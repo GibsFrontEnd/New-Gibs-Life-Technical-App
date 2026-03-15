@@ -1,0 +1,23 @@
+.form-field {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.required-asterisk {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+.form-error {
+  display: block;
+  font-size: 13px;
+  color: #dc2626;
+  margin-top: 4px;
+}

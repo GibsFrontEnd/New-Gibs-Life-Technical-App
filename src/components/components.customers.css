@@ -1,0 +1,503 @@
+/* Create Customer Modal Styles */
+.cc-create-customer-dialog {
+  padding: 20px;
+  background: white;
+}
+
+.cc-customer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.cc-form-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  background: #fafafa;
+}
+
+.cc-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cc-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.cc-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cc-form-field.cc-full-width {
+  grid-column: 1 / -1;
+}
+
+.cc-form-field label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.cc-form-field input,
+.cc-form-field select,
+.cc-form-field textarea {
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.cc-form-field input:focus,
+.cc-form-field select:focus,
+.cc-form-field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cc-form-field input.cc-error,
+.cc-form-field textarea.cc-error {
+  border-color: #ef4444;
+}
+
+.cc-error-text {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.cc-select {
+  background: white;
+  cursor: pointer;
+}
+
+.cc-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.cc-type-selection {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.cc-radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.cc-radio-option input[type="radio"] {
+  width: auto;
+  margin: 0;
+}
+
+.cc-radio-label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.cc-error-message {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  border: 1px solid #fecaca;
+}
+
+.cc-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cc-submit-btn {
+  background: #8b4b8c;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cc-submit-btn:hover:not(:disabled) {
+  background: #b147b3;
+}
+
+.cc-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Edit Customer Modal Styles */
+.ec-edit-customer-dialog {
+  padding: 20px;
+  background: white;
+}
+
+.ec-customer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.ec-form-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  background: #fafafa;
+}
+
+.ec-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ec-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.ec-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ec-form-field.ec-full-width {
+  grid-column: 1 / -1;
+}
+
+.ec-form-field label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.ec-form-field input,
+.ec-form-field select,
+.ec-form-field textarea {
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.ec-form-field input:focus,
+.ec-form-field select:focus,
+.ec-form-field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.ec-form-field input.ec-error,
+.ec-form-field textarea.ec-error {
+  border-color: #ef4444;
+}
+
+.ec-error-text {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.ec-select {
+  background: white;
+  cursor: pointer;
+}
+
+.ec-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.ec-type-display {
+  margin-top: 0.5rem;
+}
+
+.ec-type-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.ec-type-badge.ec-org {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.ec-type-badge.ec-individual {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ec-error-message {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  border: 1px solid #fecaca;
+}
+
+.ec-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ec-submit-btn {
+  background: #8b4b8c;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ec-submit-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.ec-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Customer Details Modal Styles */
+.cd-customer-details-dialog {
+  padding: 20px;
+  background: white;
+}
+
+.cd-customer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.cd-customer-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 0.75rem;
+  color: white;
+}
+
+.cd-customer-avatar {
+  width: 4rem;
+  height: 4rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cd-customer-info {
+  flex: 1;
+}
+
+.cd-customer-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.cd-customer-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cd-type-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.cd-customer-id {
+  font-family: "Monaco", "Menlo", monospace;
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.cd-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  background: #fafafa;
+}
+
+.cd-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cd-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.cd-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cd-info-item.cd-full-width {
+  grid-column: 1 / -1;
+}
+
+.cd-label {
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.cd-value {
+  color: #1f2937;
+  font-size: 0.875rem;
+}
+
+.cd-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #64748b;
+}
+
+.cd-loading-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid #e2e8f0;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 0.5rem;
+}
+
+.cd-empty-policies {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.cd-empty-policies svg {
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+
+.cd-policies-table {
+  overflow-x: auto;
+}
+
+.cd-policies-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cd-policies-table th,
+.cd-policies-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cd-policies-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.cd-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cd-close-btn {
+  background: #6b7280;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cd-close-btn:hover {
+  background: #4b5563;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .cc-form-grid,
+  .ec-form-grid,
+  .cd-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cd-customer-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .cd-customer-meta {
+    justify-content: center;
+  }
+}
