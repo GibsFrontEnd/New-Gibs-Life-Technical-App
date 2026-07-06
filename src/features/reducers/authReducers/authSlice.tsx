@@ -35,10 +35,15 @@ const authSlice = createSlice({
     setShowAuthError: (state, action) => {
       state.showAuthError = action.payload;
     },
+    logout: (state) => {
+      state.user = null;
+      state.token = null;
+      state.isExpired = true;
+    },
   },
 });
 
 export const selectAuth = (state: { auth: AuthState }) => state.auth;
 
-export const { setTokenExpired, setShowAuthError } = authSlice.actions;
+export const { setTokenExpired, setShowAuthError, logout } = authSlice.actions;
 export default authSlice.reducer;

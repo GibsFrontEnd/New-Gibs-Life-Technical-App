@@ -1,28 +1,35 @@
+// Matches the GET /v1/Customers response (insured/party schema).
+// customerID === insuredID.
 export interface Customer {
-  customerID: string
-  title: string
-  lastName: string | null
-  firstName: string | null
-  otherName: string | null
-  gender: "MALE" | "FEMALE"
+  insuredID: string
+  surName: string | null
+  otherNames: string | null
+  title: string | null
+  address: string | null
+  fullName: string | null
+  state: string | null
+  landphone: string | null
+  mobilePhone: string | null
   email: string | null
-  address: string
-  phoneLine1: string | null
-  phoneLine2: string | null
-  isOrg: boolean
-  orgName: string
-  orgRegNumber: string
-  orgRegDate: string
-  taxIdNumber: string
-  cityLGA: string
-  stateID: string
-  nationality: string
-  dateOfBirth: string
-  kycType: "NOT_AVAILABLE" | "PASSPORT" | "DRIVERS_LICENSE" | "NATIONAL_ID" | "VOTERS_CARD"
-  kycNumber: string
-  kycIssueDate: string
-  kycExpiryDate: string
-  nextOfKin: NextOfKin | null
+  nationalID: string | null
+  occupation: string | null
+  sex: string | null
+  maritalStatus: string | null
+  country: string | null
+  dateofBirth: string | null
+  age: number | null
+  height: number | null
+  weight: number | null
+  reinBalance: number | null
+  remarks: string | null
+  deleted: number
+  active: number
+  clientType: string | null
+  submittedBy: string | null
+  submittedOn: string | null
+  modifiedBy: string | null
+  modifiedOn: string | null
+  password?: string | null
 }
 
 export interface NextOfKin {
@@ -52,6 +59,7 @@ export interface CreateCustomerRequest {
   orgRegNumber: string
   orgRegDate: string
   taxIdNumber: string
+  password: string
   cityLGA: string
   stateID: string
   nationality: string

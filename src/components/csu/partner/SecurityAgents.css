@@ -30,7 +30,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: #8b4b8c;
+  background: #8c4b8d;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -41,7 +41,7 @@
 }
 
 .sa-create-btn:hover {
-  background: #b94fba;
+  background: #6d3a6e;
   transform: translateY(-1px);
 }
 
@@ -80,16 +80,16 @@
 }
 
 .sa-stat-total {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #8c4b8d 0%, #6d3a6e 100%);
 }
 .sa-stat-active {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: linear-gradient(135deg, #a855a9 0%, #7b3aec 100%);
 }
 .sa-stat-inactive {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #b5179e 0%, #8c4b8d 100%);
 }
 .sa-stat-email {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #9d4edd 0%, #6d3a6e 100%);
 }
 
 .sa-stat-content {
@@ -151,8 +151,8 @@
 
 .sa-search-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #8c4b8d;
+  box-shadow: 0 0 0 3px rgba(140, 75, 141, 0.15);
 }
 
 .sa-filter-controls {
@@ -173,8 +173,8 @@
 
 .sa-filter-select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #8c4b8d;
+  box-shadow: 0 0 0 3px rgba(140, 75, 141, 0.15);
 }
 
 /* Results Summary */
@@ -191,7 +191,8 @@
 .sa-table-container {
   background: white;
   border-radius: 0.75rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   margin-bottom: 1.5rem;
 }
@@ -202,15 +203,15 @@
 }
 
 .sa-table-header {
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: #faf6fa;
+  border-bottom: 1px solid #ecd9ec;
 }
 
 .sa-table-head {
-  padding: 1rem;
+  padding: 0.875rem 1rem;
   text-align: left;
   font-weight: 600;
-  color: #374151;
+  color: #6b4b6c;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -222,7 +223,7 @@
 }
 
 .sa-table-row:hover {
-  background: #f8fafc;
+  background: #faf6fa;
 }
 
 .sa-table-cell {
@@ -233,7 +234,7 @@
 .sa-agent-id {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 0.875rem;
-  color: #3b82f6;
+  color: #8c4b8d;
   font-weight: 600;
 }
 
@@ -334,12 +335,12 @@
 }
 
 .sa-view-btn {
-  background: #f0f9ff;
-  color: #0369a1;
+  background: #f3e3f3;
+  color: #8c4b8d;
 }
 
 .sa-view-btn:hover {
-  background: #e0f2fe;
+  background: #ecd2ec;
 }
 
 .sa-edit-btn {
@@ -379,7 +380,7 @@
   width: 2rem;
   height: 2rem;
   border: 2px solid #e2e8f0;
-  border-top: 2px solid #3b82f6;
+  border-top: 2px solid #8c4b8d;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
@@ -421,7 +422,7 @@
 }
 
 .sa-retry-btn {
-  background: #3b82f6;
+  background: #8c4b8d;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -431,7 +432,7 @@
 }
 
 .sa-retry-btn:hover {
-  background: #2563eb;
+  background: #6d3a6e;
 }
 
 /* Empty State */
@@ -461,7 +462,7 @@
 }
 
 .sa-empty-action-btn {
-  background: #3b82f6;
+  background: #8c4b8d;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -471,7 +472,7 @@
 }
 
 .sa-empty-action-btn:hover {
-  background: #2563eb;
+  background: #6d3a6e;
 }
 
 /* Pagination */

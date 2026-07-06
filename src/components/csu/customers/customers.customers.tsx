@@ -16,7 +16,7 @@ import { Button } from "../../UI/new-button"
 import Input from "../../UI/Input"
 import {
   getAllCustomers,
-  // getCustomerPolicies,
+  getCustomer,
   deleteCustomer,
   selectCustomers,
   setCurrentCustomer,
@@ -52,18 +52,22 @@ const Customers = () => {
     }
   }, [error.deleteCustomer, dispatch])
 
+  const isIndividual = (customer: any) =>
+    (customer.clientType || "").toUpperCase() === "INDIVIDUAL"
+
   const filteredCustomers = customers.filter((customer) => {
+    const q = searchTerm.toLowerCase()
     const matchesSearch =
-      customer.customerID.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.orgName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (customer.firstName && customer.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (customer.lastName && customer.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      customer.insuredID?.toLowerCase().includes(q) ||
+      customer.fullName?.toLowerCase().includes(q) ||
+      customer.surName?.toLowerCase().includes(q) ||
+      customer.otherNames?.toLowerCase().includes(q) ||
+      customer.email?.toLowerCase().includes(q)
 
     const matchesFilter =
       filterType === "all" ||
-      (filterType === "organization" && customer.isOrg) ||
-      (filterType === "individual" && !customer.isOrg)
+      (filterType === "organization" && !isIndividual(customer)) ||
+      (filterType === "individual" && isIndividual(customer))
 
     return matchesSearch && matchesFilter
   })
@@ -82,22 +86,24 @@ const Customers = () => {
   }
 
   const handleViewCustomer = (customer: any) => {
+    // Show the row data immediately, then refresh from GET /v1/Customers/{insuredID}
     dispatch(setCurrentCustomer(customer))
-    dispatch(getCustomerPolicies(customer.customerID))
     dispatch(setShowCustomerDetailsDialog(true))
+    dispatch(getCustomer(customer.insuredID))
   }
 
-  const handleDeleteCustomer = (customerID: string) => {
+  const handleDeleteCustomer = (insuredID: string) => {
     if (window.confirm("Are you sure you want to delete this customer?")) {
-      dispatch(deleteCustomer(customerID))
+      dispatch(deleteCustomer(insuredID))
     }
   }
 
   const getCustomerDisplayName = (customer: any) => {
-    if (customer.isOrg) {
-      return customer.orgName || "Unknown Organization"
-    }
-    return `${customer.firstName || ""} ${customer.lastName || ""}`.trim() || "Unknown Individual"
+    return (
+      customer.fullName ||
+      `${customer.surName || ""} ${customer.otherNames || ""}`.trim() ||
+      "Unknown"
+    )
   }
 
   const formatDate = (dateString: string) => {
@@ -107,9 +113,11 @@ const Customers = () => {
 
   const getCustomerStats = () => {
     const total = customers.length
-    const organizations = customers.filter((c) => c.isOrg).length
-    const individuals = customers.filter((c) => !c.isOrg).length
-    const withEmail = customers.filter((c) => c.email && c.email.trim() !== "").length
+    const individuals = customers.filter((c) => isIndividual(c)).length
+    const organizations = total - individuals
+    const withEmail = customers.filter(
+      (c) => c.email && c.email.trim() !== "" && c.email.trim() !== "@"
+    ).length
 
     return { total, organizations, individuals, withEmail }
   }
@@ -273,42 +281,50 @@ const Customers = () => {
           <table className="sc-customers-table">
             <thead>
               <tr className="sc-table-header">
-                <th className="sc-table-head">Customer ID</th>
-                <th className="sc-table-head">Name/Organization</th>
+                <th className="sc-table-head">Name</th>
                 <th className="sc-table-head">Type</th>
                 <th className="sc-table-head">Email</th>
                 <th className="sc-table-head">Phone</th>
                 <th className="sc-table-head">State</th>
+                <th className="sc-table-head">Status</th>
                 <th className="sc-table-head">Actions</th>
               </tr>
             </thead>
             <tbody>
               {paginatedCustomers.map((customer) => (
-                <tr key={customer.customerID} className="sc-table-row">
-                  <td className="sc-table-cell">
-                    <span className="sc-customer-id">{customer.customerID}</span>
-                  </td>
+                <tr key={customer.insuredID} className="sc-table-row">
                   <td className="sc-table-cell">
                     <div className="sc-customer-info">
                       <span className="sc-customer-name">{getCustomerDisplayName(customer)}</span>
                       {customer.address && (
-                        <span className="sc-customer-address">{customer.address.substring(0, 50)}...</span>
+                        <span className="sc-customer-address">
+                          {customer.address.length > 50
+                            ? `${customer.address.substring(0, 50)}...`
+                            : customer.address}
+                        </span>
                       )}
                     </div>
                   </td>
                   <td className="sc-table-cell">
-                    <span className={`sc-type-badge ${customer.isOrg ? "sc-org" : "sc-individual"}`}>
-                      {customer.isOrg ? "Organization" : "Individual"}
+                    <span className={`sc-type-badge ${isIndividual(customer) ? "sc-individual" : "sc-org"}`}>
+                      {isIndividual(customer) ? "Individual" : "Organization"}
                     </span>
                   </td>
                   <td className="sc-table-cell">
-                    <span className="sc-customer-email">{customer.email || "N/A"}</span>
+                    <span className="sc-customer-email">
+                      {customer.email && customer.email.trim() !== "@" ? customer.email : "N/A"}
+                    </span>
                   </td>
                   <td className="sc-table-cell">
-                    <span className="sc-customer-phone">{customer.phoneLine1 || "N/A"}</span>
+                    <span className="sc-customer-phone">{customer.mobilePhone || customer.landphone || "N/A"}</span>
                   </td>
                   <td className="sc-table-cell">
-                    <span className="sc-customer-state">{customer.stateID || "N/A"}</span>
+                    <span className="sc-customer-state">{customer.state || "N/A"}</span>
+                  </td>
+                  <td className="sc-table-cell">
+                    <span className={`sc-type-badge ${customer.active === 1 ? "sc-individual" : "sc-org"}`}>
+                      {customer.active === 1 ? "Active" : "Inactive"}
+                    </span>
                   </td>
                   <td className="sc-table-cell">
                     <div className="sc-action-buttons">
@@ -347,7 +363,7 @@ const Customers = () => {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleDeleteCustomer(customer.customerID)}
+                        onClick={() => handleDeleteCustomer(customer.insuredID)}
                         className="sc-action-btn sc-delete-btn"
                         title="Delete Customer"
                         disabled={loading.deleteCustomer}

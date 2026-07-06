@@ -20,6 +20,8 @@ import quotationReducer from './reducers/quotationReducers/quotationSlice';
 import groupLifeReducer from "./reducers/groupLifeReducers/groupLifeQuotationSlice";
 import beneficiaryReducer from "./reducers/beneficiariesReducers/beneficiariesSlice";
 import documentReducer from "./reducers/documentReducers/documentSlice";
+import investmentProposalsReducer from "./reducers/proposalReducers/proposalsSlice";
+import claimsReducer from './reducers/claimsReducers/claimsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -44,6 +46,9 @@ export const store = configureStore({
     groupLifeQuotations: groupLifeReducer,
     beneficiaries: beneficiaryReducer,
     documents: documentReducer,
+    investmentProposals: investmentProposalsReducer,
+    claims: claimsReducer,
+
   },
 });
 

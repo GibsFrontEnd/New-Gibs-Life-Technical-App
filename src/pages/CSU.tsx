@@ -7,8 +7,8 @@ const CSU = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (location.pathname === "/csu") {
-      navigate("enquiries");
+    if (location.pathname === "/csu" || location.pathname === "/csu/") {
+      navigate("overview");
     }
   }, [navigate]);
 

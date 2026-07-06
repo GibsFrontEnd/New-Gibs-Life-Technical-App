@@ -1,7 +1,6 @@
 import axios from "axios";
 import { SERVER_URL } from "./constants";
 import { setShowAuthError } from "../features/reducers/authReducers/authSlice";
-import { store } from "../features/store";
 import { decryptData } from "./encrypt-utils";
 
 const apiCall = axios.create({
@@ -114,7 +113,7 @@ apiCall.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
+  async (error) => {
     const originalRequest = error.config;
 
     // Always log actual errors, but reduce verbosity for normal operations
@@ -145,6 +144,9 @@ apiCall.interceptors.response.use(
       if (isDevelopment) {
         console.log("🔐 401 Unauthorized detected");
       }
+
+      // IMPORT STORE DYNAMICALLY TO BREAK CIRCULAR DEPENDENCY
+      const { store } = await import("../features/store");
 
       // Check if we actually have a token
       const encryptedToken = localStorage.getItem("token");

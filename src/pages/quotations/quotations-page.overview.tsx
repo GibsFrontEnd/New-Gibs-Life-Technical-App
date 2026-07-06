@@ -1,101 +1,54 @@
+import { FileInput, TrendingUp, Scroll,  ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
 
 const QuotationsOverview = () => {
-  const categories = [
-    {
-      title: "Investment Link Quotes",
-      path: "/quotations/investment-link",
-      icon: "💼",
-      description: "Create and manage investment-linked quotations",
-      color: "bg-blue-50 border-blue-200 hover:border-blue-400",
-      iconBg: "bg-blue-500",
-    },
-    {
-      title: "Traditional Quotes",
-      path: "/quotations/traditional",
-      icon: "📜",
-      description: "Manage traditional insurance quotations",
-      color: "bg-blue-50 border-blue-200 hover:border-blue-400",
-      iconBg: "bg-blue-500",
-    },
-    {
-      title: "Group Life Quotes",
-      path: "/quotations/group-life",
-      icon: "🏢",
-      description: "Handle group life insurance quotations",
-      color: "bg-green-50 border-green-200 hover:border-green-400",
-      iconBg: "bg-green-500",
-    },
-    {
-      title: "Credit Life Quotes",
-      path: "/quotations/credit-life",
-      icon: "💳",
-      description: "Process credit life quotations",
-      color: "bg-orange-50 border-orange-200 hover:border-orange-400",
-      iconBg: "bg-orange-500",
-    },
-  ];
+  const QuickAction = ({ to, label, icon, description }: any) => (
+    <Link
+      to={to}
+      className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full hover:-translate-y-1"
+    >
+      <div className="bg-gray-50 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#0d47a1]/10 transition-colors">
+        <span className="text-gray-600 group-hover:text-[#0d47a1] transition-colors">{icon}</span>
+      </div>
+      <h3 className="font-bold text-gray-800 text-lg mb-2">{label}</h3>
+      <p className="text-gray-500 text-sm mb-6 flex-1">{description}</p>
+      <div className="flex items-center text-[#0d47a1] text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+        Get Started <ArrowRight className="w-4 h-4 ml-1" />
+      </div>
+    </Link>
+  );
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-6 p-6 ">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-[#111827] m-0">
-          Quotations Overview
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Monitor and manage quotation workflows across all categories.
-        </p>
-      </div>
-
-      {/* Quick Access Categories */}
-      <div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {categories.map((category, index) => (
-            <Link
-              key={index}
-              to={category.path}
-              className={`block border-2 rounded-lg p-5 transition-all ${category.color}`}
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className={`w-12 h-12 rounded-lg ${category.iconBg} flex items-center justify-center text-white text-2xl flex-shrink-0`}
-                >
-                  {category.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 text-base">
-                      {category.title}
-                    </h3>
-                    <ArrowRight className="w-5 h-5 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    {category.description}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+    <div className="space-y-8 animate-in fade-in duration-500 p-2 lg:p-6">
+      <header>
+        <h1 className="text-3xl font-black text-gray-800 tracking-tight">Quotations Overview</h1>
+        <p className="text-gray-500 mt-1">Manage all your quotation needs in one place.</p>
+      </header>
 
       {/* Quick Actions */}
-      <div className="bg-gradient-to-r from-blue-50 to-blue-50 rounded-lg border border-blue-200 p-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">
-              Ready to create a new quotation?
-            </h3>
-            <p className="text-sm text-gray-600">
-              Choose a category above to start creating quotations for your
-              customers.
-            </p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl">
+        <QuickAction
+          to="/quotations/investment-link-quotes"
+          label="Investment Link Quotes"
+          icon={<TrendingUp className="w-6 h-6" />}
+          description="Create and manage investment-linked quotation requests for clients."
+        />
+        <QuickAction
+          to="/quotations/traditional-quotes"
+          label="Traditional Quotes"
+          icon={<Scroll className="w-6 h-6" />}
+          description="Handle traditional insurance quotations with ease and precision."
+        />
+        <QuickAction
+          to="/quotations/group-life"
+          label="Group Life Quotes"
+          icon={<FileInput className="w-6 h-6" />}
+          description="Manage group life insurance quotations for corporate clients."
+        />
       </div>
-    </div>
+
+      </div>
+   
   );
 };
 
