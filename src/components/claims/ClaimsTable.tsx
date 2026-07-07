@@ -60,7 +60,8 @@ export const ClaimsTable: React.FC<ClaimsTableProps> = ({
 }) => {
   const [isAllSelected, setIsAllSelected] = useState(false);
   const navigate = useNavigate();
-const location = useLocation();
+  const location = useLocation();
+  
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const startItem = totalCount > 0 ? (currentPage - 1) * pageSize : 0;
   const endItem = totalCount > 0 ? Math.min(currentPage * pageSize, totalCount) : 0;
@@ -104,26 +105,21 @@ const location = useLocation();
     }
   };
 
-  // Helper function to get display loss type from lossDetails
   const getDisplayLossType = (claim: ClaimReserve) => {
-    // First check lossType
     if (claim.lossType) {
       return claim.lossType;
     }
-    // Then check lossDetails
     if (claim.lossDetails) {
       const details = claim.lossDetails.toLowerCase();
       if (details.includes("maturity")) return "Maturity";
       if (details.includes("surrender")) return "Surrender";
       if (details.includes("withdrawal")) return "Partial Withdrawal";
       if (details.includes("death") || details.includes("benefit")) return "Death Benefit";
-      // Return the original lossDetails if no match
       return claim.lossDetails;
     }
     return "N/A";
   };
 
-  // Helper function to get color for loss type
   const getLossTypeColor = (lossType: string) => {
     if (!lossType) return "text-gray-700 bg-gray-50";
     
@@ -180,11 +176,13 @@ const location = useLocation();
               getStatusBadge={getStatusBadge}
               getLossTypeColor={getLossTypeColor}
               getDisplayLossType={getDisplayLossType}
+              navigate={navigate}           // ← PASS navigate
+              location={location}            // ← PASS location
             />
           ))}
         </div>
       ) : (
-        // Desktop table view
+        // Desktop table view (this is fine)
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -209,103 +207,98 @@ const location = useLocation();
               </TableRow>
             </TableHeader>
             <TableBody>
-              {claims.map((claim) => {
-                // Debug log to see what's in each claim
-                console.log("Rendering claim:", claim);
-                return (
-                  <TableRow
-                    key={claim.claimID}
-                    className={`${
-                      selectedClaims.has(claim.claimID) ? "bg-blue-50" : ""
-                    } cursor-pointer hover:bg-blue-50/50 border-blue-100 transition-colors`}
-                  
-                  >
-                    {onSelect && (
-                      <TableCell>
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedClaims.has(claim.claimID)}
-                            onCheckedChange={() =>
-                              handleSelectClaim(claim.claimID)
-                            }
-                            className="h-4 w-4"
-                          />
-                        </div>
-                      </TableCell>
-                    )}
-                    <TableCell className="font-medium">
-                      <div className="text-sm font-medium">
-                        {claim.claimNo || "N/A"}
+              {claims.map((claim) => (
+                <TableRow
+                  key={claim.claimID}
+                  className={`${
+                    selectedClaims.has(claim.claimID) ? "bg-blue-50" : ""
+                  } cursor-pointer hover:bg-blue-50/50 border-blue-100 transition-colors`}
+                >
+                  {onSelect && (
+                    <TableCell>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedClaims.has(claim.claimID)}
+                          onCheckedChange={() =>
+                            handleSelectClaim(claim.claimID)
+                          }
+                          className="h-4 w-4"
+                        />
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-gray-900">
-                        {claim.policyNo || "N/A"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-gray-900">
-                        {claim.insuredName || "N/A"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getLossTypeColor(
-                          getDisplayLossType(claim)
-                        )}`}
+                  )}
+                  <TableCell className="font-medium">
+                    <div className="text-sm font-medium">
+                      {claim.claimNo || "N/A"}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-gray-900">
+                      {claim.policyNo || "N/A"}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-gray-900">
+                      {claim.insuredName || "N/A"}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getLossTypeColor(
+                        getDisplayLossType(claim)
+                      )}`}
+                    >
+                      {getDisplayLossType(claim)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right font-medium text-blue-900">
+                    {formatCurrency(claim.a9 || claim.amtReserved || 0)}
+                  </TableCell>
+                  <TableCell className="text-gray-700">
+                    {claim.lossDate ? formatDate(claim.lossDate) : "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge(claim.approval, claim.active, claim.deleted)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0 bg-transparent border-blue-300 text-blue-700 hover:bg-blue-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onView(claim);
+                        }}
                       >
-                        {getDisplayLossType(claim)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-blue-900">
-                      {formatCurrency(claim.a9 || claim.amtReserved || 0)}
-                    </TableCell>
-                    <TableCell className="text-gray-700">
-                      {claim.lossDate ? formatDate(claim.lossDate) : "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(claim.approval, claim.active, claim.deleted)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0 bg-transparent border-blue-300 text-blue-700 hover:bg-blue-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onView(claim);
-                          }}
-                        >
-                          <Eye className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0 bg-transparent border-green-300 text-green-700 hover:bg-green-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(claim);
-                          }}
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0 bg-transparent border-red-300 text-red-700 hover:bg-red-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(claim);
-                          }}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                        <Eye className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0 bg-transparent border-green-300 text-green-700 hover:bg-green-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(claim);
+                        }}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0 bg-transparent border-red-300 text-red-700 hover:bg-red-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(claim);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
@@ -399,7 +392,7 @@ const location = useLocation();
   );
 };
 
-// Mobile Card Component
+// ✅ FIXED: Mobile Card Component with proper props
 const ClaimCard = ({
   claim,
   onEdit,
@@ -410,13 +403,14 @@ const ClaimCard = ({
   getStatusBadge,
   getLossTypeColor,
   getDisplayLossType,
+  navigate,     // ← Added
+  location,     // ← Added
 }: any) => {
   return (
     <div
       className={`border rounded-lg mb-4 p-4 hover:shadow-md transition-shadow ${
         isSelected ? "bg-blue-50 border-blue-200" : "bg-white"
       } cursor-pointer`}
-     
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -473,41 +467,40 @@ const ClaimCard = ({
       </div>
 
       <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
+        {/* ✅ FIXED: Use onView callback instead of direct navigate */}
         <Button
-  variant="outline"
-  size="sm"
-  className="h-8 w-8 p-0 bg-transparent border-blue-300 text-blue-700 hover:bg-blue-50"
-  onClick={(e) => {
-    e.stopPropagation();
-    navigate(`/claims/individual/claim/view/${claim.claimID}`, {
-      state: { returnPath: location.pathname }
-    });
-  }}
->
-  <Eye className="w-3 h-3" />
-</Button>
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0 bg-transparent border-blue-300 text-blue-700 hover:bg-blue-50"
+          onClick={(e) => {
+            e.stopPropagation();
+            onView(claim);  // ← Use the callback
+          }}
+        >
+          <Eye className="w-3 h-3" />
+        </Button>
 
-// For the Edit button
-<Button
-  variant="outline"
-  size="sm"
-  className="h-8 w-8 p-0 bg-transparent border-green-300 text-green-700 hover:bg-green-50"
-  onClick={(e) => {
-    e.stopPropagation();
-    navigate(`/claims/individual/claim/edit/${claim.claimID}`, {
-      state: { returnPath: location.pathname }
-    });
-  }}
->
-  <Pencil className="w-3 h-3" />
-</Button>
+        {/* ✅ FIXED: Use onEdit callback */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0 bg-transparent border-green-300 text-green-700 hover:bg-green-50"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(claim);  // ← Use the callback
+          }}
+        >
+          <Pencil className="w-3 h-3" />
+        </Button>
+
+        {/* ✅ FIXED: Use onDelete callback */}
         <Button
           variant="outline"
           size="sm"
           className="bg-transparent border-red-300 text-red-700 hover:bg-red-50"
           onClick={(e) => {
             e.stopPropagation();
-            onDelete(claim);
+            onDelete(claim);  // ← Use the callback
           }}
         >
           <Trash2 className="w-4 h-4 mr-2" />

@@ -32,7 +32,12 @@ import {
   selectCurrentLoading,
   selectCurrentError,
   clearCurrentError,
+  searchIndividualPolicies,
+  selectAllPolicies,
+  selectPoliciesLoading,
+  selectPoliciesError,
   type ClaimReserve,
+  type IndividualPolicy,
 } from "../../features/reducers/claimsReducers/claimsSlice";
 import { useToast } from "../../hooks/use-toast";
 import { SERVER_URL } from "../../utils/constants";
@@ -326,17 +331,7 @@ const ClaimDetailsTab: React.FC<{
           title="Policy Selection" 
           icon={<Building2 className="w-4 h-4" />}
           borderColor="border-blue-300"
-          rightElement={
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs bg-white border-blue-300 text-blue-700 hover:bg-blue-100"
-              disabled={isViewMode}
-            >
-              <RefreshCw className="w-3 h-3 mr-1" />
-              Get Policy Details
-            </Button>
-          }
+          
         />
         <div className="mt-2">
           {isCreateMode ? (
@@ -1132,12 +1127,18 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
   const currentReserve = useSelector(selectCurrentReserve);
   const loading = useSelector(selectCurrentLoading);
   const error = useSelector(selectCurrentError);
+  
+  // ✅ Get policies from Redux state (from the new endpoint)
+  const policiesFromRedux = useSelector(selectAllPolicies);
+  const policyLoadingFromRedux = useSelector(selectPoliciesLoading);
+  const policyErrorFromRedux = useSelector(selectPoliciesError);
 
-  // State for policy dropdown
+  // State for policy dropdown - transformed to match ApiDropdownOption
   const [policies, setPolicies] = useState<ApiDropdownOption[]>([]);
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policyError, setPolicyError] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState<ApiDropdownOption | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [formData, setFormData] = useState<Partial<ClaimReserve>>({
     policyNo: "",
@@ -1197,73 +1198,64 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
   const isEditMode = mode === "edit";
   const isCreateMode = mode === "create";
 
-  // Fetch policies for dropdown with all fields
-  const fetchPolicies = async () => {
+  // ✅ Updated: Fetch policies using the new searchIndividualPolicies endpoint
+  const fetchPolicies = async (searchText: string = "") => {
     if (!isCreateMode) return;
     
     setPolicyLoading(true);
     setPolicyError(false);
+    
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      // Use the new searchIndividualPolicies thunk
+      const result = await dispatch(searchIndividualPolicies({
+        search: searchText || "",
+        page: 1,
+        pageSize: 50, // Fetch more policies for dropdown
+        isProposal: false, // Only show actual policies, not proposals
+        // Optional: Add other filters as needed
+        // coverCode: "GLA", // Uncomment if you want to filter by product
+        // status: "ACTIVE", // Uncomment to show only active policies
+      })).unwrap();
       
-      const response = await fetch(`${SERVER_URL}/v1/lifepolicyAdmin/policies?Page=1&PageSize=100`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      console.log("✅ Policies fetched from new endpoint:", result);
       
-      const policyOptions = (data.items || []).map((item: any) => ({
-        id: item.policyNo || item.id,
-        name: `${item.policyNo} - ${item.insuredName || item.customerName || 'N/A'}`,
-        policyNo: item.policyNo || item.id,
-        insuredName: item.insuredName || item.customerName,
-        insuredId: item.insuredId || item.customerId,
-        subRisk: item.subRiskName || item.coverName || item.subRisk,
-        subRiskId: item.subRiskId || item.coverId || item.subRiskID,
-        coverName: item.coverName || item.subRiskName,
-        branchId: item.branchId || item.branchCode,
-        branchName: item.branchName,
-        startDate: item.startDate || item.commencementDate,
-        expiryDate: item.expiryDate || item.maturityDate,
-        commencementDate: item.commencementDate || item.startDate,
-        maturityDate: item.maturityDate || item.expiryDate,
-        sumAssured: item.sumAssured || item.faceAmount || item.lifeCoverAmount,
-        faceAmount: item.faceAmount || item.sumAssured,
-        totalContribution: item.totalContribution || item.totalPaid || 0,
-        regularSaving: item.regularSaving || item.monthlyPremium || 0,
-        monthlyPremium: item.monthlyPremium || item.regularSaving,
-        interestEarned: item.interestEarned || 0,
-        yearToDateInterest: item.yearToDateInterest || item.interestYTD || 0,
-        interestYTD: item.interestYTD || item.yearToDateInterest || 0,
-        status: item.status || item.policyStatus,
-        policyStatus: item.policyStatus || item.status,
-        coPolicyNo: item.coPolicyNo || item.coPolicyNumber,
-        financialPlanner: item.financialPlanner || item.advisor || item.agentName,
-        advisor: item.advisor || item.financialPlanner,
-        partyName: item.partyName || item.party,
-        partyId: item.partyId,
-        productType: item.productType || item.policyType,
-        policyType: item.policyType || item.productType,
-        modeOfPayment: item.modeOfPayment || item.paymentMode,
-        grossPremium: item.grossPremium,
-        netPremium: item.netPremium,
-        ...item
+      // Transform the response to match ApiDropdownOption
+      const policyOptions = (result.items || []).map((item: IndividualPolicy) => ({
+        id: item.policyNo || item.policyNo,
+        name: `${item.policyNo} - ${item.insuredName || 'N/A'}`,
+        policyNo: item.policyNo,
+        insuredName: item.insuredName,
+        coverCode: item.coverCode,
+        covertype: item.covertype,
+        brCode: item.brCode,
+        assuredCode: item.assuredCode,
+        tDate: item.tDate,
+        startDate: item.startDate,
+        maturityDate: item.maturityDate,
+        sumAssured: item.sumAssured,
+        basicPremium: item.basicPremium,
+        status: item.status,
+        isProposal: item.isProposal,
+        // Map additional fields for backward compatibility
+        subRisk: item.covertype || item.coverCode,
+        subRiskId: item.coverCode,
+        faceAmount: item.sumAssured,
+        lifeCoverAmount: item.sumAssured,
+        monthlyPremium: item.basicPremium,
+        regularSaving: item.basicPremium,
+        policyStatus: item.status,
+        // Add other mappings as needed
       }));
 
       setPolicies(policyOptions);
-    } catch (error) {
-      console.error("Error fetching policies:", error);
+      setPolicyError(false);
+      
+    } catch (error: any) {
+      console.error("❌ Error fetching policies:", error);
       setPolicyError(true);
       toast({
         title: "Error",
-        description: "Failed to load policies. Please try again.",
+        description: error || "Failed to load policies. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -1271,19 +1263,69 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     }
   };
 
+  // ✅ Handle search input changes for policy dropdown
+  const handlePolicySearch = (searchText: string) => {
+    setSearchTerm(searchText);
+    // Debounce the search to avoid too many API calls
+    const debounceTimer = setTimeout(() => {
+      fetchPolicies(searchText);
+    }, 500);
+    
+    return () => clearTimeout(debounceTimer);
+  };
+
+  // ✅ Fetch policies on mount for create mode
+  useEffect(() => {
+    if (isCreateMode) {
+      fetchPolicies("");
+    }
+  }, [isCreateMode]);
+
+  // ✅ Update local state when Redux state changes
+  useEffect(() => {
+    if (isCreateMode && policiesFromRedux.length > 0) {
+      const transformed = policiesFromRedux.map((item: IndividualPolicy) => ({
+        id: item.policyNo || item.policyNo,
+        name: `${item.policyNo} - ${item.insuredName || 'N/A'}`,
+        policyNo: item.policyNo,
+        insuredName: item.insuredName,
+        coverCode: item.coverCode,
+        covertype: item.covertype,
+        brCode: item.brCode,
+        assuredCode: item.assuredCode,
+        tDate: item.tDate,
+        startDate: item.startDate,
+        maturityDate: item.maturityDate,
+        sumAssured: item.sumAssured,
+        basicPremium: item.basicPremium,
+        status: item.status,
+        isProposal: item.isProposal,
+        subRisk: item.covertype || item.coverCode,
+        subRiskId: item.coverCode,
+        faceAmount: item.sumAssured,
+        lifeCoverAmount: item.sumAssured,
+        monthlyPremium: item.basicPremium,
+        regularSaving: item.basicPremium,
+        policyStatus: item.status,
+      }));
+      setPolicies(transformed);
+    }
+  }, [policiesFromRedux, isCreateMode]);
+
+  // ✅ Sync loading/error states from Redux
+  useEffect(() => {
+    if (isCreateMode) {
+      setPolicyLoading(policyLoadingFromRedux);
+      setPolicyError(!!policyErrorFromRedux);
+    }
+  }, [policyLoadingFromRedux, policyErrorFromRedux, isCreateMode]);
+
   // Fetch claim data if in edit or view mode
   useEffect(() => {
     if ((isEditMode || isViewMode) && id) {
       dispatch(fetchClaimReserveById(parseInt(id)));
     }
   }, [isEditMode, isViewMode, id, dispatch]);
-
-  // Fetch policies on mount for create mode
-  useEffect(() => {
-    if (isCreateMode) {
-      fetchPolicies();
-    }
-  }, [isCreateMode]);
 
   // Populate form when data is loaded
   useEffect(() => {
@@ -1349,7 +1391,7 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     };
   }, [dispatch]);
 
-  // Handle policy selection - auto-populate all fields
+  // ✅ Updated: Handle policy selection - auto-populate all fields from the new endpoint data
   const handlePolicySelect = (policy: ApiDropdownOption) => {
     if (!isCreateMode) return;
     
@@ -1358,30 +1400,30 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     setFormData((prev) => ({
       ...prev,
       policyNo: policy.policyNo || policy.id || "",
-      insuredName: policy.insuredName || policy.customerName || "",
-      insuredID: policy.insuredId || policy.customerId || "",
-      subRisk: policy.subRisk || policy.coverName || "",
-      subRiskID: policy.subRiskId || policy.coverId || "",
-      brcode: policy.branchId || policy.branchCode || "",
-      startDate: policy.startDate || policy.commencementDate 
-        ? new Date(policy.startDate || policy.commencementDate).toISOString().split("T")[0] 
+      insuredName: policy.insuredName || "",
+      insuredID: policy.assuredCode || "",
+      subRisk: policy.covertype || policy.subRisk || "",
+      subRiskID: policy.coverCode || policy.subRiskId || "",
+      brcode: policy.brCode || "",
+      startDate: policy.startDate 
+        ? new Date(policy.startDate).toISOString().split("T")[0] 
         : "",
-      endDate: policy.expiryDate || policy.maturityDate 
-        ? new Date(policy.expiryDate || policy.maturityDate).toISOString().split("T")[0] 
+      endDate: policy.maturityDate 
+        ? new Date(policy.maturityDate).toISOString().split("T")[0] 
         : "",
       a9: policy.sumAssured || policy.faceAmount || policy.lifeCoverAmount || 0,
-      a5: policy.totalContribution || policy.totalPaid || 0,
+      a5: policy.totalContribution || 0,
       a6: policy.interestEarned || 0,
-      field1: policy.customerName || policy.otherName || "",
+      field1: "",
       field2: policy.policyStatus || policy.status || "IN FORCE",
-      field3: policy.modeOfPayment || policy.paymentMode || "Transfer",
-      field8: policy.regularSaving || policy.monthlyPremium || 0,
-      field9: policy.yearToDateInterest || policy.interestYTD || 0,
-      coPolicyNo: policy.coPolicyNo || policy.coPolicyNumber || "",
-      leader: policy.financialPlanner || policy.advisor || policy.agentName || "",
-      party: policy.partyName || policy.party || "",
+      field3: "Transfer",
+      field8: policy.basicPremium || policy.monthlyPremium || policy.regularSaving || 0,
+      field9: policy.yearToDateInterest || 0,
+      coPolicyNo: policy.coPolicyNo || "",
+      leader: policy.financialPlanner || "",
+      party: policy.partyName || "",
       partyID: policy.partyId || "",
-      propType: policy.productType || policy.policyType || "",
+      propType: policy.covertype || policy.productType || "",
       propRate: 1,
     }));
 
@@ -1478,6 +1520,18 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
 
   const handleCancel = () => {
     navigate(returnPath);
+  };
+
+  // ✅ Handle refresh button click
+  const handleRefreshPolicies = () => {
+    if (isCreateMode) {
+      fetchPolicies(searchTerm);
+      toast({
+        title: "Refreshing Policies",
+        description: "Fetching latest policy data...",
+        duration: 2000,
+      });
+    }
   };
 
   const getLossTypeOptions = () => {

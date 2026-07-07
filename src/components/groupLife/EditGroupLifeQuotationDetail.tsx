@@ -274,6 +274,10 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("policy");
 
+  // ✅ NEW: Track if dropdowns are loaded
+  const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
   // State for dropdown options
   const [accountExecutives, setAccountExecutives] = useState<ApiDropdownOption[]>([]);
   const [branches, setBranches] = useState<ApiDropdownOption[]>([]);
@@ -430,9 +434,9 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
         url: '/v1/Products',
         params: { PageNo: 1, PageSize: 100 },
         mapper: (item: any) => ({
-          id: item.productID || item.riskID || item.id,
-          name: item.productName || item.description || item.name,
-          code: item.productID || item.code,
+          id: item.productID || item.riskID || item.id || item.subRiskId,
+          name: item.productName || item.description || item.name || item.subRiskName,
+          code: item.productID || item.code || item.subRiskId,
           ...item
         })
       },
@@ -524,8 +528,14 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     await Promise.all(promises);
   };
 
+  // ✅ MODIFIED: Fetch dropdown data and mark as loaded
   useEffect(() => {
-    fetchAllDropdowns();
+    const loadDropdowns = async () => {
+      await fetchAllDropdowns();
+      setDropdownsLoaded(true);
+      console.log("✅ Dropdowns loaded successfully");
+    };
+    loadDropdowns();
   }, []);
 
   // Fetch exchange rate from external API
@@ -642,7 +652,13 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     }
   }, [searchQuery, formData.existingClients, handleClientSearch]);
 
+  // ✅ MODIFIED: Load quotation data AFTER dropdowns are ready
   useEffect(() => {
+    if (!dropdownsLoaded) {
+      console.log("⏳ Waiting for dropdowns to load...");
+      return;
+    }
+
     const loadQuotation = async () => {
       if (!policyNo) {
         console.warn("⚠️ No policy number found in URL");
@@ -662,48 +678,40 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
         
         console.log("✅ Extracted quotation data:", data);
 
-        // Set members from the response
-        if (data.members) {
-          setMembers(data.members.map((m: any) => ({
-            id: m.id || m.memberId || `temp-${Math.random().toString(36).slice(2)}`,
-            staffNo: m.staffNo || "",
-            employeeNames: m.name || m.employeeNames || "Unknown",
-            sex: m.gender || m.sex || "M",
-            dateOfBirth: m.dateOfBirth ? formatDateForInput(m.dateOfBirth) : "",
-            anb: m.anb || 0,
-            basicSalary: m.salary || m.basicSalary || 0,
-            housingAllowance: m.housingAllowance || 0,
-            transportAllowance: m.transportAllowance || 0,
-            totalEmolument: m.totalEmolument || m.salary || 0,
-            sumInsured: m.sumAssured || 0,
-            premium: m.premium || 0,
-            rate: m.rate || 0,
-            hireDate: m.hireDate ? formatDateForInput(m.hireDate) : "",
-          })) || []);
-        }
-
-        // Find and set the matching dropdown values
+        // ✅ Find matching dropdown values with better matching
         const findOptionId = (options: ApiDropdownOption[], searchValue: string): string => {
           if (!searchValue) return "";
-          const found = options.find(opt => 
+          
+          // Try exact match first
+          let found = options.find(opt => 
+            opt.id?.toLowerCase() === searchValue.toLowerCase() ||
             opt.name?.toLowerCase() === searchValue.toLowerCase() ||
-            opt.code?.toLowerCase() === searchValue.toLowerCase() ||
-            opt.id === searchValue
+            opt.code?.toLowerCase() === searchValue.toLowerCase()
           );
+          
+          // Try partial match if no exact match
+          if (!found) {
+            found = options.find(opt => 
+              opt.name?.toLowerCase().includes(searchValue.toLowerCase()) ||
+              searchValue.toLowerCase().includes(opt.name?.toLowerCase() || '')
+            );
+          }
+          
           return found?.id || "";
         };
 
-        setFormData({
-          quotationNumber: data.quotationNumber || data.policyNo || "[AUTO]",
+        // ✅ Map API response to form fields with proper fallbacks
+        const updatedFormData = {
+          quotationNumber: data.policyNo || data.quotationNumber || "[AUTO]",
           policyNo: data.policyNo || policyNo,
-          transactionDate: formatDateForInput(data.transDate || data.transactionDate),
-          effectiveDate: formatDateForInput(data.effectiveDate),
-          expiryDate: formatDateForInput(data.expiryDate),
+          transactionDate: data.entryDate ? formatDateForInput(data.entryDate) : new Date().toISOString().split("T")[0],
+          effectiveDate: data.startDate ? formatDateForInput(data.startDate) : new Date().toISOString().split("T")[0],
+          expiryDate: data.expiryDate ? formatDateForInput(data.expiryDate) : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split("T")[0],
           coverDay: data.coverDays != null ? data.coverDays.toString() : "0.00",
-          clientName: data.companyName || data.clientName || "",
+          clientName: data.insuredName || data.companyName || data.clientName || "",
           groupFactorAmount: data.groupFactorAmount != null ? data.groupFactorAmount.toString() : "1000.00",
           insuredType: data.insuredType || "",
-          schemeTypes: data.schemeType || data.subRiskName || "",
+          schemeTypes: data.subRiskName || data.schemeType || "GROUP LIFE",
           groupLifeFactor: data.groupLifeFactor != null ? data.groupLifeFactor.toString() : "0",
           rateType: data.rateType || "",
           existingClients: false,
@@ -744,13 +752,36 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
           proportionPercent: data.proportionPercent || 100,
           premiumRatePercent: data.premiumRatePercent || 2.0,
           businessSector: data.businessSector || "",
-          product: findOptionId(products, data.product || data.subRiskId || ""),
-        });
+          product: findOptionId(products, data.subRiskId || data.subRiskName || ""),
+        };
 
-        // Update Redux state
+        console.log("📋 Form data to set:", updatedFormData);
+        setFormData(updatedFormData);
+
+        // Set members if available
+        if (data.members && Array.isArray(data.members)) {
+          setMembers(data.members.map((m: any) => ({
+            id: m.id || m.memberId || `temp-${Math.random().toString(36).slice(2)}`,
+            staffNo: m.staffNo || "",
+            employeeNames: m.name || m.employeeNames || "Unknown",
+            sex: m.gender || m.sex || "M",
+            dateOfBirth: m.dateOfBirth ? formatDateForInput(m.dateOfBirth) : "",
+            anb: m.anb || 0,
+            basicSalary: m.salary || m.basicSalary || 0,
+            housingAllowance: m.housingAllowance || 0,
+            transportAllowance: m.transportAllowance || 0,
+            totalEmolument: m.totalEmolument || m.salary || 0,
+            sumInsured: m.sumAssured || 0,
+            premium: m.premium || 0,
+            rate: m.rate || 0,
+            hireDate: m.hireDate ? formatDateForInput(m.hireDate) : "",
+          })) || []);
+        }
+
         dispatch(setCurrentQuotation(data));
-
+        setDataLoaded(true);
         console.log("✅ Form data updated successfully");
+
       } catch (error: any) {
         console.error("❌ Load quotation error:", error);
         toast({
@@ -758,6 +789,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
           description: error?.message || "Failed to load quotation",
           variant: "destructive",
         });
+        setDataLoaded(true); // Still mark as loaded to show form with empty data
       }
     };
 
@@ -766,7 +798,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     return () => {
       dispatch(clearCurrentQuotation());
     };
-  }, [policyNo, dispatch, toast]);
+  }, [policyNo, dispatch, toast, dropdownsLoaded, accountExecutives, branches, businessSources, agentBrokers, accountTypes, products]);
 
   const handleAddMember = async (member: Omit<GroupLifeMember, "id">) => {
     if (!policyNo) {
@@ -1086,10 +1118,16 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     navigate("/underwriting/group-life-quotations");
   };
 
-  if (loading.detail) {
+  // ✅ MODIFIED: Show loading state while data loads
+  if (loading.detail || !dropdownsLoaded || !dataLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-lg">Loading Schemes...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-lg">
+            {!dropdownsLoaded ? "Loading options..." : "Loading scheme details..."}
+          </div>
+        </div>
       </div>
     );
   }
@@ -1496,9 +1534,6 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                   </Select>
                 </div>
 
-
-              
-
                 {/* Premium Rate Percent */}
                 <div className="space-y-2">
                   <Label htmlFor="premiumRatePercent" className="text-sm font-medium">
@@ -1517,7 +1552,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
           )}
         </div>
 
-        {/* Member Details Section */}
+        {/* Member Details Section - Commented out */}
         {/* <div className="border rounded-lg shadow-sm mb-4">
           <button
             type="button"
@@ -1713,66 +1748,66 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
 
             {/* Main Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
- <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto gap-10">
-  <TabsTrigger 
-    value="policy" 
-    className="px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-  >
-    Policy
-  </TabsTrigger>
-  <TabsTrigger 
-    value="group-life" 
-    className="px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-  >
-    Group Life Detail
-  </TabsTrigger>
-  <TabsTrigger 
-    value="credit-note" 
-    className="px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-  >
-    Credit Note
-  </TabsTrigger>
-  <TabsTrigger 
-    value="debit-note" 
-    className="px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-  >
-    Debit Note
-  </TabsTrigger>
-  <TabsTrigger 
-    value="attachments" 
-    className="px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-  >
-    Attachments
-  </TabsTrigger>
-</TabsList>
+              <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto gap-30">
+                <TabsTrigger 
+                  value="policy" 
+                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
+                >
+                  Policy Detail
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="group-life" 
+                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100  data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
+                >
+                  Group Life Detail
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="debit-note" 
+                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
+                >
+                  Debit Note
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="credit-note" 
+                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
+                >
+                  Co-Insurance(Credit Note)
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="attachments" 
+                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
+                >
+                  Attachments
+                </TabsTrigger>
+              </TabsList>
 
-  <div className="mt-6">
-    <TabsContent value="policy" className="mt-0">
-      {renderPolicyDetails()}
-    </TabsContent>
+              <div className="mt-6">
+                <TabsContent value="policy" className="mt-0">
+                  {renderPolicyDetails()}
+                </TabsContent>
 
-    <TabsContent value="group-life" className="mt-0">
-      <GroupLifeDetailsTab 
-        policyNo={policyNo} 
-        formData={formData} 
-        members={members}
-        setMembers={setMembers}
-      />
-    </TabsContent>
+                <TabsContent value="group-life" className="mt-0">
+                  <GroupLifeDetailsTab 
+                    policyNo={policyNo} 
+                    formData={formData} 
+                    members={members}
+                    setMembers={setMembers}
+                  />
+                </TabsContent>
 
-    <TabsContent value="credit-note" className="mt-0">
-      <CreditNotesTab policyNo={policyNo} />
-    </TabsContent>
+                <TabsContent value="credit-note" className="mt-0">
+                  <CreditNotesTab policyNo={policyNo} />
+                </TabsContent>
 
-    {/* <TabsContent value="debit-note" className="mt-0">
-      <DebitNotesTab policyNo={policyNo} />
-    </TabsContent> */}
+                {/* <TabsContent value="debit-note" className="mt-0">
+                  <DebitNotesTab policyNo={policyNo} />
+                </TabsContent> */}
 
-    <TabsContent value="attachments" className="mt-0">
-      <AttachmentsTab policyNo={policyNo} />
-    </TabsContent>
-  </div>
-</Tabs>
+                <TabsContent value="attachments" className="mt-0">
+                  <AttachmentsTab policyNo={policyNo} />
+                </TabsContent>
+              </div>
+            </Tabs>
           </div>
         </div>
       </div>

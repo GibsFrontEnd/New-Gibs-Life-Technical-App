@@ -470,11 +470,13 @@ export const fetchPolicyDetail = createAsyncThunk(
   }
 );
 
+
+
 // GET /api/grouplife/policies/policie/members - List members for a policy
 export const fetchPolicyMembers = createAsyncThunk(
   "groupLifeQuotations/fetchMembers",
   async (
-    { policyNo, endorsement }: { policyNo: string; endorsement?: string },
+    { policyNo, endorsementNo }: { policyNo: string; endorsementNo?: string },
     { rejectWithValue }
   ) => {
     try {
@@ -482,10 +484,15 @@ export const fetchPolicyMembers = createAsyncThunk(
         throw new Error("Policy number is required");
       }
 
-      let url = `${SERVER_URL}/grouplife/policies/${encodeURIComponent(policyNo)}/members`;
-      if (endorsement) {
-        url += `&endorsement=${encodeURIComponent(endorsement)}`;
+      const queryParams = new URLSearchParams();
+      queryParams.append('policyNo', policyNo);
+      if (endorsementNo) {
+        queryParams.append('endorsementNo', endorsementNo);
       }
+
+      const url = `${SERVER_URL}/grouplife/policies/policie/members?${queryParams.toString()}`;
+
+      console.log("📡 Fetching members from:", url);
 
       const response = await fetch(url, {
         method: "GET",
@@ -504,8 +511,62 @@ export const fetchPolicyMembers = createAsyncThunk(
       }
 
       const result = await response.json();
-      return Array.isArray(result) ? result : result.members || result.data || [];
+      console.log("✅ Raw API Response:", result);
+      
+      // ✅ Map the API response to match the expected format
+      const members = Array.isArray(result) ? result.map((item: any) => ({
+        id: item.memberID?.toString(),
+        memberId: item.memberID?.toString(),
+        memberID: item.memberID,
+        policyNo: item.policyNo,
+        quotationNo: item.quotationNo,
+        endorsementNo: item.endorsementNo,
+        bizOption: item.bizOption,
+        serialNo: item.serialNo,
+        membersNo: item.membersNo,
+        surname: item.surname,
+        otherNames: item.otherNames,
+        dateOfBirth: item.dobDate,
+        dobDate: item.dobDate,
+        hireDate: item.hireDate,
+        startDate: item.hireDate,
+        sex: item.sex,
+        age: item.age,
+        ageANB: item.age,
+        basicSalary: item.basicSalary,
+        housing: item.housing,
+        transport: item.transport,
+        otherAmount: item.otherAmount,
+        totalEmolument: item.tEmolument,
+        tEmolument: item.tEmolument,
+        sumInsured: item.sumInsured || item.a9 || 0,
+        a9: item.a9,
+        grossPremium: item.grossPremium || item.a10 || 0,
+        a10: item.a10,
+        premiumRate: item.premiumRate,
+        totalSumInsured: item.sumInsured || item.a9 || 0,
+        totalPremium: item.grossPremium || item.a10 || 0,
+        freqOfPayment: item.field7 || "Monthly",
+        field7: item.field7,
+        duration: item.a1 || 12,
+        a1: item.a1,
+        photo: item.photo,
+        deleted: item.deleted,
+        active: item.active,
+        submittedBy: item.submittedBy,
+        submittedOn: item.submittedOn,
+        modifiedBy: item.modifiedBy,
+        modifiedOn: item.modifiedOn,
+        // Keep original data for debugging
+        _raw: item
+      })) : [];
+      
+      console.log("✅ Mapped Members:", members);
+      console.log("📊 Number of members:", members.length);
+      
+      return members;
     } catch (error: any) {
+      console.error("❌ Error fetching members:", error);
       return rejectWithValue(error.message || "Failed to fetch members");
     }
   }
@@ -1055,23 +1116,27 @@ const groupLifeQuotationSlice = createSlice({
         state.error.detail = action.payload as string;
       })
 
-      // Fetch Members
-      .addCase(fetchPolicyMembers.pending, (state) => {
-        state.loading.detail = true;
-        state.error.detail = null;
-      })
-      .addCase(fetchPolicyMembers.fulfilled, (state, action) => {
-        state.loading.detail = false;
-        state.currentMembers = action.payload;
-        if (state.currentQuotation) {
-          state.currentQuotation.members = action.payload;
-          state.currentQuotation.totalMembers = action.payload.length;
-        }
-      })
-      .addCase(fetchPolicyMembers.rejected, (state, action) => {
-        state.loading.detail = false;
-        state.error.detail = action.payload as string;
-      })
+    // Fetch Members - REPLACE THIS ENTIRE BLOCK
+.addCase(fetchPolicyMembers.pending, (state) => {
+  state.loading.detail = true;
+  state.error.detail = null;
+})
+.addCase(fetchPolicyMembers.fulfilled, (state, action) => {
+  state.loading.detail = false;
+  // ✅ Store the mapped members in currentMembers
+  state.currentMembers = action.payload || [];
+  // Also update the currentQuotation if it exists
+  if (state.currentQuotation) {
+    state.currentQuotation.members = action.payload || [];
+    state.currentQuotation.totalMembers = action.payload?.length || 0;
+  }
+  console.log("✅ Redux state updated with members:", state.currentMembers);
+})
+.addCase(fetchPolicyMembers.rejected, (state, action) => {
+  state.loading.detail = false;
+  state.error.detail = action.payload as string;
+  console.error("❌ Redux error fetching members:", action.payload);
+})
 
       // Compute Member Premium
       .addCase(computeMemberPremium.pending, (state) => {
@@ -1091,32 +1156,25 @@ const groupLifeQuotationSlice = createSlice({
         state.error.compute = action.payload as string;
       })
 
-      // Save Member
-      .addCase(savePolicyMember.pending, (state) => {
-        state.loading.update = true;
-        state.error.update = null;
-      })
-      .addCase(savePolicyMember.fulfilled, (state, action) => {
-        state.loading.update = false;
-        const member = action.payload;
-        // Add or update member in current list
-        const existingIndex = state.currentMembers.findIndex(
-          (m) => m.id === member.id || m.memberId === member.memberId
-        );
-        if (existingIndex !== -1) {
-          state.currentMembers[existingIndex] = member;
-        } else {
-          state.currentMembers.push(member);
-        }
-        if (state.currentQuotation) {
-          state.currentQuotation.members = state.currentMembers;
-          state.currentQuotation.totalMembers = state.currentMembers.length;
-        }
-      })
-      .addCase(savePolicyMember.rejected, (state, action) => {
-        state.loading.update = false;
-        state.error.update = action.payload as string;
-      })
+     // Save Member - UPDATE THIS BLOCK
+.addCase(savePolicyMember.pending, (state) => {
+  state.loading.update = true;
+  state.error.update = null;
+})
+.addCase(savePolicyMember.fulfilled, (state, action) => {
+  state.loading.update = false;
+  // The save returns the saved member with memberID
+  const member = action.payload;
+  console.log("✅ Member saved:", member);
+  
+  // The member is saved on the server, so we should refetch
+  // The component will call fetchMembers after save
+})
+.addCase(savePolicyMember.rejected, (state, action) => {
+  state.loading.update = false;
+  state.error.update = action.payload as string;
+  console.error("❌ Error saving member:", action.payload);
+})
 
       // Remove Member
       .addCase(removePolicyMember.pending, (state) => {

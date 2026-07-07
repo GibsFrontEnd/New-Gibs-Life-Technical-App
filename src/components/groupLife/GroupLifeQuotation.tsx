@@ -411,26 +411,40 @@ export default function GroupLifeQuotation() {
   };
 
   const handleEditQuotation = (quote: any) => {
+    console.log("✏️ Editing quotation:", quote);
+    
+    // Get the policy number from the quote
+    const quoteNumber = quote.policyNo || quote.quotationNumber || quote.quoteNo || quote.id;
+    
+    if (!quoteNumber) {
+      toast({
+        title: "Error",
+        description: "Cannot edit: No policy number found",
+        variant: "destructive",
+      });
+      console.error("❌ No policy number found in quote:", quote);
+      return;
+    }
+    
+    // Set the current quotation in Redux for the edit page to use
     dispatch(setCurrentQuotation(quote));
-    const quoteNumber = getQuotationNumber(quote);
-    navigate(`/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`);
+    
+    // ✅ Navigate to edit page
+    const encodedPolicyNo = encodeURIComponent(quoteNumber);
+    const editPath =`/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`;
+    
+    console.log("🔄 Navigating to edit path:", editPath);
+    navigate(editPath);
   };
 
   const handleNewQuotation = () => {
     console.log("🔄 handleNewQuotation - Starting navigation to create new quotation");
-    console.log("📍 Current location:", window.location.pathname);
     
+    // Clear any existing quotation
     dispatch(setCurrentQuotation(null));
-    console.log("✅ Current quotation cleared from Redux store");
     
-    const targetPath = `/underwriting/group-life-quotations/new`;
-    console.log("🎯 Navigating to:", targetPath);
-    
-    navigate(targetPath);
-    
-    setTimeout(() => {
-      console.log("📍 After navigation - Current location:", window.location.pathname);
-    }, 100);
+    // ✅ Navigate to new quotation page
+    navigate("/underwriting/group-life-quotations/new");
   };
 
   const handlePrintQuotation = (quote: any, e: React.MouseEvent) => {
@@ -966,7 +980,7 @@ export default function GroupLifeQuotation() {
                               className={`${isSelected ? "bg-blue-50" : ""} ${
                                 isApproving ? "opacity-60" : ""
                               } cursor-pointer hover:bg-blue-50/50 border-blue-100 transition-colors`}
-                              onClick={() => handleEditQuotation(quote)}
+                            
                             >
                               <TableCell>
                                 <div onClick={(e) => e.stopPropagation()}>

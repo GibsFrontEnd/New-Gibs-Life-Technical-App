@@ -59,7 +59,7 @@ const MaturityClaims = () => {
 
       const params = {
         classOption: "SV",
-        typeOption: "PENDING",
+       
         date1: filters.dateFrom || defaultDateFrom,
         date2: filters.dateTo || defaultDateTo,
         searchText: filters.searchText || "",
@@ -127,7 +127,7 @@ const MaturityClaims = () => {
   const handleView = (claim: ClaimReserve) => {
     console.log("View claim:", claim);
     navigate(`/claims/individual/claim/view/${claim.claimID}`, {
-      state: { returnPath: "/claims/individual/surrende" }
+      state: { returnPath: "/claims/individual/maturity" }
     });
   };
 

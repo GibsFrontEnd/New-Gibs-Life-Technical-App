@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchInvestmentProposals } from "../../features/reducers/proposalReducers/proposalsSlice";
 import type { Proposal } from "../../features/reducers/proposalReducers/proposalsSlice";
-import { FileText, ChevronDown, ChevronUp, Search, X, RefreshCw, ArrowRight } from "lucide-react";
+import { FileText, ChevronDown, ChevronUp, Search, X, RefreshCw, ArrowRight, Pencil } from "lucide-react";
 
 // ─── helpers ───────────────────────────────────────────────
 const fmt = (n: number | null | undefined) =>
@@ -50,8 +50,6 @@ const PolicyAdminPage = () => {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
-
-
   // pagination
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
@@ -96,7 +94,27 @@ const PolicyAdminPage = () => {
 
   const retryFetch = () => dispatch(fetchInvestmentProposals(activeTag));
 
+  const handleEdit = (proposal: Proposal) => {
+    if (activeTag === "B") {
+      // Investment policy - navigate to the same new investment page with edit mode
+      navigate("/underwriting/individual/policy-admin/new-investment", {
+        state: { 
+          policyData: proposal,
+          editMode: true 
+        }
+      });
+    } else {
+      // Traditional policy - navigate to the same new traditional page with edit mode
+      navigate("/underwriting/individual/policy-admin/new-traditional", {
+        state: { 
+          policyData: proposal,
+          editMode: true 
+        }
+      });
+    }
+  };
 
+  
   // ─── loading skeleton ─────────────────────────────────────
   if (loading) {
     return (
@@ -140,45 +158,45 @@ const PolicyAdminPage = () => {
         </p>
       </div>
 
-   {/* Policy Type Tabs - Modern Version */}
-<div className="flex items-center gap-0 border-b-2 border-gray-200 bg-white rounded-t-xl overflow-hidden">
-  <button
-    onClick={() => { setActiveTag("B"); setPage(1); }}
-    className={`
-      px-8 py-3.5 text-sm font-semibold transition-all duration-200 relative
-      ${activeTag === "B" 
-        ? "text-[#8c4b8d] bg-gradient-to-b from-[#8c4b8d]/5 to-white" 
-        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50/50"
-      }
-    `}
-  >
-    <div className="flex items-center gap-2">
-      <span className="text-base">📈</span>
-      Investment Policies
-    </div>
-    {activeTag === "B" && (
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#8c4b8d] rounded-t-full shadow-[0_0_8px_rgba(140,75,141,0.3)]" />
-    )}
-  </button>
-  <button
-    onClick={() => { setActiveTag("A"); setPage(1); }}
-    className={`
-      px-8 py-3.5 text-sm font-semibold transition-all duration-200 relative
-      ${activeTag === "A" 
-        ? "text-[#8c4b8d] bg-gradient-to-b from-[#8c4b8d]/5 to-white" 
-        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50/50"
-      }
-    `}
-  >
-    <div className="flex items-center gap-2">
-      <span className="text-base">🏛️</span>
-      Traditional Policies
-    </div>
-    {activeTag === "A" && (
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#8c4b8d] rounded-t-full shadow-[0_0_8px_rgba(140,75,141,0.3)]" />
-    )}
-  </button>
-</div>
+      {/* Policy Type Tabs - Modern Version */}
+      <div className="flex items-center gap-0 border-b-2 border-gray-200 bg-white rounded-t-xl overflow-hidden">
+        <button
+          onClick={() => { setActiveTag("B"); setPage(1); }}
+          className={`
+            px-8 py-3.5 text-sm font-semibold transition-all duration-200 relative
+            ${activeTag === "B" 
+              ? "text-[#8c4b8d] bg-gradient-to-b from-[#8c4b8d]/5 to-white" 
+              : "text-gray-500 hover:text-gray-700 hover:bg-gray-50/50"
+            }
+          `}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-base">📈</span>
+            Investment Policies
+          </div>
+          {activeTag === "B" && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#8c4b8d] rounded-t-full shadow-[0_0_8px_rgba(140,75,141,0.3)]" />
+          )}
+        </button>
+        <button
+          onClick={() => { setActiveTag("A"); setPage(1); }}
+          className={`
+            px-8 py-3.5 text-sm font-semibold transition-all duration-200 relative
+            ${activeTag === "A" 
+              ? "text-[#8c4b8d] bg-gradient-to-b from-[#8c4b8d]/5 to-white" 
+              : "text-gray-500 hover:text-gray-700 hover:bg-gray-50/50"
+            }
+          `}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-base">🏛️</span>
+            Traditional Policies
+          </div>
+          {activeTag === "A" && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#8c4b8d] rounded-t-full shadow-[0_0_8px_rgba(140,75,141,0.3)]" />
+          )}
+        </button>
+      </div>
 
       {/* Search & Filters */}
       <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -309,7 +327,6 @@ const PolicyAdminPage = () => {
                       key={p.transGUID}
                       className="border-b border-gray-100 transition-colors hover:bg-gray-50"
                     >
-
                       {/* Policy No */}
                       <td className="px-4 py-3">
                         <div className="font-semibold text-gray-800">{p.policyNo || "—"}</div>
@@ -349,14 +366,26 @@ const PolicyAdminPage = () => {
                         <StatusBadge status={p.transSTATUS || p.status} />
                       </td>
 
-                      {/* Actions — details icon only */}
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          title="View Details"
-                          className="p-2 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
-                        >
-                          <FileText size={16} />
-                        </button>
+                      {/* Actions - Edit and View icons */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {/* ✅ Edit Button */}
+                          <button
+                            onClick={() => handleEdit(p)}
+                            title="Edit Policy"
+                            className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          
+                          {/* View Details Button */}
+                          <button
+                            title="View Details"
+                            className="p-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
+                          >
+                            <FileText size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

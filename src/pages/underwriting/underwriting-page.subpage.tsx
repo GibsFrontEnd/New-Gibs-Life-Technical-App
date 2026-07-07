@@ -96,6 +96,17 @@ const UnderwritingSubPage = () => {
     return <NewTraditionalPolicySetupPage />;
   }
 
+  // ✅ ADD THESE EDIT ROUTES - Use the same components as create
+  // Handle: /underwriting/individual/policy-admin/edit-investment/:id (EDIT)
+  if (pathname.startsWith("/underwriting/individual/policy-admin/edit-investment/")) {
+    return <NewInvestmentPolicySetupPage />;
+  }
+
+  // Handle: /underwriting/individual/policy-admin/edit-traditional/:id (EDIT)
+  if (pathname.startsWith("/underwriting/individual/policy-admin/edit-traditional/")) {
+    return <NewTraditionalPolicySetupPage />;
+  }
+
   // ============================================
   // INDIVIDUAL - ENDORSEMENTS (Coming Soon)
   // ============================================

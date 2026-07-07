@@ -96,6 +96,44 @@ export interface ClaimReserveSearchParams {
   pageSize?: number;
 }
 
+// ✅ New interface for Individual Policy Search
+export interface IndividualPolicySearchParams {
+  coverCode?: string;           // e.g. "GLA" for Group Life
+  brCode?: string;
+  assuredCode?: string;
+  status?: string;
+  isProposal?: boolean;         // false = policies only, true = proposals only, null = both
+  search?: string;              // Matches against policy number or insured name
+  fromDate?: string;            // Filter on start date (inclusive)
+  toDate?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface IndividualPolicy {
+  policyNo: string;
+  isProposal: boolean;
+  coverCode: string;
+  covertype: string;
+  brCode: string;
+  assuredCode: string;
+  insuredName: string;
+  tDate: string;
+  startDate: string;
+  maturityDate: string;
+  sumAssured: number;
+  basicPremium: number;
+  status: string;
+}
+
+export interface IndividualPolicyResponse {
+  items: IndividualPolicy[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
 interface ClaimsState {
   // Claim Notifications
   notifications: ClaimNotification[];
@@ -120,6 +158,13 @@ interface ClaimsState {
   searchTotalCount: number;
   loadingSearch: boolean;
   errorSearch: string | null;
+
+  // ✅ Individual Policy Search
+  policies: IndividualPolicy[];
+  policiesTotalCount: number;
+  policiesTotalPages: number;
+  loadingPolicies: boolean;
+  errorPolicies: string | null;
   
   // Pagination
   pagination: {
@@ -150,6 +195,13 @@ const initialState: ClaimsState = {
   searchTotalCount: 0,
   loadingSearch: false,
   errorSearch: null,
+
+  // ✅ Initialize policy search state
+  policies: [],
+  policiesTotalCount: 0,
+  policiesTotalPages: 0,
+  loadingPolicies: false,
+  errorPolicies: null,
   
   pagination: {
     currentPage: 1,
@@ -225,7 +277,7 @@ export const searchClaimReserves = createAsyncThunk(
   "claims/searchClaimReserves",
   async ({ 
     classOption = "", 
-    typeOption = "", 
+    typeOption = "PENDING", 
     date1 = "", 
     date2 = "", 
     searchField = "", 
@@ -330,6 +382,49 @@ export const insertClaimReserve = createAsyncThunk(
   }
 );
 
+// ✅ NEW: Search Individual Life Policies
+export const searchIndividualPolicies = createAsyncThunk(
+  "claims/searchIndividualPolicies",
+  async ({
+    coverCode = "",
+    brCode = "",
+    assuredCode = "",
+    status = "",
+    isProposal = null,
+    search = "",
+    fromDate = "",
+    toDate = "",
+    page = 1,
+    pageSize = 10
+  }: IndividualPolicySearchParams = {}, { rejectWithValue }) => {
+    try {
+      const params = new URLSearchParams();
+      
+      // Add optional parameters only if they have values
+      if (coverCode) params.append('CoverCode', coverCode);
+      if (brCode) params.append('BrCode', brCode);
+      if (assuredCode) params.append('AssuredCode', assuredCode);
+      if (status) params.append('Status', status);
+      if (isProposal !== null && isProposal !== undefined) {
+        params.append('IsProposal', isProposal.toString());
+      }
+      if (search) params.append('Search', search);
+      if (fromDate) params.append('FromDate', fromDate);
+      if (toDate) params.append('ToDate', toDate);
+      if (page) params.append('Page', page.toString());
+      if (pageSize) params.append('PageSize', pageSize.toString());
+      
+      const url = `/v1/lifepolicyAdmin/IndpolicySearch?${params.toString()}`;
+      const response = await apiCall.get(url);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "Failed to search individual policies"
+      );
+    }
+  }
+);
+
 // ==================== SLICE ====================
 
 const claimsSlice = createSlice({
@@ -346,10 +441,14 @@ const claimsSlice = createSlice({
       state.currentReserve = null;
       state.searchResults = [];
       state.searchTotalCount = 0;
+      state.policies = [];
+      state.policiesTotalCount = 0;
+      state.policiesTotalPages = 0;
       state.errorNotifications = null;
       state.errorReserves = null;
       state.errorCurrent = null;
       state.errorSearch = null;
+      state.errorPolicies = null;
     },
     
     // Clear specific errors
@@ -368,6 +467,10 @@ const claimsSlice = createSlice({
     clearSearchError: (state) => {
       state.errorSearch = null;
     },
+
+    clearPoliciesError: (state) => {
+      state.errorPolicies = null;
+    },
     
     // Clear all errors
     clearAllErrors: (state) => {
@@ -375,6 +478,7 @@ const claimsSlice = createSlice({
       state.errorReserves = null;
       state.errorCurrent = null;
       state.errorSearch = null;
+      state.errorPolicies = null;
     },
     
     // Set current claim
@@ -394,6 +498,14 @@ const claimsSlice = createSlice({
     
     // Reset state
     resetClaimsState: () => initialState,
+
+    // Clear policies
+    clearPolicies: (state) => {
+      state.policies = [];
+      state.policiesTotalCount = 0;
+      state.policiesTotalPages = 0;
+      state.errorPolicies = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -589,6 +701,53 @@ const claimsSlice = createSlice({
       .addCase(insertClaimReserve.rejected, (state, action) => {
         state.loadingCurrent = false;
         state.errorCurrent = action.payload as string;
+      })
+
+      // ===== SEARCH INDIVIDUAL POLICIES =====
+      .addCase(searchIndividualPolicies.pending, (state) => {
+        state.loadingPolicies = true;
+        state.errorPolicies = null;
+        state.policies = [];
+        state.policiesTotalCount = 0;
+        state.policiesTotalPages = 0;
+      })
+      .addCase(searchIndividualPolicies.fulfilled, (state, action) => {
+        state.loadingPolicies = false;
+        state.errorPolicies = null;
+        
+        const response = action.payload;
+        console.log("📋 Redux - Individual Policies Search Response:", response);
+        
+        if (response?.items && Array.isArray(response.items)) {
+          state.policies = response.items;
+          state.policiesTotalCount = response.totalCount || response.items.length;
+          state.policiesTotalPages = response.totalPages || 0;
+          
+          // Also update pagination
+          state.pagination = {
+            currentPage: response.page || 1,
+            pageSize: response.pageSize || 10,
+            totalItems: response.totalCount || 0,
+            totalPages: response.totalPages || 0,
+          };
+        } else if (Array.isArray(response)) {
+          state.policies = response;
+          state.policiesTotalCount = response.length;
+          state.policiesTotalPages = 1;
+        } else {
+          state.policies = [];
+          state.policiesTotalCount = 0;
+          state.policiesTotalPages = 0;
+        }
+        
+     
+      })
+      .addCase(searchIndividualPolicies.rejected, (state, action) => {
+        state.loadingPolicies = false;
+        state.errorPolicies = action.payload as string;
+        state.policies = [];
+        state.policiesTotalCount = 0;
+        state.policiesTotalPages = 0;
       });
   },
 });
@@ -601,11 +760,13 @@ export const {
   clearReservesError,
   clearCurrentError,
   clearSearchError,
+  clearPoliciesError,
   clearAllErrors,
   setCurrentClaim,
   setCurrentReserve,
   setPagination,
   resetClaimsState,
+  clearPolicies,
 } = claimsSlice.actions;
 
 // ==================== EXPORT SELECTORS ====================
@@ -649,6 +810,18 @@ export const selectSearchLoading = (state: { claims: ClaimsState }) =>
   state.claims.loadingSearch;
 export const selectSearchError = (state: { claims: ClaimsState }) => 
   state.claims.errorSearch;
+
+// ✅ Individual Policy Selectors
+export const selectAllPolicies = (state: { claims: ClaimsState }) => 
+  state.claims.policies;
+export const selectPoliciesTotalCount = (state: { claims: ClaimsState }) => 
+  state.claims.policiesTotalCount;
+export const selectPoliciesTotalPages = (state: { claims: ClaimsState }) => 
+  state.claims.policiesTotalPages;
+export const selectPoliciesLoading = (state: { claims: ClaimsState }) => 
+  state.claims.loadingPolicies;
+export const selectPoliciesError = (state: { claims: ClaimsState }) => 
+  state.claims.errorPolicies;
 
 // Pagination Selectors
 export const selectPagination = (state: { claims: ClaimsState }) => 

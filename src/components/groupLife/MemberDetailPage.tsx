@@ -216,7 +216,7 @@ const MemberDetailPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate("/underwriting/group-life-quotations/policies");
+    navigate(-1); // Goes back one step in history
   };
 
   // If no policy number, show error

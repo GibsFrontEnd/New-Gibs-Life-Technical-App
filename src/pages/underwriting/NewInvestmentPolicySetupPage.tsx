@@ -1,6 +1,9 @@
+// src/components/policy-admin/NewInvestmentPolicySetupPage.tsx
+// @ts-nocheck
+
 import { useState, useEffect } from "react";
 import { ArrowLeft, Users, RefreshCw, Save } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import apiCall from "../../utils/api-call";
 
 // ─── helpers ───────────────────────────────────────────────
@@ -115,11 +118,33 @@ const emptyFormState = {
 
 const NewInvestmentPolicySetupPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // ✅ Check if we're in edit mode and get initial data
+  const isEditMode = location.state?.editMode || location.pathname.includes("edit-investment");
+  const initialData = location.state?.policyData || null;
+  
   const [activeTab, setActiveTab] = useState("Information");
   const [formData, setFormData] = useState(emptyFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
+
+  // ✅ Populate form with initial data if in edit mode
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      setFormData({
+        ...emptyFormState,
+        ...initialData,
+        // Ensure dates are in the correct format
+        dateOfBirth: initialData.dateOfBirth?.split('T')[0] || "",
+        issueDate: initialData.issueDate?.split('T')[0] || "",
+        expiryDate: initialData.expiryDate?.split('T')[0] || "",
+        dateofpayment: initialData.dateofpayment?.split('T')[0] || "",
+        dateEmployed: initialData.dateEmployed?.split('T')[0] || "",
+      });
+    }
+  }, [isEditMode, initialData]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -200,11 +225,24 @@ const NewInvestmentPolicySetupPage = () => {
         dateEmployed: formData.dateEmployed ? new Date(formData.dateEmployed).toISOString() : new Date().toISOString(),
       };
       
-      await apiCall.post("/v1/lifepolicyAdmin/create", payload);
-      alert("Investment policy created successfully!");
+      if (isEditMode) {
+        // ✅ CORRECT: Use POST with /edit/{policyNo}
+        const policyNo = formData.policyNo || formData.proposalNo;
+        if (!policyNo) {
+          alert("Policy number is required for update");
+          return;
+        }
+        
+        await apiCall.post(`/v1/lifepolicyAdmin/edit/${encodeURIComponent(policyNo)}`, payload);
+        alert("Investment policy updated successfully!");
+      } else {
+        // ✅ Create new policy
+        await apiCall.post("/v1/lifepolicyAdmin/create", payload);
+        alert("Investment policy created successfully!");
+      }
       navigate("/underwriting/individual/policy-admin");
     } catch (err: any) {
-      alert("Failed to create policy: " + (err?.response?.data?.message || err.message || "Unknown error"));
+      alert(`Failed to ${isEditMode ? 'update' : 'create'} policy: ` + (err?.response?.data?.message || err.message || "Unknown error"));
     } finally {
       setIsSubmitting(false);
     }
@@ -215,36 +253,38 @@ const NewInvestmentPolicySetupPage = () => {
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button
-          onClick={() => navigate("/underwriting/individual/policy-admin")}
+          onClick={() => navigate(-1)}
           className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">New Investment Policy Setup</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Create a brand new policy for a client</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isEditMode ? "Edit Investment Policy" : "New Investment Policy Setup"}
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {isEditMode ? "Update policy details for the client" : "Create a brand new policy for a client"}
+          </p>
         </div>
       </div>
 
       {/* Tabs */}
- 
-
       <div className="flex items-center gap-2 border-b border-gray-200">
-              <button
-                onClick={() => setActiveTab("Information")}
-                className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTab === "Information" ? "text-[#8c4b8d]" : "text-gray-500 hover:text-gray-700"}`}
-              >
-               Information
-                {activeTab === "Information" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8c4b8d]" />}
-              </button>
-              <button
-                onClick={() => setActiveTab("Beneficiaries")}
-                className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTab === "Beneficiaries" ? "text-[#8c4b8d]" : "text-gray-500 hover:text-gray-700"}`}
-              >
-                 <Users size={16} /> Beneficiaries
-                {activeTab ==="Beneficiaries"  && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8c4b8d]" />}
-              </button>
-            </div>
+        <button
+          onClick={() => setActiveTab("Information")}
+          className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTab === "Information" ? "text-[#8c4b8d]" : "text-gray-500 hover:text-gray-700"}`}
+        >
+          Information
+          {activeTab === "Information" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8c4b8d]" />}
+        </button>
+        <button
+          onClick={() => setActiveTab("Beneficiaries")}
+          className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTab === "Beneficiaries" ? "text-[#8c4b8d]" : "text-gray-500 hover:text-gray-700"}`}
+        >
+          <Users size={16} /> Beneficiaries
+          {activeTab === "Beneficiaries" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8c4b8d]" />}
+        </button>
+      </div>
 
       {activeTab === "Information" && (
         <form onSubmit={handleCreatePolicy} className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 lg:p-8">
@@ -355,12 +395,12 @@ const NewInvestmentPolicySetupPage = () => {
               {isSubmitting ? (
                 <>
                   <RefreshCw size={16} className="animate-spin" />
-                  Creating...
+                  {isEditMode ? "Updating..." : "Creating..."}
                 </>
               ) : (
                 <>
                   <Save size={16} />
-                  Submit Policy
+                  {isEditMode ? "Update Policy" : "Submit Policy"}
                 </>
               )}
             </button>
@@ -375,7 +415,9 @@ const NewInvestmentPolicySetupPage = () => {
           </div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">No Beneficiaries Added Yet</h2>
           <p className="text-gray-500 max-w-sm">
-            Save the initial policy setup first to unlock adding beneficiaries in the system.
+            {isEditMode 
+              ? "Add beneficiaries to this policy in the system." 
+              : "Save the initial policy setup first to unlock adding beneficiaries in the system."}
           </p>
         </div>
       )}

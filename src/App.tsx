@@ -122,35 +122,44 @@ const App: React.FC = () => {
             <Route path="tickets" element={<CSUTickets />} />
           </Route>
 
-          <Route path="/underwriting" element={<Underwriting />}>
-            <Route path="overview" element={<UnderwritingOverview />} />
-            
-            {/* All routes go through UnderwritingSubPage */}
-            <Route path="group-life-quotations/members/:id" element={<UnderwritingSubPage />} />
-            <Route path="group-life-quotations/new" element={<UnderwritingSubPage />} />
-            <Route path="group-life-quotations/:id" element={<UnderwritingSubPage />} />
-            <Route path="group-life-quotations" element={<UnderwritingSubPage />} />
-            <Route path="individual/policy-admin" element={<UnderwritingSubPage />} />
-            <Route path="individual/policy-admin/new-investment" element={<UnderwritingSubPage />} />
-            <Route path="individual/policy-admin/new-traditional" element={<UnderwritingSubPage />} />
-            <Route path="convert-to-policy/investment-policies" element={<UnderwritingSubPage />} />
-            <Route path="convert-to-policy/investment-policies/:id" element={<UnderwritingSubPage />} />
-            <Route path="convert-to-policy/group-business-quotations" element={<UnderwritingSubPage />} />
-            <Route path="convert-to-scheme/group-life-policies" element={<UnderwritingSubPage />} />
-            <Route path="convert-to-scheme/credit-life-policies" element={<UnderwritingSubPage />} />
-            <Route path="group-life/scheme-renewals" element={<SchemeRenewals />} />
+          
 
-            {/* All other underwriting routes - just use UnderwritingSubPage */}
-            <Route path="individual/endorsements" element={<UnderwritingSubPage />} />
-            <Route path="individual/endorsements/*" element={<UnderwritingSubPage />} />
-            <Route path="individual/processing" element={<UnderwritingSubPage />} />
-            <Route path="individual/processing/*" element={<UnderwritingSubPage />} />
-            <Route path="individual/maintenance" element={<UnderwritingSubPage />} />
-            <Route path="group-life/endorsements" element={<UnderwritingSubPage />} />
-            <Route path="group-life/maintenance" element={<UnderwritingSubPage />} />
-            <Route path="credit-life/scheme-admin" element={<UnderwritingSubPage />} />
-            <Route path="credit-life/scheme-renewals" element={<UnderwritingSubPage />} />
-          </Route>
+<Route path="/underwriting" element={<Underwriting />}>
+  <Route path="overview" element={<UnderwritingOverview />} />
+  
+  {/* All routes go through UnderwritingSubPage */}
+  <Route path="group-life-quotations/members/:id" element={<UnderwritingSubPage />} />
+  <Route path="group-life-quotations/new" element={<UnderwritingSubPage />} />
+  <Route path="group-life-quotations/:id" element={<UnderwritingSubPage />} />
+  <Route path="group-life-quotations" element={<UnderwritingSubPage />} />
+  
+  {/* ✅ Individual Policy Admin Routes */}
+  <Route path="individual/policy-admin" element={<UnderwritingSubPage />} />
+  <Route path="individual/policy-admin/new-investment" element={<UnderwritingSubPage />} />
+  <Route path="individual/policy-admin/new-traditional" element={<UnderwritingSubPage />} />
+  
+  {/* ✅ ADD THESE TWO EDIT ROUTES */}
+  <Route path="individual/policy-admin/edit-investment/:id" element={<UnderwritingSubPage />} />
+  <Route path="individual/policy-admin/edit-traditional/:id" element={<UnderwritingSubPage />} />
+  
+  <Route path="convert-to-policy/investment-policies" element={<UnderwritingSubPage />} />
+  <Route path="convert-to-policy/investment-policies/:id" element={<UnderwritingSubPage />} />
+  <Route path="convert-to-policy/group-business-quotations" element={<UnderwritingSubPage />} />
+  <Route path="convert-to-scheme/group-life-policies" element={<UnderwritingSubPage />} />
+  <Route path="convert-to-scheme/credit-life-policies" element={<UnderwritingSubPage />} />
+  <Route path="group-life/scheme-renewals" element={<SchemeRenewals />} />
+
+  {/* All other underwriting routes - just use UnderwritingSubPage */}
+  <Route path="individual/endorsements" element={<UnderwritingSubPage />} />
+  <Route path="individual/endorsements/*" element={<UnderwritingSubPage />} />
+  <Route path="individual/processing" element={<UnderwritingSubPage />} />
+  <Route path="individual/processing/*" element={<UnderwritingSubPage />} />
+  <Route path="individual/maintenance" element={<UnderwritingSubPage />} />
+  <Route path="group-life/endorsements" element={<UnderwritingSubPage />} />
+  <Route path="group-life/maintenance" element={<UnderwritingSubPage />} />
+  <Route path="credit-life/scheme-admin" element={<UnderwritingSubPage />} />
+  <Route path="credit-life/scheme-renewals" element={<UnderwritingSubPage />} />
+</Route>
 
           {/* 
             ✅ UPDATED CLAIMS ROUTES
