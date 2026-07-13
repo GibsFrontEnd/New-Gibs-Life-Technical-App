@@ -23,7 +23,8 @@ import {
   AlertCircle,
   Bell,
   RotateCcw,
-  Calculator
+  Calculator,
+  FolderOpen
 } from "lucide-react";
 
 const SIDEBAR_BG = "#0d47a1";        // Dark blue
@@ -36,7 +37,15 @@ const sections = [
     key: "individual",
     icon: User,
     items: [
-      { path: "/underwriting/individual/policy-admin", label: "Policy Admin", icon: FileCheck },
+      { 
+        path: "/underwriting/individual/policy-admin", 
+        label: "Policy Admin", 
+        icon: FileCheck,
+        subItems: [
+          { path: "/underwriting/individual/policy-admin/investment-policies", label: "Investment Policies", icon: TrendingUp },
+          { path: "/underwriting/individual/policy-admin/traditional-policies", label: "Traditional Policies", icon: FolderOpen },
+        ]
+      },
       { 
         path: "/underwriting/individual/endorsements", 
         label: "Endorsements", 

@@ -15,8 +15,8 @@ import {
   selectSearchTotalCount,
   type ClaimReserve,
 } from "../../features/reducers/claimsReducers/claimsSlice";
-import { ClaimFilters } from "../../components/claims/ClaimsFilters";
-import { ClaimsTable } from "../../components/claims/ClaimsTable";
+import ClaimFilters from "../../components/claims/ClaimsFilters";
+import  ClaimsTable  from "../../components/claims/ClaimsTable";
 import { useToast } from "../../hooks/use-toast";
 
 const MaturityClaims = () => {
@@ -58,7 +58,7 @@ const MaturityClaims = () => {
       const defaultDateTo = "2099-12-31 23:59:59";
 
       const params = {
-        classOption: "SV",
+        classOption: "MV",
        
         date1: filters.dateFrom || defaultDateFrom,
         date2: filters.dateTo || defaultDateTo,

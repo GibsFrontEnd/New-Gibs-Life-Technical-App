@@ -1,3 +1,5 @@
+// Updated ClaimsSidebar.tsx
+
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -56,7 +58,10 @@ const sections: { label: string; key: string; icon: any; items: SectionItem[] }[
     key: "group-life",
     icon: Users,
     items: [
-      { label: "Death Claim", path: "/claims/group-life/death-claim", icon: Skull },
+      // Group Life claim types with their specific paths
+     
+      { label: "Death Claim",       path: "/claims/group-life/death-claim",       icon: Skull },
+      
       {
         label: "Processing",
         key: "group-life-processing",
@@ -77,6 +82,9 @@ const sections: { label: string; key: string; icon: any; items: SectionItem[] }[
     icon: CreditCard,
     items: [
       { label: "Death Claim", path: "/claims/credit-life/death-claim", icon: Skull },
+      // { label: "Maturity",    path: "/claims/credit-life/maturity",    icon: HeartHandshake },
+      // { label: "Surrender",   path: "/claims/credit-life/surrender",   icon: FileX },
+      // { label: "Partial Withdrawal", path: "/claims/credit-life/partial-withdrawal", icon: FileMinus },
       {
         label: "Processing",
         key: "credit-life-processing",

@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import CreateUserModal from "@/components/Modals/CreateUserModal";
-import CreateRoleModal from "@/components/Modals/CreateRoleModal";
+import CreateUserModal from "../../components/Modals/CreateUserModal";
+import CreateRoleModal from "../../components/Modals/CreateRoleModal";
 import "./AdminSecurity.css";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/UI/tabs";
-import SecurityUsers from "@/components/admin/security-page/security.users";
-import SecurityRoles from "@/components/admin/security-page/security.roles";
-import SecurityPermissions from "@/components/admin/security-page/security.permissions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/UI/tabs";
+import SecurityUsers from "../../components/admin/security-page/security.users";
+import SecurityRoles from "../../components/admin/security-page/security.roles";
+import SecurityPermissions from "../../components/admin/security-page/security.permissions";
 
 const AdminSecurity: React.FC = () => {
   const [activeTab, setActiveTab] = useState("Users");

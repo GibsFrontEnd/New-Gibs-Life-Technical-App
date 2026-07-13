@@ -3,8 +3,8 @@ import type {
   MarketingStaffState,
   MktStaff,
   UpdateMktStaffRequest,
-} from "@/types/marketing-staff";
-import apiCall from "@/utils/api-call";
+} from "../../../types/marketing-staff";
+import apiCall from "../../../utils/api-call";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 export const fetchMktStaffs = createAsyncThunk(

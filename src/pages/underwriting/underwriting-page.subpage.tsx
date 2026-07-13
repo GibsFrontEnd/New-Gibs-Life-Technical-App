@@ -81,7 +81,17 @@ const UnderwritingSubPage = () => {
   // INDIVIDUAL ROUTES
   // ============================================
 
-  // Handle: /underwriting/individual/policy-admin (LIST)
+  // 🆕 Handle: /underwriting/individual/policy-admin/investment-policies (Investment Policies List)
+  if (pathname === "/underwriting/individual/policy-admin/investment-policies") {
+    return <PolicyAdminPage defaultTab="B" />;
+  }
+
+  // 🆕 Handle: /underwriting/individual/policy-admin/traditional-policies (Traditional Policies List)
+  if (pathname === "/underwriting/individual/policy-admin/traditional-policies") {
+    return <PolicyAdminPage defaultTab="A" />;
+  }
+
+  // Handle: /underwriting/individual/policy-admin (LIST - Default/All Policies)
   if (pathname === "/underwriting/individual/policy-admin") {
     return <PolicyAdminPage />;
   }
@@ -96,7 +106,6 @@ const UnderwritingSubPage = () => {
     return <NewTraditionalPolicySetupPage />;
   }
 
-  // ✅ ADD THESE EDIT ROUTES - Use the same components as create
   // Handle: /underwriting/individual/policy-admin/edit-investment/:id (EDIT)
   if (pathname.startsWith("/underwriting/individual/policy-admin/edit-investment/")) {
     return <NewInvestmentPolicySetupPage />;

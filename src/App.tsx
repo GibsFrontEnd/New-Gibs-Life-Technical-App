@@ -52,7 +52,7 @@ import SchemeRenewals from "./components/groupLife/SchemeRenewals";
 import CreditLifeSchemeAdmin from "./components/CreditLife/CreditLifeSchemeAdmin";
 import CreditLifeSchemeRenewals from "./components/CreditLife/CreditLifeSchemeRenewals";
 
-// Import the new individual claim pages
+// Imports of  claim pages
 import  MaturityClaims  from "./pages/claims/MaturityClaims";
 import  SurrenderClaims  from "./pages/claims/SurrenderClaims";
 import  PartialWithdrawalClaims  from "./pages/claims/PartialWithdrawalClaims";
@@ -60,6 +60,13 @@ import  DeathBenefitClaims  from "./pages/claims/DeathBenefitClaims";
 import  ClaimCreatePage  from "./components/claims/ClaimCreatePage";
 import  ClaimEditPage from "./components/claims/ClaimEditPage";
 import ClaimFormPage from "./components/claims/ClaimsFormPage"; // New unified form page for create, edit, and view
+import GroupLifeDeathClaims from "./pages/claims/GroupLifeClaims/GroupLifeDeathClaims";
+import GroupLifeMaturityClaims from "./pages/claims/GroupLifeClaims/GroupLifeMaturityClaims";
+import GroupLifeSurrenderClaims from "./pages/claims/GroupLifeClaims/GroupLifeSurrenderClaims";
+import GroupLifePartialWithdrawalClaims from "./pages/claims/GroupLifeClaims/GroupLifePartialWithdrawalClaims";
+import GroupLifeClaimFormPage from "./components/claims/GroupLife/GroupLifeFormPage"
+import CreditLifeDeathClaims from "./pages/claims/CreditLife/CreditLifeDeathClaims";
+import CreditLifeClaimFormPage from "./components/claims/CreditLife/CreditLifeFormPage";
 
 const App: React.FC = () => {
   useAuth();
@@ -122,92 +129,102 @@ const App: React.FC = () => {
             <Route path="tickets" element={<CSUTickets />} />
           </Route>
 
-          
+          <Route path="/underwriting" element={<Underwriting />}>
+            <Route path="overview" element={<UnderwritingOverview />} />
+            
+            {/* All routes go through UnderwritingSubPage */}
+            <Route path="group-life-quotations/members/:id" element={<UnderwritingSubPage />} />
+            <Route path="group-life-quotations/new" element={<UnderwritingSubPage />} />
+            <Route path="group-life-quotations/:id" element={<UnderwritingSubPage />} />
+            <Route path="group-life-quotations" element={<UnderwritingSubPage />} />
+            
+            {/* ✅ Individual Policy Admin Routes */}
+            <Route path="individual/policy-admin" element={<UnderwritingSubPage />} />
+            <Route path="individual/policy-admin/new-investment" element={<UnderwritingSubPage />} />
+            <Route path="individual/policy-admin/new-traditional" element={<UnderwritingSubPage />} />
+            
+            {/* 🆕 ADD THESE INVESTMENT AND TRADITIONAL POLICY LIST ROUTES */}
+            <Route path="individual/policy-admin/investment-policies" element={<UnderwritingSubPage />} />
+            <Route path="individual/policy-admin/traditional-policies" element={<UnderwritingSubPage />} />
+            
+            {/* ✅ EDIT ROUTES */}
+            <Route path="individual/policy-admin/edit-investment/:id" element={<UnderwritingSubPage />} />
+            <Route path="individual/policy-admin/edit-traditional/:id" element={<UnderwritingSubPage />} />
+            
+            <Route path="convert-to-policy/investment-policies" element={<UnderwritingSubPage />} />
+            <Route path="convert-to-policy/investment-policies/:id" element={<UnderwritingSubPage />} />
+            <Route path="convert-to-policy/group-business-quotations" element={<UnderwritingSubPage />} />
+            <Route path="convert-to-scheme/group-life-policies" element={<UnderwritingSubPage />} />
+            <Route path="convert-to-scheme/credit-life-policies" element={<UnderwritingSubPage />} />
+            <Route path="group-life/scheme-renewals" element={<SchemeRenewals />} />
 
-<Route path="/underwriting" element={<Underwriting />}>
-  <Route path="overview" element={<UnderwritingOverview />} />
-  
-  {/* All routes go through UnderwritingSubPage */}
-  <Route path="group-life-quotations/members/:id" element={<UnderwritingSubPage />} />
-  <Route path="group-life-quotations/new" element={<UnderwritingSubPage />} />
-  <Route path="group-life-quotations/:id" element={<UnderwritingSubPage />} />
-  <Route path="group-life-quotations" element={<UnderwritingSubPage />} />
-  
-  {/* ✅ Individual Policy Admin Routes */}
-  <Route path="individual/policy-admin" element={<UnderwritingSubPage />} />
-  <Route path="individual/policy-admin/new-investment" element={<UnderwritingSubPage />} />
-  <Route path="individual/policy-admin/new-traditional" element={<UnderwritingSubPage />} />
-  
-  {/* ✅ ADD THESE TWO EDIT ROUTES */}
-  <Route path="individual/policy-admin/edit-investment/:id" element={<UnderwritingSubPage />} />
-  <Route path="individual/policy-admin/edit-traditional/:id" element={<UnderwritingSubPage />} />
-  
-  <Route path="convert-to-policy/investment-policies" element={<UnderwritingSubPage />} />
-  <Route path="convert-to-policy/investment-policies/:id" element={<UnderwritingSubPage />} />
-  <Route path="convert-to-policy/group-business-quotations" element={<UnderwritingSubPage />} />
-  <Route path="convert-to-scheme/group-life-policies" element={<UnderwritingSubPage />} />
-  <Route path="convert-to-scheme/credit-life-policies" element={<UnderwritingSubPage />} />
-  <Route path="group-life/scheme-renewals" element={<SchemeRenewals />} />
-
-  {/* All other underwriting routes - just use UnderwritingSubPage */}
-  <Route path="individual/endorsements" element={<UnderwritingSubPage />} />
-  <Route path="individual/endorsements/*" element={<UnderwritingSubPage />} />
-  <Route path="individual/processing" element={<UnderwritingSubPage />} />
-  <Route path="individual/processing/*" element={<UnderwritingSubPage />} />
-  <Route path="individual/maintenance" element={<UnderwritingSubPage />} />
-  <Route path="group-life/endorsements" element={<UnderwritingSubPage />} />
-  <Route path="group-life/maintenance" element={<UnderwritingSubPage />} />
-  <Route path="credit-life/scheme-admin" element={<UnderwritingSubPage />} />
-  <Route path="credit-life/scheme-renewals" element={<UnderwritingSubPage />} />
-</Route>
+            {/* All other underwriting routes - just use UnderwritingSubPage */}
+            <Route path="individual/endorsements" element={<UnderwritingSubPage />} />
+            <Route path="individual/endorsements/*" element={<UnderwritingSubPage />} />
+            <Route path="individual/processing" element={<UnderwritingSubPage />} />
+            <Route path="individual/processing/*" element={<UnderwritingSubPage />} />
+            <Route path="individual/maintenance" element={<UnderwritingSubPage />} />
+            <Route path="group-life/endorsements" element={<UnderwritingSubPage />} />
+            <Route path="group-life/maintenance" element={<UnderwritingSubPage />} />
+            <Route path="credit-life/scheme-admin" element={<UnderwritingSubPage />} />
+            <Route path="credit-life/scheme-renewals" element={<UnderwritingSubPage />} />
+          </Route>
 
           {/* 
             ✅ UPDATED CLAIMS ROUTES
             Now using the new individual claim pages for maturity, surrender, partial withdrawal, and death benefit
             The ClaimsSubPage handles processing routes and group/credit life routes
           */}
-         // In your router configuration
-<Route path="/claims" element={<Claims />}>
-  <Route path="overview" element={<ClaimsOverview />} />
-  
-  {/* Individual Claim Pages */}
-  <Route path="individual/maturity" element={<MaturityClaims />} />
-  <Route path="individual/surrender" element={<SurrenderClaims />} />
-  <Route path="individual/partial-withdrawal" element={<PartialWithdrawalClaims />} />
-  <Route path="individual/death-benefit" element={<DeathBenefitClaims />} />
+          <Route path="/claims" element={<Claims />}>
+            <Route path="overview" element={<ClaimsOverview />} />
+            
+            {/* Individual Claim Pages */}
+            <Route path="individual/maturity" element={<MaturityClaims />} />
+            <Route path="individual/surrender" element={<SurrenderClaims />} />
+            <Route path="individual/partial-withdrawal" element={<PartialWithdrawalClaims />} />
+            <Route path="individual/death-benefit" element={<DeathBenefitClaims />} />
 
-  {/* ✅ Create Page - Single dynamic route */}
-  <Route path="individual/:lossType/create" element={<ClaimFormPage mode="create" />} />
-  
-  {/* ✅ Edit Page - Single dynamic route */}
-  <Route path="individual/claim/edit/:id" element={<ClaimFormPage mode="edit" />} />
-  
-  {/* ✅ View Page - Single dynamic route */}
-  <Route path="individual/claim/view/:id" element={<ClaimFormPage mode="view" />} />
-  
-  {/* Individual Processing Routes */}
-  <Route path="individual/processing/offer" element={<ClaimsSubPage />} />
-  <Route path="individual/processing/requisition" element={<ClaimsSubPage />} />
-  <Route path="individual/processing/payment-approval" element={<ClaimsSubPage />} />
-  <Route path="individual/processing/enquiries" element={<ClaimsSubPage />} />
-  
-  {/* Group Life Routes */}
-  <Route path="group-life/death-claim" element={<ClaimsSubPage />} />
+            {/* ✅ Create Page - Single dynamic route */}
+            <Route path="individual/:lossType/create" element={<ClaimFormPage mode="create" />} />
+            
+            {/* ✅ Edit Page - Single dynamic route */}
+            <Route path="individual/claim/edit/:id" element={<ClaimFormPage mode="edit" />} />
+            
+            {/* ✅ View Page - Single dynamic route */}
+            <Route path="individual/claim/view/:id" element={<ClaimFormPage mode="view" />} />
+            
+            {/* Individual Processing Routes */}
+            <Route path="individual/processing/offer" element={<ClaimsSubPage />} />
+            <Route path="individual/processing/requisition" element={<ClaimsSubPage />} />
+            <Route path="individual/processing/payment-approval" element={<ClaimsSubPage />} />
+            <Route path="individual/processing/enquiries" element={<ClaimsSubPage />} />
+            
+           
+  {/* Group Life Claim Pages */}
+  <Route path="group-life/death-claim" element={<GroupLifeDeathClaims />} />
+  <Route path="group-life/maturity" element={<GroupLifeMaturityClaims />} />
+  <Route path="group-life/surrender" element={<GroupLifeSurrenderClaims />} />
+  <Route path="group-life/partial-withdrawal" element={<GroupLifePartialWithdrawalClaims />} />
+  <Route path="group-life/:lossType/create" element={<GroupLifeClaimFormPage mode="create" />} />
+  <Route path="group-life/claim/edit/:id" element={<GroupLifeClaimFormPage mode="edit" />} />
+  <Route path="group-life/claim/view/:id" element={<GroupLifeClaimFormPage mode="view" />} />
   <Route path="group-life/processing/offer" element={<ClaimsSubPage />} />
   <Route path="group-life/processing/requisition" element={<ClaimsSubPage />} />
   <Route path="group-life/processing/payment-approval" element={<ClaimsSubPage />} />
   <Route path="group-life/processing/enquiries" element={<ClaimsSubPage />} />
-  
-  {/* Credit Life Routes */}
-  <Route path="credit-life/death-claim" element={<ClaimsSubPage />} />
-  <Route path="credit-life/processing/offer" element={<ClaimsSubPage />} />
-  <Route path="credit-life/processing/requisition" element={<ClaimsSubPage />} />
-  <Route path="credit-life/processing/payment-approval" element={<ClaimsSubPage />} />
-  <Route path="credit-life/processing/enquiries" element={<ClaimsSubPage />} />
-  
-  {/* Fallback */}
-  <Route path=":section/processing/:subpage" element={<ClaimsSubPage />} />
-</Route>
+            {/* Credit Life Routes */}
+            <Route path="credit-life/death-claim" element={<CreditLifeDeathClaims />} />
+             <Route path="credit-life/:lossType/create" element={<CreditLifeClaimFormPage mode="create" />} />
+               <Route path="credit-life/claim/edit/:id" element={<CreditLifeClaimFormPage mode="edit" />} />
+  <Route path="credit-life/claim/view/:id" element={<CreditLifeClaimFormPage mode="view" />} />
+            <Route path="credit-life/processing/offer" element={<ClaimsSubPage />} />
+            <Route path="credit-life/processing/requisition" element={<ClaimsSubPage />} />
+            <Route path="credit-life/processing/payment-approval" element={<ClaimsSubPage />} />
+            <Route path="credit-life/processing/enquiries" element={<ClaimsSubPage />} />
+            
+            {/* Fallback */}
+            <Route path=":section/processing/:subpage" element={<ClaimsSubPage />} />
+          </Route>
 
           <Route path="/reinsurance" element={<Reinsurance />}>
             <Route path="overview" element={<ReinsuranceOverview />} />

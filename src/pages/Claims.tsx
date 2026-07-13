@@ -1,7 +1,7 @@
 //@ts-nocheck
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import ClaimsSidebar from "@/components/claims/claims.sidebar";
+import ClaimsSidebar from "../components/claims/claims.sidebar";
 
 const Claims = () => {
   const location = useLocation();

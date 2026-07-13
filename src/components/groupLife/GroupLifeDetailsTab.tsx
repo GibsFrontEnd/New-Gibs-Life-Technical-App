@@ -295,15 +295,7 @@ const handleRowClick = (item: PolicyDetailItem) => {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleNewDetails}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                New Details
-              </Button>
+              
               <Button
                 variant="outline"
                 size="sm"

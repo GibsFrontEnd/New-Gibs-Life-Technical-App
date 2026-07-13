@@ -43,7 +43,7 @@ interface ClaimsTableProps {
   isMobile?: boolean;
 }
 
-export const ClaimsTable: React.FC<ClaimsTableProps> = ({
+ const ClaimsTable: React.FC<ClaimsTableProps> = ({
   claims,
   loading,
   totalCount,
@@ -510,3 +510,5 @@ const ClaimCard = ({
     </div>
   );
 };
+
+export default ClaimsTable;

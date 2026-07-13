@@ -12,7 +12,6 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "skipLibCheck": true,
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -23,6 +22,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "vite-env.d.ts"],
-  "exclude": ["src/components"]
+  "include": ["src", "vite-env.d.ts"]
+  // DELETE THIS LINE: "exclude": ["src/components"]
 }

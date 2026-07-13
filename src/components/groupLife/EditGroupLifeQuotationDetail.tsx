@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../UI/new-select";
-import { ArrowLeft, RefreshCw, Loader2, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, ChevronDown, X, Users, CreditCard, Paperclip } from "lucide-react";
 import { useToast } from "../UI/use-toast";
 import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
 import {
@@ -37,7 +37,6 @@ import { debounce } from "lodash";
 // Import the tabs components
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../UI/tabs";
 import GroupLifeDetailsTab from "./GroupLifeDetailsTab";
-// import DebitNotesTab from "./DebitNotesTab";
 import CreditNotesTab from "./CreditNotesTab";
 import AttachmentsTab from "./AttachmentsTab";
 
@@ -274,7 +273,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("policy");
 
-  // ✅ NEW: Track if dropdowns are loaded
+  // Track if dropdowns are loaded
   const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -426,7 +425,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     }
   };
 
-  // Fetch all dropdown data
+  // Fetch all dropdown data - CORRECTED with all endpoints
   const fetchAllDropdowns = async () => {
     const endpoints = [
       { 
@@ -442,12 +441,11 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
       },
       { 
         key: 'accountExecutives', 
-        url: '/Users',
-        params: { page: 1, pageSize: 100 },
+        url: '/lookups/account-executives',  // ✅ FIXED: Correct endpoint
         mapper: (item: any) => ({
-          id: item.id || item.userId || item.userID,
-          name: item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || item.username || item.name,
-          code: item.userId || item.id,
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
           ...item
         })
       },
@@ -478,26 +476,47 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
         })
       },
       { 
-        key: 'businessSources', 
-        url: '/grouplife/policies/policy-business-types',
+        key: 'busChannels', 
+        url: '/lookups/channels',
         mapper: (item: any) => ({
-          id: item.id || item.busTypeId || item.businessTypeId,
-          name: item.name || item.busTypeName || item.description,
-          code: item.code || item.busTypeCode,
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
+          ...item
+        })
+      },
+      { 
+        key: 'businessSources', 
+        url: '/lookups/business-sources',
+        mapper: (item: any) => ({
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
           ...item
         })
       },
       { 
         key: 'accountTypes', 
-        url: '/grouplife/policies/business-share-types',
+        url: '/lookups/account-types',
         mapper: (item: any) => ({
-          id: item.id || item.shareTypeId || item.acctTypeId,
-          name: item.name || item.shareTypeName || item.description,
-          code: item.code || item.shareTypeCode,
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
           ...item
         })
       },
-    
+      { 
+        key: 'rateTypes', 
+        url: '/lookups/premium-rate',
+        params: { productCode: 'GL', duration: 12, age: 0 },
+        mapper: (item: any) => ({
+          id: item.id || item.rateId || item.rateTypeId || item.value,
+          name: item.name || item.rateName || item.description || item.text,
+          value: item.rateValue || item.value || item.rate,
+          code: item.code || item.rateCode,
+          ...item
+        })
+      },
     ];
 
     setDropdownLoading(prev => Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
@@ -505,13 +524,16 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     const promises = endpoints.map(async ({ key, url, params, mapper }) => {
       try {
         const rawData = await fetchDropdownData(url, params);
+        console.log(`🔍 Raw data for ${key}:`, rawData);
         const formattedData = rawData.map((item: any) => mapper(item));
+        console.log(`✅ Formatted data for ${key}:`, formattedData);
 
         switch (key) {
           case 'products': setProducts(formattedData); break;
           case 'accountExecutives': setAccountExecutives(formattedData); break;
           case 'agentBrokers': setAgentBrokers(formattedData); break;
           case 'branches': setBranches(formattedData); break;
+          case 'busChannels': setBusChannels(formattedData); break;
           case 'businessSources': setBusinessSources(formattedData); break;
           case 'accountTypes': setAccountTypes(formattedData); break;
           case 'rateTypes': setRateTypes(formattedData); break;
@@ -526,9 +548,10 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     });
 
     await Promise.all(promises);
+    console.log("✅ All dropdowns loaded");
   };
 
-  // ✅ MODIFIED: Fetch dropdown data and mark as loaded
+  // Fetch dropdown data and mark as loaded
   useEffect(() => {
     const loadDropdowns = async () => {
       await fetchAllDropdowns();
@@ -652,7 +675,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     }
   }, [searchQuery, formData.existingClients, handleClientSearch]);
 
-  // ✅ MODIFIED: Load quotation data AFTER dropdowns are ready
+  // Load quotation data AFTER dropdowns are ready
   useEffect(() => {
     if (!dropdownsLoaded) {
       console.log("⏳ Waiting for dropdowns to load...");
@@ -678,9 +701,11 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
         
         console.log("✅ Extracted quotation data:", data);
 
-        // ✅ Find matching dropdown values with better matching
+        // Find matching dropdown values
         const findOptionId = (options: ApiDropdownOption[], searchValue: string): string => {
           if (!searchValue) return "";
+          
+          console.log(`🔍 Searching for: "${searchValue}" in ${options.length} options`);
           
           // Try exact match first
           let found = options.find(opt => 
@@ -697,10 +722,11 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
             );
           }
           
+          console.log(`✅ Found:`, found);
           return found?.id || "";
         };
 
-        // ✅ Map API response to form fields with proper fallbacks
+        // Map API response to form fields
         const updatedFormData = {
           quotationNumber: data.policyNo || data.quotationNumber || "[AUTO]",
           policyNo: data.policyNo || policyNo,
@@ -747,7 +773,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
           businessSource: findOptionId(businessSources, data.businessSource || ""),
           agentBrokerId: findOptionId(agentBrokers, data.agentBrokerId || data.agentBroker || ""),
           accountTypeId: findOptionId(accountTypes, data.accountTypeId || data.accountType || ""),
-          busChannelId: data.busChannelId || data.busChannel || "",
+          busChannelId: findOptionId(busChannels, data.busChannelId || data.busChannel || ""),
           subChannelId: data.subChannelId || data.subChannel || "",
           proportionPercent: data.proportionPercent || 100,
           premiumRatePercent: data.premiumRatePercent || 2.0,
@@ -760,7 +786,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
 
         // Set members if available
         if (data.members && Array.isArray(data.members)) {
-          setMembers(data.members.map((m: any) => ({
+          const mappedMembers = data.members.map((m: any) => ({
             id: m.id || m.memberId || `temp-${Math.random().toString(36).slice(2)}`,
             staffNo: m.staffNo || "",
             employeeNames: m.name || m.employeeNames || "Unknown",
@@ -775,7 +801,9 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
             premium: m.premium || 0,
             rate: m.rate || 0,
             hireDate: m.hireDate ? formatDateForInput(m.hireDate) : "",
-          })) || []);
+          }));
+          setMembers(mappedMembers);
+          console.log("👥 Members loaded:", mappedMembers.length);
         }
 
         dispatch(setCurrentQuotation(data));
@@ -789,7 +817,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
           description: error?.message || "Failed to load quotation",
           variant: "destructive",
         });
-        setDataLoaded(true); // Still mark as loaded to show form with empty data
+        setDataLoaded(true);
       }
     };
 
@@ -798,7 +826,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     return () => {
       dispatch(clearCurrentQuotation());
     };
-  }, [policyNo, dispatch, toast, dropdownsLoaded, accountExecutives, branches, businessSources, agentBrokers, accountTypes, products]);
+  }, [policyNo, dispatch, toast, dropdownsLoaded, accountExecutives, branches, businessSources, agentBrokers, accountTypes, busChannels, products]);
 
   const handleAddMember = async (member: Omit<GroupLifeMember, "id">) => {
     if (!policyNo) {
@@ -936,7 +964,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     if (!members || members.length === 0) {
       toast({
         title: "No members",
-        description: "Members must be available to compute",
+        description: "Please add members before computing",
         variant: "destructive",
       });
       return;
@@ -1038,14 +1066,15 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
       return;
     }
 
-    if (!members || members.length === 0) {
-      toast({
-        title: "No members",
-        description: "Members must be available to save",
-        variant: "destructive",
-      });
-      return;
-    }
+    // ✅ REMOVED: Members are NOT required to save
+    // if (!members || members.length === 0) {
+    //   toast({
+    //     title: "No members",
+    //     description: "Members must be available to save",
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
     const policyData = {
       policyNo: formData.policyNo || policyNo,
@@ -1055,7 +1084,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
       expiryDate: formData.expiryDate,
       subRiskName: formData.schemeTypes,
       insuredType: formData.insuredType,
-      totalMembers: members.length,
+      totalMembers: members?.length || 0,
       totalSumInsured: Number.parseFloat(formData.totalSumInsured) || 0,
       totalPremium: Number.parseFloat(formData.totalPremium) || 0,
       netPremiumDue: Number.parseFloat(formData.netPremiumDue) || 0,
@@ -1075,7 +1104,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
       exchangeRate: formData.exRate || 1,
       businessSector: formData.businessSector,
       product: formData.product,
-      members: members.map((m) => ({
+      members: members && members.length > 0 ? members.map((m) => ({
         name: m.employeeNames || m.name || "Unknown",
         dateOfBirth: m.dateOfBirth,
         gender: (m.sex || m.gender || "M") as "M" | "F",
@@ -1086,7 +1115,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
         housingAllowance: m.housingAllowance || 0,
         transportAllowance: m.transportAllowance || 0,
         hireDate: m.hireDate || new Date().toISOString().split("T")[0],
-      })),
+      })) : [],
     };
 
     try {
@@ -1106,7 +1135,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err || "Failed to save quotation.",
+        description: err?.message || "Failed to save quotation.",
         variant: "destructive",
       });
     } finally {
@@ -1118,7 +1147,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     navigate("/underwriting/group-life-quotations");
   };
 
-  // ✅ MODIFIED: Show loading state while data loads
+  // Show loading state while data loads
   if (loading.detail || !dropdownsLoaded || !dataLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
@@ -1200,7 +1229,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                   />
                 </div>
 
-                {/* Agent/Broker - Searchable Dropdown */}
+                {/* Agent/Broker */}
                 <div className="space-y-2">
                   <SearchableDropdown
                     options={agentBrokers}
@@ -1360,7 +1389,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                   />
                 </div>
 
-                {/* Product - Searchable Dropdown */}
+                {/* Product */}
                 <div className="space-y-2">
                   <SearchableDropdown
                     options={products}
@@ -1375,25 +1404,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                   />
                 </div>
 
-                {/* Scheme Types - Searchable Dropdown */}
-                <div className="space-y-2">
-                  <SearchableDropdown
-                    options={[
-                      { id: "group-life", name: "Group Life" },
-                      { id: "credit-life", name: "Credit Life" }
-                    ]}
-                    value={formData.schemeTypes}
-                    onChange={(value) => handleInputChange("schemeTypes", value)}
-                    placeholder="Select Scheme Type"
-                    label="Scheme Types"
-                    loading={false}
-                    error={false}
-                    required={true}
-                    searchPlaceholder="Search scheme type..."
-                  />
-                </div>
-
-                {/* Account Executive - Searchable Dropdown */}
+                {/* Account Executive */}
                 <div className="space-y-2">
                   <SearchableDropdown
                     options={accountExecutives}
@@ -1408,7 +1419,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                   />
                 </div>
 
-                {/* Branch/Location - Searchable Dropdown */}
+                {/* Branch/Location */}
                 <div className="space-y-2">
                   <SearchableDropdown
                     options={branches}
@@ -1423,7 +1434,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                   />
                 </div>
 
-                {/* Business Source - Searchable Dropdown */}
+                {/* Business Source */}
                 <div className="space-y-2">
                   <SearchableDropdown
                     options={businessSources}
@@ -1438,14 +1449,10 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                   />
                 </div>
 
-                {/* Bus Channels - Searchable Dropdown */}
+                {/* Bus Channels */}
                 <div className="space-y-2">
                   <SearchableDropdown
-                    options={busChannels.length > 0 ? busChannels : [
-                      { id: "CH-001", name: "Direct Sales" },
-                      { id: "CH-002", name: "Partners" },
-                      { id: "CH-003", name: "Digital" }
-                    ]}
+                    options={busChannels}
                     value={formData.busChannelId}
                     onChange={(value) => handleInputChange("busChannelId", value)}
                     placeholder="Select Bus Channel"
@@ -1457,7 +1464,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                   />
                 </div>
 
-                {/* Account Types - Searchable Dropdown */}
+                {/* Account Types */}
                 <div className="space-y-2">
                   <SearchableDropdown
                     options={accountTypes}
@@ -1469,26 +1476,6 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                     error={dropdownErrors.accountTypes}
                     required={true}
                     searchPlaceholder="Search account type..."
-                  />
-                </div>
-
-                {/* Business Sector - Searchable Dropdown */}
-                <div className="space-y-2">
-                  <SearchableDropdown
-                    options={businessSectors.length > 0 ? businessSectors : [
-                      { id: "FINANCE", name: "Finance" },
-                      { id: "HEALTHCARE", name: "Healthcare" },
-                      { id: "TECHNOLOGY", name: "Technology" },
-                      { id: "MANUFACTURING", name: "Manufacturing" },
-                      { id: "OIL_GAS", name: "Oil & Gas" }
-                    ]}
-                    value={formData.businessSector}
-                    onChange={(value) => handleInputChange("businessSector", value)}
-                    placeholder="Select Business Sector"
-                    label="Business Sector"
-                    loading={dropdownLoading.businessSectors}
-                    error={dropdownErrors.businessSectors}
-                    searchPlaceholder="Search business sector..."
                   />
                 </div>
 
@@ -1516,7 +1503,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                 {/* Quotation Status */}
                 <div className="space-y-2">
                   <Label htmlFor="quotationStatus" className="text-sm font-medium">
-                    Quotation Status
+                    Scheme Status
                   </Label>
                   <Select
                     value={formData.quotationStatus}
@@ -1533,49 +1520,12 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Premium Rate Percent */}
-                <div className="space-y-2">
-                  <Label htmlFor="premiumRatePercent" className="text-sm font-medium">
-                    Premium Rate %
-                  </Label>
-                  <Input
-                    id="premiumRatePercent"
-                    type="number"
-                    step="0.01"
-                    value={formData.premiumRatePercent}
-                    onChange={(e) => handleInputChange("premiumRatePercent", parseFloat(e.target.value) || 0)}
-                  />
-                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Member Details Section - Commented out */}
-        {/* <div className="border rounded-lg shadow-sm mb-4">
-          <button
-            type="button"
-            onClick={() => toggleSection("memberDetails")}
-            className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-          >
-            <span className="font-semibold">Member Details</span>
-          </button>
-          {expandedSections.memberDetails && (
-            <div className="p-6">
-              <MemberManagementTable
-                members={members}
-                onAddMember={handleAddMember}
-                onUpdateMember={handleUpdateMember}
-                onDeleteMember={handleDeleteMember}
-                groupFactorAmount={Number.parseFloat(
-                  formData.groupFactorAmount
-                )}
-                readOnly={false}
-              />
-            </div>
-          )}
-        </div> */}
+       
 
         {/* Extension Details Section */}
         <div className="border rounded-lg shadow-sm mb-4">
@@ -1748,40 +1698,106 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
 
             {/* Main Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto gap-30">
-                <TabsTrigger 
-                  value="policy" 
-                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-                >
-                  Policy Detail
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="group-life" 
-                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100  data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-                >
-                  Group Life Detail
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="debit-note" 
-                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-                >
-                  Debit Note
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="credit-note" 
-                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-                >
-                  Co-Insurance(Credit Note)
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="attachments" 
-                  className="px-4 py-3 text-sm font-medium text-black hover:text-gray-900 hover:bg-blue-100 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent rounded-none transition-all duration-200"
-                >
-                  Attachments
-                </TabsTrigger>
-              </TabsList>
+              <div className="relative">
+                <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto gap-25 overflow-x-auto scrollbar-hide flex-nowrap">
+                  <TabsTrigger 
+                    value="policy" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <span className="hidden xs:inline">Policy Detail</span>
+                      <span className="xs:hidden">Policy Detail</span>
+                    </span>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="group-life" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden xs:inline">Group Life Detail</span>
+                      <span className="xs:hidden">GroupLife Detail</span>
+                    </span>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="debit-note" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden xs:inline">Debit Note</span>
+                      <span className="xs:hidden">Debit Note</span>
+                    </span>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="credit-note" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">Co-Insurance (Credit Note)</span>
+                      <span className="hidden xs:inline sm:hidden">Credit Note</span>
+           
+                    </span>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="attachments" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <Paperclip className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden xs:inline">Attachments</span>
+                      <span className="xs:hidden">Files</span>
+                    </span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-              <div className="mt-6">
+              <div className="mt-4 sm:mt-6">
                 <TabsContent value="policy" className="mt-0">
                   {renderPolicyDetails()}
                 </TabsContent>
@@ -1798,10 +1814,6 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                 <TabsContent value="credit-note" className="mt-0">
                   <CreditNotesTab policyNo={policyNo} />
                 </TabsContent>
-
-                {/* <TabsContent value="debit-note" className="mt-0">
-                  <DebitNotesTab policyNo={policyNo} />
-                </TabsContent> */}
 
                 <TabsContent value="attachments" className="mt-0">
                   <AttachmentsTab policyNo={policyNo} />

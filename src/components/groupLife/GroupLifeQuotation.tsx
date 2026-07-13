@@ -67,11 +67,11 @@ import {
 import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
 import {
   selectGroupLifeQuotations,
-  selectGroupLifePolicies, // NEW: Import the new selector
+  selectGroupLifePolicies,
   setCurrentQuotation,
   fetchGroupLifePolicy,
   createGroupLifePolicy,
-  fetchGroupLifePolicies, // NEW: Import the new thunk
+  fetchGroupLifePolicies,
 } from "../../features/reducers/groupLifeReducers/groupLifeQuotationSlice";
 import { formatDate, formatCurrency } from "../../utils/ui-utilities";
 import { useToast } from "../../hooks/use-toast";
@@ -93,7 +93,6 @@ interface GroupLifeQuotation {
   status: "PROSPECT" | "ACTIVE" | "PENDING" | "CANCELLED";
   groupFactorAmount: number;
   loadingPercentage: number;
-  // Optional fallback fields
   quoteID?: string;
   quoteNo?: string;
   surName?: string;
@@ -105,12 +104,9 @@ export default function GroupLifeQuotation() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { toast } = useToast();
-  
-  // OLD: Using the quotations from the slice
-  // const { quotations, loading, totalCount } = useAppSelector(selectGroupLifeQuotations);
-  
-  // NEW: Using the policies from the slice
-  const { policies, totalCount, loading, error } = useAppSelector(selectGroupLifePolicies);
+
+  // ✅ totalPages now comes straight from the slice/selector — no client recompute
+  const { policies, totalCount, totalPages, loading, error } = useAppSelector(selectGroupLifePolicies);
   const isLoading = loading || false;
 
   const [isMobile, setIsMobile] = useState(false);
@@ -123,8 +119,39 @@ export default function GroupLifeQuotation() {
     status: "all",
     schemeType: "all",
     insuredType: "all",
+    subRiskId: "all", // ✅ dynamic — was hardcoded 'GLA'
     tag: "GL",
   });
+
+  // ✅ Product options fetched from API to populate the subRiskId filter
+  const [productOptions, setProductOptions] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        const response = await fetch(`${SERVER_URL}/v1/Products?PageNo=1&PageSize=100`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await response.json();
+        const list = Array.isArray(data)
+          ? data
+          : data.data || data.items || data.records || data.results || [];
+        setProductOptions(
+          list.map((item: any) => ({
+            id: item.productID || item.riskID || item.id,
+            name: item.productName || item.description || item.name,
+          }))
+        );
+      } catch (err) {
+        console.error("Failed to fetch product options:", err);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const [selectedQuotations, setSelectedQuotations] = useState<Set<string>>(
     new Set()
@@ -164,13 +191,13 @@ export default function GroupLifeQuotation() {
   // Load policies when component mounts or when page/filters change
   useEffect(() => {
     console.log("📊 Fetching group life policies...");
-    
+
     dispatch(fetchGroupLifePolicies({
       page: currentPage,
       pageSize: pageSize,
-      subRiskId: 'GLA', // Filter for Group Life products
+      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
     }));
-  }, [dispatch, currentPage, pageSize]);
+  }, [dispatch, currentPage, pageSize, filterCriteria.subRiskId]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -232,7 +259,7 @@ export default function GroupLifeQuotation() {
       dispatch(fetchGroupLifePolicies({
         page: currentPage,
         pageSize: pageSize,
-        subRiskId: 'GLA',
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
       }));
 
       const newSelected = new Set(selectedQuotations);
@@ -286,9 +313,9 @@ export default function GroupLifeQuotation() {
       dispatch(fetchGroupLifePolicies({
         page: currentPage,
         pageSize: pageSize,
-        subRiskId: 'GLA',
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
       }));
-      
+
       setSelectedQuotations(new Set());
       setIsAllSelected(false);
     } catch (err) {
@@ -303,7 +330,7 @@ export default function GroupLifeQuotation() {
     setCurrentPage(1);
     setSelectedQuotations(new Set());
     setIsAllSelected(false);
-    
+
     // Fetch with filters
     dispatch(fetchGroupLifePolicies({
       page: 1,
@@ -312,7 +339,7 @@ export default function GroupLifeQuotation() {
       status: filterCriteria.status !== 'all' ? filterCriteria.status.toUpperCase() : undefined,
       fromDate: filterCriteria.startDate || undefined,
       toDate: filterCriteria.endDate || undefined,
-      subRiskId: 'GLA', // Group Life product
+      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
     }));
   };
 
@@ -325,17 +352,17 @@ export default function GroupLifeQuotation() {
       status: "all",
       schemeType: "all",
       insuredType: "all",
+      subRiskId: "all",
       tag: "GL",
     });
     setCurrentPage(1);
     setSelectedQuotations(new Set());
     setIsAllSelected(false);
-    
-    // Reset to default fetch
+
+    // Reset to default fetch (no product filter)
     dispatch(fetchGroupLifePolicies({
       page: 1,
       pageSize: pageSize,
-      subRiskId: 'GLA',
     }));
   };
 
@@ -358,7 +385,7 @@ export default function GroupLifeQuotation() {
     }
 
     if (filterCriteria.status !== "all") {
-      filtered = filtered.filter((quote: any) => 
+      filtered = filtered.filter((quote: any) =>
         quote.status?.toUpperCase() === filterCriteria.status.toUpperCase()
       );
     }
@@ -386,36 +413,37 @@ export default function GroupLifeQuotation() {
     filterCriteria.endDate ||
     filterCriteria.status !== "all" ||
     filterCriteria.schemeType !== "all" ||
-    filterCriteria.insuredType !== "all";
+    filterCriteria.insuredType !== "all" ||
+    filterCriteria.subRiskId !== "all";
 
   const itemsForDisplay = getDisplayQuotations();
   const effectiveTotalCount = totalCount || itemsForDisplay.length;
-  const totalPages = Math.max(1, Math.ceil(effectiveTotalCount / pageSize));
   const startItem = (currentPage - 1) * pageSize;
-  const endItem = Math.min(currentPage * pageSize, effectiveTotalCount);
-  const paginatedQuotations = itemsForDisplay.slice(startItem, endItem);
+  // ✅ Server already returns one page at a time — don't re-slice a page-sized array
+  const endItem = startItem + itemsForDisplay.length;
+  const paginatedQuotations = itemsForDisplay;
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
       setSelectedQuotations(new Set());
       setIsAllSelected(false);
-      
+
       // Fetch the new page
       dispatch(fetchGroupLifePolicies({
         page: page,
         pageSize: pageSize,
-        subRiskId: 'GLA',
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
       }));
     }
   };
 
   const handleEditQuotation = (quote: any) => {
     console.log("✏️ Editing quotation:", quote);
-    
+
     // Get the policy number from the quote
     const quoteNumber = quote.policyNo || quote.quotationNumber || quote.quoteNo || quote.id;
-    
+
     if (!quoteNumber) {
       toast({
         title: "Error",
@@ -425,24 +453,24 @@ export default function GroupLifeQuotation() {
       console.error("❌ No policy number found in quote:", quote);
       return;
     }
-    
+
     // Set the current quotation in Redux for the edit page to use
     dispatch(setCurrentQuotation(quote));
-    
+
     // ✅ Navigate to edit page
     const encodedPolicyNo = encodeURIComponent(quoteNumber);
-    const editPath =`/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`;
-    
+    const editPath = `/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`;
+
     console.log("🔄 Navigating to edit path:", editPath);
     navigate(editPath);
   };
 
   const handleNewQuotation = () => {
     console.log("🔄 handleNewQuotation - Starting navigation to create new quotation");
-    
+
     // Clear any existing quotation
     dispatch(setCurrentQuotation(null));
-    
+
     // ✅ Navigate to new quotation page
     navigate("/underwriting/group-life-quotations/new");
   };
@@ -740,6 +768,9 @@ export default function GroupLifeQuotation() {
                             filterCriteria.insuredType !== "all"
                               ? filterCriteria.insuredType
                               : null,
+                            filterCriteria.subRiskId !== "all"
+                              ? filterCriteria.subRiskId
+                              : null,
                           ].filter(Boolean).length
                         }{" "}
                         active
@@ -785,10 +816,10 @@ export default function GroupLifeQuotation() {
                           <SelectValue placeholder="Select field" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="companyName">
+                          <SelectItem value="CompanyName">
                             Company Name
                           </SelectItem>
-                          <SelectItem value="quotationNumber">
+                          <SelectItem value="SchemesNumber">
                             Schemes Number
                           </SelectItem>
                         </SelectContent>
@@ -875,6 +906,35 @@ export default function GroupLifeQuotation() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* ✅ Product / subRiskId filter — now dynamic */}
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">
+                        Product
+                      </label>
+                      <Select
+                        value={filterCriteria.subRiskId}
+                        onValueChange={(value) =>
+                          setFilterCriteria((prev) => ({
+                            ...prev,
+                            subRiskId: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All products" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Products</SelectItem>
+                          {productOptions.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="flex items-end">
                       <Button
                         variant="outline"
@@ -980,7 +1040,7 @@ export default function GroupLifeQuotation() {
                               className={`${isSelected ? "bg-blue-50" : ""} ${
                                 isApproving ? "opacity-60" : ""
                               } cursor-pointer hover:bg-blue-50/50 border-blue-100 transition-colors`}
-                            
+
                             >
                               <TableCell>
                                 <div onClick={(e) => e.stopPropagation()}>

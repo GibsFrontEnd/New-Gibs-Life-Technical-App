@@ -15,8 +15,8 @@ import {
   selectSearchTotalCount,
   type ClaimReserve,
 } from "../../features/reducers/claimsReducers/claimsSlice";
-import { ClaimFilters } from "../../components/claims/ClaimsFilters";
-import { ClaimsTable } from "../../components/claims/ClaimsTable";
+import  ClaimFilters  from "../../components/claims/ClaimsFilters";
+import  ClaimsTable  from "../../components/claims/ClaimsTable";
 import { useToast } from "../../hooks/use-toast";
 
 const SurrenderClaims = () => {

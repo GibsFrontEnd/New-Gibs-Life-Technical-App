@@ -2,9 +2,9 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { Button } from "@/components/UI/new-button"
-import { useAppDispatch, useAppSelector } from "@/hooks/use-apps"
-import SearchBar from "@/components/SearchBar"
+import { Button } from "../../UI/new-button"
+import { useAppDispatch, useAppSelector } from "../../../hooks/use-apps"
+import SearchBar from "../../SearchBar"
 import {
   getAllPolicies,
   endorsePolicy,
@@ -12,8 +12,8 @@ import {
   niipUpload,
   selectPolicies,
   setCurrentPolicy,
-} from "@/features/reducers/csuReducers/policySlice"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/UI/table"
+} from "../../../features/reducers/csuReducers/policySlice"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../UI/table"
 import {
   Pagination,
   PaginationContent,
@@ -21,14 +21,14 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/UI/pagination"
+} from "../../UI/pagination"
 import {
   selectUiState,
   setShowCreatePolicyDialog,
   setShowRenewPolicyDialog,
   setShowPolicyDetailsDialog,
-} from "@/features/reducers/uiReducers/uiSlice"
-import type { Policy } from "@/types/policy"
+} from "../../../features/reducers/uiReducers/uiSlice"
+import type { Policy } from "../../../types/policy"
 import { CreatePolicy, RenewPolicy, PolicyDetails } from "../../components.policies"
 import "./EnquiriesPolicies.css"
 

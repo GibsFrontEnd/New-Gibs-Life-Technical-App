@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Users, RefreshCw, Save } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import apiCall from "../../utils/api-call";
+import { useToast } from "../../components/UI/use-toast";
+
 
 // ─── helpers ───────────────────────────────────────────────
 const InputField = ({ label, value, onChange, type = "text", required = false, disabled = false }: any) => (
@@ -119,6 +121,7 @@ const emptyFormState = {
 const NewInvestmentPolicySetupPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast(); // ✅ Initialize toast hook
   
   // ✅ Check if we're in edit mode and get initial data
   const isEditMode = location.state?.editMode || location.pathname.includes("edit-investment");
@@ -143,8 +146,15 @@ const NewInvestmentPolicySetupPage = () => {
         dateofpayment: initialData.dateofpayment?.split('T')[0] || "",
         dateEmployed: initialData.dateEmployed?.split('T')[0] || "",
       });
+      
+      // ✅ Show success toast when loading edit data
+      toast({
+        title: "Success",
+        description: "Policy data loaded successfully",
+        variant: "default",
+      });
     }
-  }, [isEditMode, initialData]);
+  }, [isEditMode, initialData, toast]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -159,10 +169,16 @@ const NewInvestmentPolicySetupPage = () => {
         setBranches(branchResp.data || []);
       } catch (err) {
         console.error("Failed to fetch setup data:", err);
+        // ✅ Show error toast on data fetch failure
+        toast({
+          title: "Error",
+          description: "Failed to load setup data. Please refresh the page.",
+          variant: "destructive",
+        });
       }
     };
     fetchData();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (formData.issueDate && formData.duration) {
@@ -212,6 +228,14 @@ const NewInvestmentPolicySetupPage = () => {
   const handleCreatePolicy = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
+    // ✅ Show loading toast
+    const loadingToast = toast({
+      title: "Processing",
+      description: isEditMode ? "Updating policy..." : "Creating policy...",
+      variant: "default",
+    });
+    
     try {
       const payload = {
         ...formData,
@@ -225,24 +249,53 @@ const NewInvestmentPolicySetupPage = () => {
         dateEmployed: formData.dateEmployed ? new Date(formData.dateEmployed).toISOString() : new Date().toISOString(),
       };
       
+      let response;
       if (isEditMode) {
         // ✅ CORRECT: Use POST with /edit/{policyNo}
         const policyNo = formData.policyNo || formData.proposalNo;
         if (!policyNo) {
-          alert("Policy number is required for update");
+          toast({
+            title: "Error",
+            description: "Policy number is required for update",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
           return;
         }
         
-        await apiCall.post(`/v1/lifepolicyAdmin/edit/${encodeURIComponent(policyNo)}`, payload);
-        alert("Investment policy updated successfully!");
+         response = await apiCall.post(`/v1/lifepolicyAdmin/edit/${policyNo}`, payload);
+      
+      toast({
+        title: "Success",
+        description: "Investment policy updated successfully!",
+        variant: "default",
+      });
       } else {
         // ✅ Create new policy
-        await apiCall.post("/v1/lifepolicyAdmin/create", payload);
-        alert("Investment policy created successfully!");
+        response = await apiCall.post("/v1/lifepolicyAdmin/create", payload);
+        
+        // ✅ Success toast for creation
+        const policyNo = response?.data?.policyNo || response?.data?.proposalNo || "";
+        toast({
+          title: "Success",
+          description: `Investment policy created successfully!${policyNo ? ` Policy No: ${policyNo}` : ''}`,
+          variant: "default",
+        });
       }
+      
+      // ✅ Navigate after successful operation
       navigate("/underwriting/individual/policy-admin");
+      
     } catch (err: any) {
-      alert(`Failed to ${isEditMode ? 'update' : 'create'} policy: ` + (err?.response?.data?.message || err.message || "Unknown error"));
+      // ✅ Show error toast
+      const errorMessage = err?.response?.data?.message || err.message || "Unknown error";
+      toast({
+        title: "Error",
+        description: `Failed to ${isEditMode ? 'update' : 'create'} policy: ${errorMessage}`,
+        variant: "destructive",
+      });
+      
+      console.error("Policy operation failed:", err);
     } finally {
       setIsSubmitting(false);
     }

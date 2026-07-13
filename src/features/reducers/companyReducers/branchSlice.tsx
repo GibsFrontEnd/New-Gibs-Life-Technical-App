@@ -1,5 +1,5 @@
 import type { Branch, BranchState, UpdateBranchRequest } from "@/types/branches";
-import apiCall from "@/utils/api-call";
+import apiCall from "../../../utils/api-call";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 export const getAllBranches = createAsyncThunk(

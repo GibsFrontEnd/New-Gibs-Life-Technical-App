@@ -44,6 +44,10 @@ import { SERVER_URL } from "../../utils/constants";
 
 // ==================== TYPES ====================
 
+/**
+ * Interface for API dropdown options
+ * Used for policy selection dropdown with additional metadata
+ */
 interface ApiDropdownOption {
   id: string;
   name: string;
@@ -54,6 +58,9 @@ interface ApiDropdownOption {
   [key: string]: any;
 }
 
+/**
+ * Props for the SearchableDropdown component
+ */
 interface SearchableDropdownProps {
   options: ApiDropdownOption[];
   value: string;
@@ -70,12 +77,20 @@ interface SearchableDropdownProps {
 
 // ==================== NAIRA ICON COMPONENT ====================
 
+/**
+ * Naira currency icon component
+ * Displays the Nigerian Naira symbol with styling
+ */
 const NairaIcon = ({ className = "w-5 h-5" }) => (
   <span className={`font-bold text-purple-600 ${className}`}>₦</span>
 );
 
 // ==================== SECTION HEADER COMPONENT ====================
 
+/**
+ * Section header component for grouping form sections
+ * Includes title, optional icon, badge, and right element
+ */
 const SectionHeader: React.FC<{
   title: string;
   icon?: React.ReactNode;
@@ -93,6 +108,7 @@ const SectionHeader: React.FC<{
   rightElement,
   borderColor = "border-gray-200"
 }) => {
+  // Mapping of badge colors to their respective CSS classes
   const badgeColors = {
     blue: "bg-blue-100 text-blue-700",
     green: "bg-green-100 text-green-700",
@@ -124,6 +140,14 @@ const SectionHeader: React.FC<{
 
 // ==================== SEARCHABLE DROPDOWN COMPONENT ====================
 
+/**
+ * Searchable dropdown component for policy selection
+ * Features:
+ * - Search functionality with filtering
+ * - Loading and error states
+ * - Clear selection option
+ * - Click outside to close
+ */
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   options,
   value,
@@ -142,14 +166,17 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Find the selected option based on value
   const selectedOption = options.find(opt => opt.id === value);
 
+  // Filter options based on search term
   const filteredOptions = options.filter(opt =>
     opt.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     opt.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     opt.policyNo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -161,6 +188,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Handle option selection
   const handleSelect = (option: ApiDropdownOption) => {
     onChange(option.id);
     if (onSelect) {
@@ -170,6 +198,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     setSearchTerm("");
   };
 
+  // Clear the selected value
   const handleClear = () => {
     onChange("");
     setSearchTerm("");
@@ -181,6 +210,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         {label} {required && <span className="text-red-500">*</span>}
       </Label>
       <div className="relative">
+        {/* Dropdown trigger */}
         <div
           className={`flex items-center justify-between border rounded-md px-3 py-2.5 cursor-pointer ${
             disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:border-gray-400'
@@ -207,8 +237,10 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           </div>
         </div>
 
+        {/* Dropdown menu */}
         {isOpen && !disabled && (
           <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+            {/* Search input */}
             <div className="p-2 border-b border-gray-200">
               <Input
                 ref={inputRef}
@@ -221,6 +253,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                 autoFocus
               />
             </div>
+            {/* Options list */}
             <div className="max-h-48 overflow-y-auto">
               {loading ? (
                 <div className="flex items-center justify-center py-4">
@@ -265,11 +298,21 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
 
 // ==================== CLAIM DETAILS TAB ====================
 
+/**
+ * Claim Details Tab Component
+ * Displays the main claim information including:
+ * - Loss details
+ * - Policy selection (create mode only)
+ * - Premium check section (shown after policy selection or in edit mode)
+ * - Payment details
+ */
 const ClaimDetailsTab: React.FC<{
   formData: Partial<ClaimReserve>;
   handleChange: (key: keyof ClaimReserve, value: any) => void;
   isViewMode: boolean;
   isCreateMode: boolean;
+  isEditMode: boolean;
+  hasSelectedPolicy: boolean;
   errors: Record<string, string>;
   policies: ApiDropdownOption[];
   policyLoading: boolean;
@@ -281,6 +324,8 @@ const ClaimDetailsTab: React.FC<{
   handleChange,
   isViewMode,
   isCreateMode,
+  isEditMode,
+  hasSelectedPolicy,
   errors,
   policies,
   policyLoading,
@@ -288,9 +333,17 @@ const ClaimDetailsTab: React.FC<{
   handlePolicySelect,
   lossTypeOptions,
 }) => {
+  // Determine if the By Pass Premium Check section should be visible
+  // Show when: 
+  // 1. In CREATE mode AND a policy has been selected from the dropdown
+  // 2. In EDIT mode (policy is already associated with the claim)
+  // 3. In VIEW mode (policy is already associated with the claim)
+  const showPremiumCheck = (isCreateMode && hasSelectedPolicy) || isEditMode || isViewMode;
+
   return (
     <div className="space-y-6">
-      {/* Loss Details Section */}
+      {/* ===== LOSS DETAILS SECTION ===== */}
+      {/* This section shows basic claim information like claim number and processing date */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <SectionHeader 
           title="Loss Details" 
@@ -325,16 +378,17 @@ const ClaimDetailsTab: React.FC<{
         </div>
       </div>
 
-      {/* Policy Selection */}
+      {/* ===== POLICY SELECTION SECTION ===== */}
+      {/* Only visible in create mode - allows user to search and select a policy */}
       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
         <SectionHeader 
           title="Policy Selection" 
           icon={<Building2 className="w-4 h-4" />}
           borderColor="border-blue-300"
-          
         />
         <div className="mt-2">
           {isCreateMode ? (
+            // Create mode: Show searchable dropdown
             <SearchableDropdown
               options={policies}
               value={formData.policyNo || ""}
@@ -353,6 +407,7 @@ const ClaimDetailsTab: React.FC<{
               searchPlaceholder="Search by policy number or insured name..."
             />
           ) : (
+            // Edit/View mode: Show policy number as disabled input
             <Input
               id="policyNo"
               value={formData.policyNo || ""}
@@ -367,152 +422,198 @@ const ClaimDetailsTab: React.FC<{
         </div>
       </div>
 
-      {/* By Pass Premium Check Section */}
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <SectionHeader 
-          title="By Pass Premium Check" 
-          icon={<CheckCircle className="w-4 h-4" />}
-          borderColor="border-green-200"
-          badge="Auto-populated"
-          badgeColor="green"
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          <div>
-            <Label htmlFor="insuredName">Surname {!isViewMode && "*"}</Label>
-            <Input
-              id="insuredName"
-              value={formData.insuredName || ""}
-              onChange={(e) => handleChange("insuredName", e.target.value)}
-              placeholder="Enter surname"
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-            {errors.insuredName && !isViewMode && (
-              <p className="text-red-500 text-xs mt-1">{errors.insuredName}</p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="othername">Othername</Label>
-            <Input
-              id="othername"
-              value={formData.field1 || ""}
-              onChange={(e) => handleChange("field1", e.target.value)}
-              placeholder="Enter other name"
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="startDate">Commencement Date</Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={formData.startDate || ""}
-              onChange={(e) => handleChange("startDate", e.target.value)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="endDate">Maturity Date</Label>
-            <Input
-              id="endDate"
-              type="date"
-              value={formData.endDate || ""}
-              onChange={(e) => handleChange("endDate", e.target.value)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="modeOfPayment">Mode Of Payment</Label>
-            <Select
-              value={formData.field3 || ""}
-              onValueChange={(value) => handleChange("field3", value)}
-              disabled={isViewMode}
-            >
-              <SelectTrigger className={isViewMode ? "bg-gray-50" : ""}>
-                <SelectValue placeholder="Select mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Transfer">Transfer</SelectItem>
-                <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="Cheque">Cheque</SelectItem>
-                <SelectItem value="Direct Debit">Direct Debit</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="sumAssured">Sum Assured</Label>
-            <Input
-              id="sumAssured"
-              type="number"
-              step="0.01"
-              value={formData.a9 || 0}
-              onChange={(e) => handleChange("a9", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50 font-medium" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="policyStatus">Policy Status</Label>
-            <Input
-              id="policyStatus"
-              value={formData.field2 || "IN FORCE"}
-              onChange={(e) => handleChange("field2", e.target.value)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50 font-medium text-green-600" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="subRisk">Cover Name</Label>
-            <Input
-              id="subRisk"
-              value={formData.subRisk || ""}
-              onChange={(e) => handleChange("subRisk", e.target.value)}
-              placeholder="Enter cover name"
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="leader">Financial Planner</Label>
-            <Input
-              id="leader"
-              value={formData.leader || ""}
-              onChange={(e) => handleChange("leader", e.target.value)}
-              placeholder="Enter financial planner"
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="brcode">Branch</Label>
-            <Input
-              id="brcode"
-              value={formData.brcode || ""}
-              onChange={(e) => handleChange("brcode", e.target.value)}
-              placeholder="Enter branch code"
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="regularSaving">Regular Saving</Label>
-            <Input
-              id="regularSaving"
-              type="number"
-              step="0.01"
-              value={formData.field8 || 0}
-              onChange={(e) => handleChange("field8", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
+      {/* ===== BY PASS PREMIUM CHECK SECTION ===== */}
+      {/* 
+        This section is visible when:
+        1. In CREATE mode AND a policy has been selected from the dropdown
+        2. In EDIT mode (policy is already associated with the claim)
+        3. In VIEW mode (policy is already associated with the claim)
+        In VIEW mode, all fields are read-only (disabled)
+      */}
+      {showPremiumCheck && (
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <SectionHeader 
+            title="By Pass Premium Check" 
+            icon={<CheckCircle className="w-4 h-4" />}
+            borderColor="border-green-200"
+            badge={isViewMode ? "View Mode" : isEditMode ? "Edit Mode" : "Policy Loaded"}
+            badgeColor={isViewMode ? "gray" : "green"}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+            {/* Surname - Required field */}
+            <div>
+              <Label htmlFor="insuredName">Surname {!isViewMode && "*"}</Label>
+              <Input
+                id="insuredName"
+                value={formData.insuredName || ""}
+                onChange={(e) => handleChange("insuredName", e.target.value)}
+                placeholder="Enter surname"
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+              {errors.insuredName && !isViewMode && (
+                <p className="text-red-500 text-xs mt-1">{errors.insuredName}</p>
+              )}
+            </div>
+            
+            {/* Othername */}
+            <div>
+              <Label htmlFor="othername">Othername</Label>
+              <Input
+                id="othername"
+                value={formData.field1 || ""}
+                onChange={(e) => handleChange("field1", e.target.value)}
+                placeholder="Enter other name"
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+            
+            {/* Commencement Date */}
+            <div>
+              <Label htmlFor="startDate">Commencement Date</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={formData.startDate || ""}
+                onChange={(e) => handleChange("startDate", e.target.value)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+             <div>
+      <Label htmlFor="lossDate">Loss Date *</Label>
+      <Input
+        id="lossDate"
+        type="date"
+        value={formData.lossDate || ""}
+        onChange={(e) => handleChange("lossDate", e.target.value)}
+        disabled={isViewMode}
+        className={isViewMode ? "bg-gray-50" : ""}
+        required
+      />
+      {errors.lossDate && !isViewMode && (
+        <p className="text-red-500 text-xs mt-1">{errors.lossDate}</p>
+      )}
+    </div>
+            
+            {/* Maturity Date */}
+            <div>
+              <Label htmlFor="endDate">Maturity Date</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={formData.endDate || ""}
+                onChange={(e) => handleChange("endDate", e.target.value)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+            
+            {/* Mode of Payment - Select dropdown */}
+            <div>
+              <Label htmlFor="modeOfPayment">Mode Of Payment</Label>
+              <Select
+                value={formData.field3 || ""}
+                onValueChange={(value) => handleChange("field3", value)}
+                disabled={isViewMode}
+              >
+                <SelectTrigger className={isViewMode ? "bg-gray-50" : ""}>
+                  <SelectValue placeholder="Select mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Transfer">Transfer</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="Direct Debit">Direct Debit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Sum Assured */}
+            <div>
+              <Label htmlFor="sumAssured">Sum Assured</Label>
+              <Input
+                id="sumAssured"
+                type="number"
+                step="0.01"
+                value={formData.a9 || 0}
+                onChange={(e) => handleChange("a9", parseFloat(e.target.value) || 0)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50 font-medium" : ""}
+              />
+            </div>
+            
+            {/* Policy Status */}
+            <div>
+              <Label htmlFor="policyStatus">Policy Status</Label>
+              <Input
+                id="policyStatus"
+                value={formData.field2 || "IN FORCE"}
+                onChange={(e) => handleChange("field2", e.target.value)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50 font-medium text-green-600" : ""}
+              />
+            </div>
+            
+            {/* Cover Name */}
+            <div>
+              <Label htmlFor="subRisk">Cover Name</Label>
+              <Input
+                id="subRisk"
+                value={formData.subRisk || ""}
+                onChange={(e) => handleChange("subRisk", e.target.value)}
+                placeholder="Enter cover name"
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+            
+            {/* Financial Planner */}
+            <div>
+              <Label htmlFor="leader">Financial Planner</Label>
+              <Input
+                id="leader"
+                value={formData.leader || ""}
+                onChange={(e) => handleChange("leader", e.target.value)}
+                placeholder="Enter financial planner"
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+            
+            {/* Branch Code */}
+            <div>
+              <Label htmlFor="brcode">Branch</Label>
+              <Input
+                id="brcode"
+                value={formData.brcode || ""}
+                onChange={(e) => handleChange("brcode", e.target.value)}
+                placeholder="Enter branch code"
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+            
+            {/* Regular Saving */}
+            <div>
+              <Label htmlFor="regularSaving">Regular Saving</Label>
+              <Input
+                id="regularSaving"
+                type="number"
+                step="0.01"
+                value={formData.field8 || 0}
+                onChange={(e) => handleChange("field8", parseFloat(e.target.value) || 0)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Payment Details Section */}
+      {/* ===== PAYMENT DETAILS SECTION ===== */}
+      {/* Shows payment-related fields like total contributed, interest, and balances */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <SectionHeader 
           title="Payment Details" 
@@ -522,6 +623,7 @@ const ClaimDetailsTab: React.FC<{
           badgeColor="purple"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          {/* Total Contributed */}
           <div>
             <Label htmlFor="totalContributed">Total Contributed</Label>
             <Input
@@ -534,6 +636,8 @@ const ClaimDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50 font-medium" : ""}
             />
           </div>
+          
+          {/* Amount To Investment */}
           <div>
             <Label htmlFor="amtToInvestment">Amt To Investment</Label>
             <Input
@@ -546,6 +650,8 @@ const ClaimDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
+          
+          {/* Year To Date Interest */}
           <div>
             <Label htmlFor="yearToDateInterest">Year To Date Interest</Label>
             <Input
@@ -558,6 +664,8 @@ const ClaimDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
+          
+          {/* Life Cover Amount */}
           <div>
             <Label htmlFor="lifeCoverAmount">Life Cover Amount</Label>
             <Input
@@ -570,11 +678,13 @@ const ClaimDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
+          
+          {/* Gross Total Balance - Calculated field (read-only) */}
           <div className="md:col-span-2">
             <Label htmlFor="grossTotalBalance">Gross Total Balance</Label>
             <Input
               id="grossTotalBalance"
-              value={`₦ ${(parseFloat(formData.a5 || 0) + parseFloat(formData.a6 || 0)).toFixed(2)}`}
+              value={`${(parseFloat(formData.a5 || 0) + parseFloat(formData.a6 || 0)).toFixed(2)}`}
               disabled
               className="bg-gray-50 font-bold text-blue-700 text-lg"
             />
@@ -587,13 +697,41 @@ const ClaimDetailsTab: React.FC<{
 
 // ==================== PAYMENT DETAILS TAB ====================
 
+/**
+ * Payment Details Tab Component
+ * Handles all payment calculations and displays:
+ * - Payable amount with calculations
+ * - Additional calculations (bonus, WHT, etc.) - Only for non-Surrender claims
+ * - DV (Discharge Voucher) details with live exchange rate
+ * 
+ * Loss Types:
+ * - DB: Death Benefit - Shows Surrender Value Rate, Surrender Value, Penalty Charge, Interest Earn
+ * - MV: Maturity - Standard calculations
+ * - PWD: Partial Withdrawal - Standard calculations
+ * - SV: Surrender Value - Simplified: Withdrawal %, Withdrawal Instalment Type, Withdrawal Amount, Net Payable
+ */
 const PaymentDetailsTab: React.FC<{
   formData: Partial<ClaimReserve>;
   handleChange: (key: keyof ClaimReserve, value: any) => void;
   isViewMode: boolean;
   errors: Record<string, string>;
-}> = ({ formData, handleChange, isViewMode, errors }) => {
-  // Calculate derived values
+  lossType?: string;
+}> = ({ formData, handleChange, isViewMode, errors, lossType }) => {
+  const { toast } = useToast();
+  
+  // Check claim types
+  const isDeathBenefit = lossType === "DB";
+  const isSurrenderClaim = lossType === "SV";
+  const isMaturityClaim = lossType === "MV";
+  const isPartialWithdrawal = lossType === "PWD";
+  
+  // ===== EXCHANGE RATE STATE =====
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
+  
+  // ===== DERIVED VALUES CALCULATIONS =====
+  // All calculations are derived from form data and update automatically
+  
+  // Basic financial calculations
   const totalContributed = parseFloat(formData.a5 || 0);
   const interestEarned = parseFloat(formData.a6 || 0);
   const totalBalance = totalContributed + interestEarned;
@@ -601,10 +739,26 @@ const PaymentDetailsTab: React.FC<{
   const outstandingLoans = parseFloat(formData.a7 || 0);
   const approvedLoanAmt = parseFloat(formData.a8 || 0);
   
-  // Net withdrawal = total balance - outstanding loans - approved loan amount
-  const netWithdrawal = totalBalance - outstandingLoans - approvedLoanAmt;
+  // Death Benefit specific fields (DB only)
+  const surrenderValueRate = parseFloat(formData.field13 || 0);
+  const surrenderValue = parseFloat(formData.field14 || 0);
+  const penaltyCharge = parseFloat(formData.field15 || 0);
   
-  // Other calculations
+  // Surrender Claim specific fields (SV only)
+  const withdrawalPercentage = parseFloat(formData.field16 || 0);
+  const withdrawalInstalmentType = formData.field17 || "";
+  const withdrawalAmount = parseFloat(formData.field18 || 0);
+  
+  // Net withdrawal = total balance - outstanding loans - approved loan amount - penalty charge (for DB)
+  // For surrender claims, net withdrawal is the withdrawal amount
+  let netWithdrawal = 0;
+  if (isSurrenderClaim) {
+    netWithdrawal = withdrawalAmount;
+  } else {
+    netWithdrawal = totalBalance - outstandingLoans - approvedLoanAmt - (isDeathBenefit ? penaltyCharge : 0);
+  }
+  
+  // Additional calculation fields (not for surrender claims)
   const calcLoanInterest = parseFloat(formData.field4 || 0);
   const outstandingLoanInterest = parseFloat(formData.field11 || 0);
   const outstandingPremium = parseFloat(formData.field5 || 0);
@@ -612,9 +766,65 @@ const PaymentDetailsTab: React.FC<{
   const whtOnInterest = parseFloat(formData.field7 || 0);
   const otherDeductions = parseFloat(formData.field10 || 0);
   
-  // Net payable = netWithdrawal - other deductions - outstanding premium + bonus - whtOnInterest
-  const netPayable = netWithdrawal - otherDeductions - outstandingPremium + bonus - whtOnInterest;
+  // Net payable = netWithdrawal - other deductions - outstanding premium + bonus - whtOnInterest (for non-surrender)
+  // For surrender claims, net payable = withdrawal amount
+  let netPayable = 0;
+  if (isSurrenderClaim) {
+    netPayable = withdrawalAmount;
+  } else {
+    netPayable = netWithdrawal - otherDeductions - outstandingPremium + bonus - whtOnInterest;
+  }
 
+  /**
+   * Fetch exchange rate from API
+   */
+  const fetchExchangeRate = async (fromCurrency: string, toCurrency: string = "NGN") => {
+    if (!fromCurrency || fromCurrency === "NAIRA") {
+      handleChange("propRate", 1);
+      return;
+    }
+    
+    setIsFetchingRate(true);
+    try {
+      const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
+      if (!response.ok) throw new Error("Failed to fetch exchange rate");
+      const data = await response.json();
+      const rate = data.rates[toCurrency] || 1;
+      handleChange("propRate", rate);
+      
+      toast({
+        title: "Exchange Rate Updated",
+        description: `1 ${fromCurrency} = ${rate} ${toCurrency}`,
+        variant: "default",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error fetching exchange rate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch exchange rate. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFetchingRate(false);
+    }
+  };
+
+  /**
+   * Handle currency change - fetches exchange rate
+   */
+  const handleCurrencyChange = (currency: string) => {
+    handleChange("field12", currency);
+    if (currency && currency !== "NAIRA") {
+      fetchExchangeRate(currency);
+    } else {
+      handleChange("propRate", 1);
+    }
+  };
+
+  /**
+   * Handle recalculation of all values
+   */
   const handleReCalc = () => {
     toast({
       title: "Recalculated",
@@ -625,7 +835,7 @@ const PaymentDetailsTab: React.FC<{
 
   return (
     <div className="space-y-6">
-      {/* Payable Amount Section */}
+      {/* ===== PAYABLE AMOUNT SECTION ===== */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <SectionHeader 
           title="Payable Amount" 
@@ -635,6 +845,7 @@ const PaymentDetailsTab: React.FC<{
           badgeColor="blue"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          {/* Claim Description - Read-only */}
           <div className="md:col-span-2">
             <Label htmlFor="claimDescription">Claim Description</Label>
             <Input
@@ -644,51 +855,204 @@ const PaymentDetailsTab: React.FC<{
               className="bg-gray-50"
             />
           </div>
-          <div>
-            <Label htmlFor="approvedLoanAmt">Approved Loan Amt</Label>
-            <Input
-              id="approvedLoanAmt"
-              type="number"
-              step="0.01"
-              value={approvedLoanAmt}
-              onChange={(e) => handleChange("a8", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="outstandingLoans">Outstanding Loans</Label>
-            <Input
-              id="outstandingLoans"
-              type="number"
-              step="0.01"
-              value={outstandingLoans}
-              onChange={(e) => handleChange("a7", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
+          
+          {/* ===== DEATH BENEFIT (DB) SPECIFIC FIELDS ===== */}
+          {/* Only show these fields when lossType is "DB" (Death Benefit) */}
+          {isDeathBenefit && (
+            <>
+              {/* Surrender Value Rate */}
+              <div>
+                <Label htmlFor="surrenderValueRate">Surrender Value Rate</Label>
+                <Input
+                  id="surrenderValueRate"
+                  type="number"
+                  step="0.01"
+                  value={surrenderValueRate}
+                  onChange={(e) => handleChange("field13", parseFloat(e.target.value) || 0)}
+                  disabled={isViewMode}
+                  className={isViewMode ? "bg-gray-50" : ""}
+                  placeholder="Enter surrender value rate"
+                />
+              </div>
+              
+              {/* Surrender Value */}
+              <div>
+                <Label htmlFor="surrenderValue">Surrender Value</Label>
+                <Input
+                  id="surrenderValue"
+                  type="number"
+                  step="0.01"
+                  value={surrenderValue}
+                  onChange={(e) => handleChange("field14", parseFloat(e.target.value) || 0)}
+                  disabled={isViewMode}
+                  className={isViewMode ? "bg-gray-50" : ""}
+                  placeholder="Enter surrender value"
+                />
+              </div>
+              
+              {/* Penalty Charge */}
+              <div>
+                <Label htmlFor="penaltyCharge">Penalty Charge</Label>
+                <Input
+                  id="penaltyCharge"
+                  type="number"
+                  step="0.01"
+                  value={penaltyCharge}
+                  onChange={(e) => handleChange("field15", parseFloat(e.target.value) || 0)}
+                  disabled={isViewMode}
+                  className={isViewMode ? "bg-gray-50" : ""}
+                  placeholder="Enter penalty charge"
+                />
+              </div>
+              
+              {/* Interest Earn - uses a6 field */}
+              <div>
+                <Label htmlFor="interestEarn">Interest Earn</Label>
+                <Input
+                  id="interestEarn"
+                  type="number"
+                  step="0.01"
+                  value={interestEarned}
+                  onChange={(e) => handleChange("a6", parseFloat(e.target.value) || 0)}
+                  disabled={isViewMode}
+                  className={isViewMode ? "bg-gray-50" : ""}
+                  placeholder="Enter interest earned"
+                />
+              </div>
+            </>
+          )}
+          
+          {/* ===== SURRENDER CLAIM (SV) SPECIFIC FIELDS ===== */}
+          {/* Only show these fields when lossType is "SV" (Surrender Value) */}
+          {isSurrenderClaim && (
+            <>
+              {/* Withdrawal (%) */}
+              <div>
+                <Label htmlFor="withdrawalPercentage">Withdrawal (%)</Label>
+                <Input
+                  id="withdrawalPercentage"
+                  type="number"
+                  step="0.01"
+                  value={withdrawalPercentage}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    handleChange("field16", val);
+                    // Auto-calculate withdrawal amount based on percentage of total balance
+                    const amount = (totalBalance * val) / 100;
+                    handleChange("field18", amount);
+                  }}
+                  disabled={isViewMode}
+                  className={isViewMode ? "bg-gray-50" : ""}
+                  placeholder="Enter withdrawal percentage"
+                />
+              </div>
+              
+              {/* Withdrawal Instalment Type */}
+              <div>
+                <Label htmlFor="withdrawalInstalmentType">Withdrawal Instalment Type</Label>
+                <Select
+                  value={withdrawalInstalmentType}
+                  onValueChange={(value) => handleChange("field17", value)}
+                  disabled={isViewMode}
+                >
+                  <SelectTrigger className={isViewMode ? "bg-gray-50" : ""}>
+                    <SelectValue placeholder="- select -" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Single">Single</SelectItem>
+                    <SelectItem value="Monthly">Monthly</SelectItem>
+                    <SelectItem value="Quarterly">Quarterly</SelectItem>
+                    <SelectItem value="Semi-Annual">Semi-Annual</SelectItem>
+                    <SelectItem value="Annual">Annual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Withdrawal Amount */}
+              <div>
+                <Label htmlFor="withdrawalAmount">Withdrawal Amount</Label>
+                <Input
+                  id="withdrawalAmount"
+                  type="number"
+                  step="0.01"
+                  value={withdrawalAmount}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    handleChange("field18", val);
+                    // Auto-calculate percentage based on total balance
+                    if (totalBalance > 0) {
+                      const percent = (val / totalBalance) * 100;
+                      handleChange("field16", percent);
+                    }
+                  }}
+                  disabled={isViewMode}
+                  className={isViewMode ? "bg-gray-50 font-bold" : ""}
+                  placeholder="Enter withdrawal amount"
+                />
+              </div>
+            </>
+          )}
+          
+          {/* Approved Loan Amount - Hidden for surrender claims */}
+          {!isSurrenderClaim && (
+            <div>
+              <Label htmlFor="approvedLoanAmt">Approved Loan Amt</Label>
+              <Input
+                id="approvedLoanAmt"
+                type="number"
+                step="0.01"
+                value={approvedLoanAmt}
+                onChange={(e) => handleChange("a8", parseFloat(e.target.value) || 0)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+          )}
+          
+          {/* Outstanding Loans - Hidden for surrender claims */}
+          {!isSurrenderClaim && (
+            <div>
+              <Label htmlFor="outstandingLoans">Outstanding Loans</Label>
+              <Input
+                id="outstandingLoans"
+                type="number"
+                step="0.01"
+                value={outstandingLoans}
+                onChange={(e) => handleChange("a7", parseFloat(e.target.value) || 0)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+          )}
+          
+          {/* Net Withdrawal - Calculated (read-only) */}
           <div>
             <Label htmlFor="netWithdrawal">Net Withdrawal</Label>
             <Input
               id="netWithdrawal"
-              value={`₦ ${netWithdrawal.toFixed(2)}`}
+              value={`${netWithdrawal.toFixed(2)}`}
               disabled
               className="bg-gray-50 font-bold"
             />
           </div>
-          <div>
-            <Label htmlFor="otherDeductions">Other Deductions</Label>
-            <Input
-              id="otherDeductions"
-              type="number"
-              step="0.01"
-              value={otherDeductions}
-              onChange={(e) => handleChange("field10", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
+          
+          {/* Other Deductions - Hidden for surrender claims */}
+          {!isSurrenderClaim && (
+            <div>
+              <Label htmlFor="otherDeductions">Other Deductions</Label>
+              <Input
+                id="otherDeductions"
+                type="number"
+                step="0.01"
+                value={otherDeductions}
+                onChange={(e) => handleChange("field10", parseFloat(e.target.value) || 0)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+          )}
+          
+          {/* Recalc Button */}
           <div className="md:col-span-2">
             <div className="flex items-center justify-end">
               <Button
@@ -706,89 +1070,95 @@ const PaymentDetailsTab: React.FC<{
         </div>
       </div>
 
-      {/* Additional Calculations Section */}
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <SectionHeader 
-          title="Additional Calculations" 
-          icon={<TrendingUp className="w-4 h-4" />}
-          borderColor="border-yellow-200"
-          badge="Summary"
-          badgeColor="yellow"
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          <div>
-            <Label htmlFor="calcLoanInterest">Calc. Loan Interest</Label>
-            <Input
-              id="calcLoanInterest"
-              type="number"
-              step="0.01"
-              value={calcLoanInterest}
-              onChange={(e) => handleChange("field4", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="outstandingLoanInterest">Outstanding Loan Interest</Label>
-            <Input
-              id="outstandingLoanInterest"
-              type="number"
-              step="0.01"
-              value={outstandingLoanInterest}
-              onChange={(e) => handleChange("field11", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="outstandingPremium">Outstanding Premium</Label>
-            <Input
-              id="outstandingPremium"
-              type="number"
-              step="0.01"
-              value={outstandingPremium}
-              onChange={(e) => handleChange("field5", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="bonus">Bonus</Label>
-            <Input
-              id="bonus"
-              type="number"
-              step="0.01"
-              value={bonus}
-              onChange={(e) => handleChange("field6", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="whtOnInterest">WHT On Interest</Label>
-            <Input
-              id="whtOnInterest"
-              type="number"
-              step="0.01"
-              value={whtOnInterest}
-              onChange={(e) => handleChange("field7", parseFloat(e.target.value) || 0)}
-              disabled={isViewMode}
-              className={isViewMode ? "bg-gray-50" : ""}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <Label htmlFor="netPayable" className="text-lg font-bold">Net Payable</Label>
-            <Input
-              id="netPayable"
-              value={`₦ ${netPayable.toFixed(2)}`}
-              disabled
-              className="bg-green-50 font-bold text-green-700 text-xl"
-            />
+      {/* ===== ADDITIONAL CALCULATIONS SECTION ===== */}
+      {/* Only show for non-Surrender claims */}
+      {!isSurrenderClaim && (
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <SectionHeader 
+            title="Additional Calculations" 
+            icon={<TrendingUp className="w-4 h-4" />}
+            borderColor="border-yellow-200"
+            badge="Summary"
+            badgeColor="yellow"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+           
+            
+            {/* Outstanding Premium */}
+            <div>
+              <Label htmlFor="outstandingPremium">Outstanding Premium</Label>
+              <Input
+                id="outstandingPremium"
+                type="number"
+                step="0.01"
+                value={outstandingPremium}
+                onChange={(e) => handleChange("field5", parseFloat(e.target.value) || 0)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+            
+            {/* Bonus */}
+            <div>
+              <Label htmlFor="bonus">Bonus</Label>
+              <Input
+                id="bonus"
+                type="number"
+                step="0.01"
+                value={bonus}
+                onChange={(e) => handleChange("field6", parseFloat(e.target.value) || 0)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+            
+            {/* WHT On Interest */}
+            <div>
+              <Label htmlFor="whtOnInterest">WHT On Interest</Label>
+              <Input
+                id="whtOnInterest"
+                type="number"
+                step="0.01"
+                value={whtOnInterest}
+                onChange={(e) => handleChange("field7", parseFloat(e.target.value) || 0)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+              />
+            </div>
+            
+            {/* Net Payable - Calculated (read-only, highlighted) */}
+            <div className="md:col-span-2">
+              <Label htmlFor="netPayable" className="text-lg font-bold">Net Payable</Label>
+              <Input
+                id="netPayable"
+                value={`${netPayable.toFixed(2)}`}
+                disabled
+                className="bg-green-50 font-bold text-green-700 text-xl"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* DV Details Section */}
+      {/* ===== NET PAYABLE FOR SURRENDER CLAIMS ===== */}
+      {/* For surrender claims, show Net Payable separately */}
+      {isSurrenderClaim && (
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <Label htmlFor="netPayable" className="text-lg font-bold">Net Payable</Label>
+              <Input
+                id="netPayable"
+                value={`${netPayable.toFixed(2)}`}
+                disabled
+                className="bg-green-50 font-bold text-green-700 text-xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== DV DETAILS SECTION ===== */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <SectionHeader 
           title="DV Details" 
@@ -798,12 +1168,13 @@ const PaymentDetailsTab: React.FC<{
           badgeColor="purple"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          {/* Currency Type - Select dropdown with exchange rate fetch */}
           <div>
             <Label htmlFor="currencyType">Currency Type</Label>
             <Select
               value={formData.field12 || "NAIRA"}
-              onValueChange={(value) => handleChange("field12", value)}
-              disabled={isViewMode}
+              onValueChange={handleCurrencyChange}
+              disabled={isViewMode || isFetchingRate}
             >
               <SelectTrigger className={isViewMode ? "bg-gray-50" : ""}>
                 <SelectValue placeholder="Select currency" />
@@ -812,10 +1183,23 @@ const PaymentDetailsTab: React.FC<{
                 <SelectItem value="NAIRA">NAIRA</SelectItem>
                 <SelectItem value="USD">USD</SelectItem>
                 <SelectItem value="GBP">GBP</SelectItem>
-                <SelectItem value="EURO">EURO</SelectItem>
+                <SelectItem value="EUR">EUR</SelectItem>
+                <SelectItem value="CAD">CAD</SelectItem>
+                <SelectItem value="AUD">AUD</SelectItem>
+                <SelectItem value="JPY">JPY</SelectItem>
+                <SelectItem value="CNY">CNY</SelectItem>
+                <SelectItem value="ZAR">ZAR</SelectItem>
               </SelectContent>
             </Select>
+            {isFetchingRate && (
+              <div className="flex items-center mt-1 text-sm text-blue-600">
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                Fetching exchange rate...
+              </div>
+            )}
           </div>
+          
+          {/* Exchange Rate */}
           <div>
             <Label htmlFor="exchangeRate">Exchange Rate</Label>
             <Input
@@ -828,6 +1212,8 @@ const PaymentDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
+          
+          {/* Adjusted Amount Due */}
           <div>
             <Label htmlFor="adjustedAmountDue">Adjusted Amount Due</Label>
             <Input
@@ -840,6 +1226,8 @@ const PaymentDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
+          
+          {/* Our Liability Amount (Local) */}
           <div>
             <Label htmlFor="ourLiabilityAmount">Our Liability Amount (Local)</Label>
             <Input
@@ -858,22 +1246,40 @@ const PaymentDetailsTab: React.FC<{
   );
 };
 
+
 // ==================== DOCUMENT UPLOAD TAB ====================
 
+/**
+ * Document Upload Tab Component
+ * Handles file uploads, document management, and approval workflow
+ * Features:
+ * - File upload with validation
+ * - Document list with view/delete capabilities
+ * - Transaction status management
+ * - Authorization selection
+ */
 const DocumentUploadTab: React.FC<{
   isViewMode: boolean;
 }> = ({ isViewMode }) => {
+  const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedDocuments, setUploadedDocuments] = useState<Array<{ name: string; size: number; uploadDate: string }>>([]);
   const [transactionStatus, setTransactionStatus] = useState("PENDING");
   const [authorizedBy, setAuthorizedBy] = useState("");
 
+  /**
+   * Handle file selection from input
+   */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
     }
   };
 
+  /**
+   * Upload the selected file
+   * Adds document to the list and clears the file input
+   */
   const handleUpload = () => {
     if (selectedFile) {
       setUploadedDocuments([
@@ -885,6 +1291,7 @@ const DocumentUploadTab: React.FC<{
         }
       ]);
       setSelectedFile(null);
+      // Reset file input value
       const fileInput = document.getElementById('fileUpload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
       
@@ -896,6 +1303,9 @@ const DocumentUploadTab: React.FC<{
     }
   };
 
+  /**
+   * Delete a document from the list
+   */
   const handleDeleteDocument = (index: number) => {
     setUploadedDocuments(uploadedDocuments.filter((_, i) => i !== index));
     toast({
@@ -905,6 +1315,9 @@ const DocumentUploadTab: React.FC<{
     });
   };
 
+  /**
+   * Add approval document (sends for approval workflow)
+   */
   const handleAddApprovalDocument = () => {
     toast({
       title: "Approval Document Added",
@@ -915,7 +1328,7 @@ const DocumentUploadTab: React.FC<{
 
   return (
     <div className="space-y-6">
-      {/* Additional Info Section */}
+      {/* ===== ADDITIONAL INFO SECTION ===== */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <SectionHeader 
           title="Additional Info" 
@@ -925,6 +1338,7 @@ const DocumentUploadTab: React.FC<{
           badgeColor="blue"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          {/* File Upload */}
           <div>
             <Label htmlFor="fileUpload">Upload</Label>
             <div className="flex items-center gap-2">
@@ -949,6 +1363,8 @@ const DocumentUploadTab: React.FC<{
               <p className="text-sm text-gray-500 mt-1">Selected: {selectedFile.name}</p>
             )}
           </div>
+          
+          {/* Transaction Status */}
           <div>
             <Label htmlFor="transactionStatus">Transaction Status</Label>
             <Select
@@ -967,6 +1383,8 @@ const DocumentUploadTab: React.FC<{
               </SelectContent>
             </Select>
           </div>
+          
+          {/* Authorized By */}
           <div>
             <Label htmlFor="authorizedBy">Authorized By</Label>
             <Select
@@ -984,6 +1402,8 @@ const DocumentUploadTab: React.FC<{
               </SelectContent>
             </Select>
           </div>
+          
+          {/* Add Approval Document Button */}
           <div className="flex items-end">
             <Button
               onClick={handleAddApprovalDocument}
@@ -997,7 +1417,8 @@ const DocumentUploadTab: React.FC<{
         </div>
       </div>
 
-      {/* Help Section */}
+      {/* ===== HELP SECTION ===== */}
+      {/* Informational section with usage instructions */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <SectionHeader 
           title="HELP" 
@@ -1015,7 +1436,7 @@ const DocumentUploadTab: React.FC<{
         </ul>
       </div>
 
-      {/* Uploaded Documents */}
+      {/* ===== UPLOADED DOCUMENTS SECTION ===== */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
         <SectionHeader 
           title="Uploaded Document Details" 
@@ -1025,11 +1446,13 @@ const DocumentUploadTab: React.FC<{
           badgeColor="gray"
         />
         {uploadedDocuments.length === 0 ? (
+          // Empty state
           <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg mt-2">
             <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
             <p>No documents uploaded yet</p>
           </div>
         ) : (
+          // Document table
           <div className="border rounded-lg overflow-x-auto mt-2">
             <table className="w-full min-w-full">
               <thead className="bg-gray-50">
@@ -1077,7 +1500,7 @@ const DocumentUploadTab: React.FC<{
         )}
       </div>
 
-      {/* Bottom Actions */}
+      {/* ===== BOTTOM ACTIONS ===== */}
       <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
         <Button
           variant="outline"
@@ -1108,6 +1531,21 @@ const DocumentUploadTab: React.FC<{
 
 // ==================== MAIN COMPONENT ====================
 
+/**
+ * Claim Form Page Component
+ * Main container for claim creation, editing, and viewing
+ * 
+ * Modes:
+ * - create: New claim creation with policy search
+ * - edit: Edit existing claim with premium check section
+ * - view: Read-only view of claim details
+ * 
+ * Loss Types:
+ * - DB: Death Benefit
+ * - MV: Maturity
+ * - PWD: Partial Withdrawal
+ * - SV: Surrender Value
+ */
 interface ClaimFormPageProps {
   mode: "create" | "edit" | "view";
   lossType?: string;
@@ -1121,84 +1559,139 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("details");
 
-  const returnPath = location.state?.returnPath || 
-    (lossType ? `/claims/individual/${lossType.toLowerCase().replace(/ /g, '-')}` : "/claims/overview");
+  // ===== DETERMINE LOSS TYPE FROM URL =====
+  // Map URL-friendly loss type names to their codes
+  const mapLossTypeToCode = (type: string): string => {
+    const mapping: Record<string, string> = {
+      'surrender': 'SV',
+      'maturity': 'MV',
+      'death-benefit': 'DB',
+      'partial-withdrawal': 'PWD',
+      'db': 'DB',
+      'mv': 'MV',
+      'sv': 'SV',
+      'pwd': 'PWD'
+    };
+    return mapping[type?.toLowerCase()] || type || '';
+  };
 
+  // Get lossType from URL params if not passed as prop
+  const params = useParams<{ lossType?: string }>();
+  const urlLossType = params.lossType || '';
+  const effectiveLossType = lossType || mapLossTypeToCode(urlLossType);
+
+  // Determine return path based on loss type
+  const returnPath = location.state?.returnPath || 
+    (effectiveLossType ? `/claims/individual/${urlLossType || effectiveLossType.toLowerCase()}` : "/claims/overview");
+
+  // Redux selectors for claim data
   const currentReserve = useSelector(selectCurrentReserve);
   const loading = useSelector(selectCurrentLoading);
   const error = useSelector(selectCurrentError);
   
-  // ✅ Get policies from Redux state (from the new endpoint)
+  // Redux selectors for policy data
   const policiesFromRedux = useSelector(selectAllPolicies);
   const policyLoadingFromRedux = useSelector(selectPoliciesLoading);
   const policyErrorFromRedux = useSelector(selectPoliciesError);
 
-  // State for policy dropdown - transformed to match ApiDropdownOption
+  // ===== STATE MANAGEMENT =====
+  
+  // Policy dropdown state
   const [policies, setPolicies] = useState<ApiDropdownOption[]>([]);
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policyError, setPolicyError] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState<ApiDropdownOption | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [formData, setFormData] = useState<Partial<ClaimReserve>>({
-    policyNo: "",
-    insuredName: "",
-    lossType: lossType || "",
-    lossDetails: "",
-    lossDate: new Date().toISOString().split("T")[0],
-    amtReserved: 0,
-    amtPaid: 0,
-    claimNo: "",
-    active: 1,
-    approval: 0,
-    brcode: "",
-    coPolicyNo: "",
-    refDNCNNo: "",
-    propRate: 1,
-    undYear: 0,
-    startDate: "",
-    endDate: "",
-    subRiskID: "",
-    subRisk: "",
-    partyID: "",
-    party: "",
-    insuredID: "",
-    detailID: 0,
-    leadID: "",
-    leader: "",
-    propType: "",
-    leadProp: 0,
-    field1: "",
-    field2: "IN FORCE",
-    field3: "",
-    field4: "",
-    field5: "",
-    field6: "",
-    field7: "",
-    field8: "",
-    field9: "",
-    field10: "",
-    field11: "",
-    field12: "",
-    a1: 0,
-    a2: 0,
-    a3: 0,
-    a4: 0,
-    a5: 0,
-    a6: 0,
-    a7: 0,
-    a8: 0,
-    a9: 0,
-  });
+  // Form data state
+ // In the useState for formData, remove hardcoded values
+const [formData, setFormData] = useState<Partial<ClaimReserve>>({
+  claimID: 0,
+  claimNo: "",
+  brcode: "",
+  policyNo: "",
+  coPolicyNo: "",
+  refDNCNNo: "",
+  insuredName: "",
+  insuredID: "",
+  lossType: effectiveLossType || "",
+  lossDetails: "",
+  lossDate: "",
+  startDate: "",
+  endDate: "",
+  subRiskID: "",
+  subRisk: "",
+  partyID: "",
+  party: "",
+  leadID: "",
+  leader: "",
+  propType: "",
+  leadProp: 0,
+  propRate: 1,
+  undYear: 0,
+  detailID: 0,
+  approval: 0,
+  deleted: 0,
+  active: 1,
+  amtReserved: 0,
+  amtPaid: 0,
+  // ✅ ALL fields start empty
+  field1: "",
+  field2: "",
+  field3: "",
+  field4: "",
+  field5: "",
+  field6: "",
+  field7: "",
+  field8: "",
+  field9: "",
+  field10: "",
+  field11: "",
+  field12: "",
+  field13: "",
+  field14: "",
+  field15: "",
+  field16: "",
+  field17: "",
+  field18: "",
+  a1: 0,
+  a2: 0,
+  a3: 0,
+  a4: 0,
+  a5: 0,
+  a6: 0,
+  a7: 0,
+  a8: 0,
+  a9: 0,
+  submittedBy: "",
+  submittedOn: "",
+  modifiedBy: "",
+  modifiedOn: "",
+  approvedBy: "",
+  approvedOn: "",
+  entryDate: "",
+  notifiedDate: "",
+});
 
+  // Track if a policy has been selected (moved AFTER formData declaration)
+  const hasSelectedPolicy = !!formData.policyNo && formData.policyNo.trim() !== "";
+  
+  // Validation and submission state
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Mode flags
   const isViewMode = mode === "view";
   const isEditMode = mode === "edit";
   const isCreateMode = mode === "create";
 
-  // ✅ Updated: Fetch policies using the new searchIndividualPolicies endpoint
+  // ===== API FUNCTIONS =====
+
+  /**
+   * Fetch policies from the API
+   * Uses the searchIndividualPolicies endpoint with search text
+   * Only called in create mode
+   */
   const fetchPolicies = async (searchText: string = "") => {
     if (!isCreateMode) return;
     
@@ -1206,20 +1699,16 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     setPolicyError(false);
     
     try {
-      // Use the new searchIndividualPolicies thunk
       const result = await dispatch(searchIndividualPolicies({
         search: searchText || "",
         page: 1,
-        pageSize: 50, // Fetch more policies for dropdown
-        isProposal: false, // Only show actual policies, not proposals
-        // Optional: Add other filters as needed
-        // coverCode: "GLA", // Uncomment if you want to filter by product
-        // status: "ACTIVE", // Uncomment to show only active policies
+        pageSize: 50,
+        isProposal: false, // Only actual policies, not proposals
       })).unwrap();
       
       console.log("✅ Policies fetched from new endpoint:", result);
       
-      // Transform the response to match ApiDropdownOption
+      // Transform API response to dropdown format
       const policyOptions = (result.items || []).map((item: IndividualPolicy) => ({
         id: item.policyNo || item.policyNo,
         name: `${item.policyNo} - ${item.insuredName || 'N/A'}`,
@@ -1236,7 +1725,6 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
         basicPremium: item.basicPremium,
         status: item.status,
         isProposal: item.isProposal,
-        // Map additional fields for backward compatibility
         subRisk: item.covertype || item.coverCode,
         subRiskId: item.coverCode,
         faceAmount: item.sumAssured,
@@ -1244,7 +1732,6 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
         monthlyPremium: item.basicPremium,
         regularSaving: item.basicPremium,
         policyStatus: item.status,
-        // Add other mappings as needed
       }));
 
       setPolicies(policyOptions);
@@ -1263,25 +1750,27 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     }
   };
 
-  // ✅ Handle search input changes for policy dropdown
+  /**
+   * Handle policy search with debouncing
+   */
   const handlePolicySearch = (searchText: string) => {
     setSearchTerm(searchText);
-    // Debounce the search to avoid too many API calls
     const debounceTimer = setTimeout(() => {
       fetchPolicies(searchText);
     }, 500);
-    
     return () => clearTimeout(debounceTimer);
   };
 
-  // ✅ Fetch policies on mount for create mode
+  // ===== EFFECTS =====
+
+  // Fetch policies on mount for create mode
   useEffect(() => {
     if (isCreateMode) {
       fetchPolicies("");
     }
   }, [isCreateMode]);
 
-  // ✅ Update local state when Redux state changes
+  // Update local state when Redux state changes
   useEffect(() => {
     if (isCreateMode && policiesFromRedux.length > 0) {
       const transformed = policiesFromRedux.map((item: IndividualPolicy) => ({
@@ -1312,7 +1801,7 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     }
   }, [policiesFromRedux, isCreateMode]);
 
-  // ✅ Sync loading/error states from Redux
+  // Sync loading/error states from Redux
   useEffect(() => {
     if (isCreateMode) {
       setPolicyLoading(policyLoadingFromRedux);
@@ -1327,7 +1816,7 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     }
   }, [isEditMode, isViewMode, id, dispatch]);
 
-  // Populate form when data is loaded
+  // Populate form when data is loaded (edit/view mode)
   useEffect(() => {
     if ((isEditMode || isViewMode) && currentReserve) {
       setFormData({
@@ -1371,6 +1860,9 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
         field10: currentReserve.field10 || "",
         field11: currentReserve.field11 || "",
         field12: currentReserve.field12 || "",
+        field13: currentReserve.field13 || "",
+        field14: currentReserve.field14 || "",
+        field15: currentReserve.field15 || "",
         a1: currentReserve.a1 || 0,
         a2: currentReserve.a2 || 0,
         a3: currentReserve.a3 || 0,
@@ -1391,7 +1883,12 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     };
   }, [dispatch]);
 
-  // ✅ Updated: Handle policy selection - auto-populate all fields from the new endpoint data
+  // ===== EVENT HANDLERS =====
+
+  /**
+   * Handle policy selection - auto-populates form fields
+   * Called when user selects a policy from the dropdown
+   */
   const handlePolicySelect = (policy: ApiDropdownOption) => {
     if (!isCreateMode) return;
     
@@ -1411,6 +1908,7 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
       endDate: policy.maturityDate 
         ? new Date(policy.maturityDate).toISOString().split("T")[0] 
         : "",
+        lossDate: new Date().toISOString().split("T")[0], 
       a9: policy.sumAssured || policy.faceAmount || policy.lifeCoverAmount || 0,
       a5: policy.totalContribution || 0,
       a6: policy.interestEarned || 0,
@@ -1434,11 +1932,16 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     });
   };
 
+  /**
+   * Validate form data before submission
+   * Returns true if all validations pass
+   */
   const validate = () => {
     if (isViewMode) return true;
     
     const newErrors: Record<string, string> = {};
 
+    // Required field validations
     if (!formData.policyNo?.trim()) {
       newErrors.policyNo = "Policy number is required";
     }
@@ -1451,6 +1954,8 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     if (!formData.lossDate) {
       newErrors.lossDate = "Loss date is required";
     }
+    
+    // Numeric validations
     if ((formData.amtReserved || 0) < 0) {
       newErrors.amtReserved = "Amount reserved cannot be negative";
     }
@@ -1462,53 +1967,168 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
-    if (isViewMode) return;
-    if (!validate()) return;
+  /**
+   * Handle form submission
+   * Creates new claim or updates existing based on mode
+   */
+const handleSubmit = async () => {
+  console.log("🔵 handleSubmit - START");
+  console.log("🔵 isViewMode:", isViewMode);
+  console.log("🔵 isCreateMode:", isCreateMode);
+  console.log("🔵 formData.policyNo:", formData.policyNo);
+  console.log("🔵 formData.insuredName:", formData.insuredName);
+  console.log("🔵 formData.lossDate:", formData.lossDate);
+  console.log("🔵 effectiveLossType:", effectiveLossType);
+  
+  if (isViewMode) {
+    console.log("🔵 View mode - returning early");
+    return;
+  }
+  
+  console.log("🔵 About to validate...");
+  const isValid = validate();
+  console.log("🔵 Validation result:", isValid);
+  
+  if (!isValid) {
+    console.log("🔵 Validation failed!");
+    console.log("🔵 Errors:", errors);
+    return;
+  }
 
-    setIsSubmitting(true);
-    try {
-      const submitData = {
-        ...formData,
-        entryDate: new Date().toISOString(),
-        notifyDate: new Date().toISOString(),
-        submittedOn: new Date().toISOString(),
-        modifiedOn: new Date().toISOString(),
-      };
-
-      if (isCreateMode) {
-        await dispatch(insertClaimReserve(submitData)).unwrap();
-        toast({
-          title: "✅ Claim Created",
-          description: "Claim has been created successfully!",
-          variant: "default",
-        });
-      } else if (isEditMode) {
-        if (formData.claimID) {
-          await dispatch(updateClaimReserve({ 
-            id: formData.claimID, 
-            data: submitData 
-          })).unwrap();
-          toast({
-            title: "✅ Claim Updated",
-            description: "Claim has been updated successfully!",
-            variant: "default",
-          });
-        }
-      }
+  setIsSubmitting(true);
+  console.log("🔵 isSubmitting set to true");
+  try {
+    // ✅ Build payload with NO hardcoded values - ALL from formData
+    const submitData = {
+      // Claim identification
+      claimID: formData.claimID || 0,
+      claimNo: formData.claimNo || "",
+      brcode: formData.brcode || "",
       
-      navigate(returnPath);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error || "Failed to save claim",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      // Dates
+      entryDate: formData.entryDate || new Date().toISOString(),
+      notifiedDate: formData.notifiedDate || formData.entryDate || new Date().toISOString(),
+      lossDate: formData.lossDate ? new Date(formData.lossDate).toISOString() : new Date().toISOString(),
+      
+      // Policy and Insured
+      policyNo: formData.policyNo || "",
+      coPolicyNo: formData.coPolicyNo || "",
+      refDNCNNo: formData.refDNCNNo || "",
+      insuredName: formData.insuredName || "",
+      insuredID: formData.insuredID || "",
+      
+      // Policy period
+      startDate: formData.startDate ? new Date(formData.startDate).toISOString() : "",
+      endDate: formData.endDate ? new Date(formData.endDate).toISOString() : "",
+      
+      // Risk and Party
+      subRiskID: formData.subRiskID || "",
+      subRisk: formData.subRisk || "",
+      partyID: formData.partyID || "",
+      party: formData.party || "",
+      
+      // Claim details
+      lossType: effectiveLossType || "",
+      lossDetails: formData.lossDetails || "",
+      
+      // ✅ ALL field values as strings (converted from formData)
+      field1: formData.field1 !== undefined && formData.field1 !== null ? String(formData.field1) : "",
+      field2: formData.field2 !== undefined && formData.field2 !== null ? String(formData.field2) : "",
+      field3: formData.field3 !== undefined && formData.field3 !== null ? String(formData.field3) : "",
+      field4: formData.field4 !== undefined && formData.field4 !== null ? String(formData.field4) : "",
+      field5: formData.field5 !== undefined && formData.field5 !== null ? String(formData.field5) : "",
+      field6: formData.field6 !== undefined && formData.field6 !== null ? String(formData.field6) : "",
+      field7: formData.field7 !== undefined && formData.field7 !== null ? String(formData.field7) : "",
+      field8: formData.field8 !== undefined && formData.field8 !== null ? String(formData.field8) : "",
+      field9: formData.field9 !== undefined && formData.field9 !== null ? String(formData.field9) : "",
+      field10: formData.field10 !== undefined && formData.field10 !== null ? String(formData.field10) : "",
+      field11: formData.field11 !== undefined && formData.field11 !== null ? String(formData.field11) : "",
+      field12: formData.field12 !== undefined && formData.field12 !== null ? String(formData.field12) : "",
+      field13: formData.field13 !== undefined && formData.field13 !== null ? String(formData.field13) : "",
+      field14: formData.field14 !== undefined && formData.field14 !== null ? String(formData.field14) : "",
+      field15: formData.field15 !== undefined && formData.field15 !== null ? String(formData.field15) : "",
+      field16: formData.field16 !== undefined && formData.field16 !== null ? String(formData.field16) : "",
+      field17: formData.field17 !== undefined && formData.field17 !== null ? String(formData.field17) : "",
+      field18: formData.field18 !== undefined && formData.field18 !== null ? String(formData.field18) : "",
+      
+      // ✅ ALL a fields as numbers (converted from formData)
+      a1: Number(formData.a1) || 0,
+      a2: Number(formData.a2) || 0,
+      a3: Number(formData.a3) || 0,
+      a4: Number(formData.a4) || 0,
+      a5: Number(formData.a5) || 0,
+      a6: Number(formData.a6) || 0,
+      a7: Number(formData.a7) || 0,
+      a8: Number(formData.a8) || 0,
+      a9: Number(formData.a9) || 0,
+      
+      // Payment amounts
+      amtReserved: Number(formData.amtReserved) || 0,
+      amtPaid: Number(formData.amtPaid) || 0,
+      
+      // Status flags
+      detailID: Number(formData.detailID) || 0,
+      approval: Number(formData.approval) || 0,
+      deleted: Number(formData.deleted) || 0,
+      active: Number(formData.active) || 1,
+      
+      // Audit fields
+      submittedBy: formData.submittedBy || "",
+      submittedOn: formData.submittedOn || new Date().toISOString(),
+      modifiedBy: formData.modifiedBy || "",
+      modifiedOn: formData.modifiedOn || new Date().toISOString(),
+      approvedBy: formData.approvedBy || "",
+      approvedOn: formData.approvedOn || new Date().toISOString(),
+      
+      // Additional fields
+      leadID: formData.leadID || "",
+      leader: formData.leader || "",
+      propType: formData.propType || "",
+      leadProp: Number(formData.leadProp) || 0,
+      propRate: Number(formData.propRate) || 1,
+      undYear: Number(formData.undYear) || new Date().getFullYear(),
+    };
 
+    console.log("📤 Submitting payload:", submitData);
+
+    if (isCreateMode) {
+      await dispatch(insertClaimReserve(submitData)).unwrap();
+      toast({
+        title: "✅ Claim Created",
+        description: `Claim has been created successfully!`,
+        variant: "default",
+      });
+    } else if (isEditMode && formData.claimID) {
+      await dispatch(updateClaimReserve({ 
+        id: formData.claimID, 
+        data: submitData 
+      })).unwrap();
+      toast({
+        title: "✅ Claim Updated",
+        description: "Claim has been updated successfully!",
+        variant: "default",
+      });
+    }
+    
+    navigate(returnPath);
+  } catch (error: any) {
+    console.error("❌ Submit error:", error);
+    console.error("❌ Error response:", error?.response?.data);
+    
+    toast({
+      title: "Error",
+      description: error?.response?.data?.message || error?.message || "Failed to save claim",
+      variant: "destructive",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+  /**
+   * Handle form field changes
+   * Clears validation error for the field when changed
+   */
   const handleChange = (key: keyof ClaimReserve, value: any) => {
     if (isViewMode) return;
     
@@ -1518,11 +2138,16 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     }
   };
 
+  /**
+   * Navigate back to the previous page
+   */
   const handleCancel = () => {
     navigate(returnPath);
   };
 
-  // ✅ Handle refresh button click
+  /**
+   * Refresh policy list
+   */
   const handleRefreshPolicies = () => {
     if (isCreateMode) {
       fetchPolicies(searchTerm);
@@ -1534,34 +2159,55 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     }
   };
 
-  const getLossTypeOptions = () => {
-    const options = [
-      { label: "Maturity", value: "Maturity" },
-      { label: "Surrender", value: "Surrender" },
-      { label: "Partial Withdrawal", value: "Partial Withdrawal" },
-      { label: "Death Benefit", value: "Death Benefit" },
-    ];
-    
-    if (lossType) {
-      return options.filter(opt => opt.value === lossType);
-    }
-    return options;
-  };
+  // ===== HELPER FUNCTIONS =====
 
-  const lossTypeOptions = getLossTypeOptions();
+/**
+ * Get loss type options based on the current loss type
+ */
+const getLossTypeOptions = () => {
+  const options = [
+    { label: "Maturity Claims", value: "MV" },
+    { label: "Death Benefit Claims", value: "DB" },
+    { label: "Partial Withdrawal Claims", value: "PWD" },
+    { label: "Surrender Claims ", value: "SV" },
+  ];
   
-  const getPageTitle = () => {
-    if (isViewMode) return `${lossType || 'Claim'} Details`;
-    if (isEditMode) return `Edit ${lossType || 'Claim'}`;
-    return `New ${lossType || 'Claim'}`;
-  };
+  if (effectiveLossType) { // ✅ Use effectiveLossType
+    return options.filter(opt => opt.value === effectiveLossType);
+  }
+  return options;
+};
+
+const lossTypeOptions = getLossTypeOptions();
   
+/**
+ * Get page title based on current mode
+ */
+const getPageTitle = () => {
+  const allOptions = [
+    { label: "Maturity Claims", value: "MV" },
+    { label: "Death Benefit Claims", value: "DB" },
+    { label: "Partial Withdrawal Claims", value: "PWD" },
+    { label: "Surrender Claims", value: "SV" },
+  ];
+  const lossTypeLabel = allOptions.find(opt => opt.value === effectiveLossType)?.label || effectiveLossType || 'Claim';
+  if (isViewMode) return `${lossTypeLabel} Details`;
+  if (isEditMode) return `Edit ${lossTypeLabel}`;
+  return `New ${lossTypeLabel}`;
+};
+  
+  /**
+   * Get page subtitle based on current mode
+   */
   const getPageSubtitle = () => {
     if (isViewMode) return "View complete claim details and history";
     if (isEditMode) return "Update claim information and details";
     return "Fill in the details to create a new claim";
   };
 
+  // ===== RENDER =====
+
+  // Loading state
   if (loading && (isEditMode || isViewMode)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -1572,6 +2218,7 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="p-6">
@@ -1598,7 +2245,7 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="container mx-auto max-w-7xl">
-        {/* Header */}
+        {/* ===== HEADER ===== */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-4">
             <Button
@@ -1617,50 +2264,55 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
           </div>
           <div className="flex gap-2 w-10 md:w-auto">
             {isViewMode && (
+              // View mode: Show Edit button
               <Button
                 onClick={() => {
                   navigate(`/claims/individual/claim/edit/${id}`, {
                     state: { returnPath: returnPath }
                   });
                 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white w-full md:w-auto"
+                className="bg-blue-600 hover:bg-blue-700 text-white w-10 md:w-auto"
               >
                 <Pencil className="w-4 h-4 mr-2" />
                 Edit Claim
               </Button>
             )}
             {!isViewMode && (
+              // Create/Edit mode: Show Cancel and Submit buttons
               <>
                 <Button
                   variant="outline"
                   onClick={handleCancel}
-                  className="bg-white w-full md:w-auto"
+                  className="bg-white w-10 md:w-auto"
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="bg-blue-600 hover:bg-blue-700 text-white w-full md:w-auto"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {isCreateMode ? "Creating..." : "Updating..."}
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      {isCreateMode ? "Create Claim" : "Update Claim"}
-                    </>
-                  )}
-                </Button>
+  onClick={() => {
+    console.log("🔵 Button clicked!");
+    handleSubmit();
+  }}
+  disabled={isSubmitting}
+  className="bg-blue-600 hover:bg-blue-700 text-white w-10 md:w-auto"
+>
+  {isSubmitting ? (
+    <>
+      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+      {isCreateMode ? "Creating..." : "Updating..."}
+    </>
+  ) : (
+    <>
+      <Save className="w-4 h-4 mr-2" />
+      {isCreateMode ? "Create Claim" : "Update Claim"}
+    </>
+  )}
+</Button>
               </>
             )}
           </div>
         </div>
 
-        {/* Status Badge */}
+        {/* ===== STATUS BADGE ===== */}
         {isViewMode && (
           <div className="mb-6 flex items-center gap-3">
             <Badge className="bg-green-100 text-green-700 px-3 py-1">
@@ -1674,15 +2326,16 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
           </div>
         )}
 
-        {/* Main Card with Tabs */}
+        {/* ===== MAIN FORM CARD ===== */}
         <Card className="bg-white shadow-sm">
           <CardHeader className="border-b">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              {lossType || 'Claim'} Management
-            </CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+  <FileText className="w-5 h-5 text-blue-600" />
+  {lossTypeOptions.find(opt => opt.value === effectiveLossType)?.label || effectiveLossType || 'Claim'} Management
+</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
+            {/* Tabs Navigation */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="details" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
@@ -1699,12 +2352,15 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
                 </TabsTrigger>
               </TabsList>
 
+              {/* ===== TAB 1: CLAIM DETAILS ===== */}
               <TabsContent value="details" className="animate-in slide-in-from-top-3 fade-in duration-300">
                 <ClaimDetailsTab
                   formData={formData}
                   handleChange={handleChange}
                   isViewMode={isViewMode}
                   isCreateMode={isCreateMode}
+                  isEditMode={isEditMode}
+                  hasSelectedPolicy={hasSelectedPolicy}
                   errors={errors}
                   policies={policies}
                   policyLoading={policyLoading}
@@ -1714,15 +2370,19 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
                 />
               </TabsContent>
 
-              <TabsContent value="payment" className="animate-in slide-in-from-top-3 fade-in duration-300">
+              {/* ===== TAB 2: PAYMENT DETAILS ===== */}
+
+ <TabsContent value="payment" className="animate-in slide-in-from-top-3 fade-in duration-300">
                 <PaymentDetailsTab
                   formData={formData}
                   handleChange={handleChange}
                   isViewMode={isViewMode}
                   errors={errors}
+                  lossType={effectiveLossType} // Pass lossType to show death benefit specific fields
                 />
               </TabsContent>
 
+              {/* ===== TAB 3: DOCUMENTS ===== */}
               <TabsContent value="documents" className="animate-in slide-in-from-top-3 fade-in duration-300">
                 <DocumentUploadTab isViewMode={isViewMode} />
               </TabsContent>

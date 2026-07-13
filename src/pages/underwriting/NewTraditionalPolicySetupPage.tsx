@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, User, Users, RefreshCw, Save } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import apiCall from "../../utils/api-call";
+import { useToast } from "../../components/UI/use-toast";
 
 // ─── helpers ───────────────────────────────────────────────
 const InputField = ({ label, value, onChange, type = "text", required = false, disabled = false }: any) => (
@@ -121,6 +122,7 @@ const emptyFormState = {
 const NewTraditionalPolicySetupPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   
   // ✅ Check if we're in edit mode and get initial data
   const isEditMode = location.state?.editMode || location.pathname.includes("edit-traditional");
@@ -145,8 +147,14 @@ const NewTraditionalPolicySetupPage = () => {
         dateofpayment: initialData.dateofpayment?.split('T')[0] || "",
         dateEmployed: initialData.dateEmployed?.split('T')[0] || "",
       });
+      
+      toast({
+        title: "Success",
+        description: "Traditional policy data loaded successfully",
+        variant: "default",
+      });
     }
-  }, [isEditMode, initialData]);
+  }, [isEditMode, initialData, toast]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -161,10 +169,15 @@ const NewTraditionalPolicySetupPage = () => {
         setBranches(branchResp.data || []);
       } catch (err) {
         console.error("Failed to fetch setup data:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load setup data. Please refresh the page.",
+          variant: "destructive",
+        });
       }
     };
     fetchData();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (formData.issueDate && formData.duration) {
@@ -211,40 +224,243 @@ const NewTraditionalPolicySetupPage = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // ✅ Validate required fields before submission
+  const validateForm = () => {
+    const requiredFields = [
+      { field: 'surName', label: 'Surname' },
+      { field: 'dateOfBirth', label: 'Date of Birth' },
+      { field: 'gender', label: 'Gender' },
+      { field: 'email', label: 'Email Address' },
+      { field: 'mobilePhone', label: 'Mobile Phone' },
+      { field: 'address', label: 'Contact Address' },
+      { field: 'state', label: 'State' },
+      { field: 'country', label: 'Country' },
+      { field: 'meansID', label: 'Means of ID' },
+      { field: 'idNo', label: 'ID Number' },
+      { field: 'brCode', label: 'Branch' },
+      { field: 'productCode', label: 'Product Code' },
+      { field: 'frequency', label: 'Frequency' },
+      { field: 'regularSaving', label: 'Regular Saving' },
+      { field: 'issueDate', label: 'Start Date' },
+      { field: 'duration', label: 'Duration' },
+      { field: 'paymentType', label: 'Payment Type' },
+      { field: 'paymentAmount', label: 'Payment Amount' },
+      { field: 'dateofpayment', label: 'Date of Payment' },
+    ];
+
+    for (const { field, label } of requiredFields) {
+      if (!formData[field] || (typeof formData[field] === 'string' && formData[field].trim() === '')) {
+        toast({
+          title: "Validation Error",
+          description: `${label} is required`,
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
+    // ✅ Validate firstPremium or sumAssured
+    if (formData.firstPremium === 0 && formData.sumAssured === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Either First Premium or Sum Assured must be greater than 0",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
   const handleCreatePolicy = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ✅ Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsSubmitting(true);
+    
+    // ✅ Show loading toast
+    toast({
+      title: "Processing",
+      description: isEditMode ? "Updating traditional policy..." : "Creating traditional policy...",
+      variant: "default",
+    });
+    
     try {
+      // ✅ Build payload exactly as Swagger expects
       const payload = {
-        ...formData,
+        title: formData.title || "",
+        assuredCode: formData.assuredCode || "",
+        surName: formData.surName || "",
+        otherNames: formData.otherNames || "",
         fullName: `${formData.surName || ""} ${formData.otherNames || ""}`.trim(),
+        address: formData.address || "",
+        state: formData.state || "",
+        landphone: formData.landphone || "",
+        mobilePhone: formData.mobilePhone || "",
+        email: formData.email || "",
         riskID: "A",
-        remark: (formData.productCode === "FFP" || formData.productCode === "TAS") ? (formData.remark === "" ? "PREMIUM" : formData.remark) : "PREMIUM",
+        occupation: formData.occupation || "",
+        gender: formData.gender || "",
         dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : new Date().toISOString(),
+        duration: Number(formData.duration) || 0,
+        frequency: formData.frequency || "Monthly",
+        remark: (formData.productCode === "FFP" || formData.productCode === "TAS") 
+          ? (formData.remark && formData.remark !== "" ? formData.remark : "PREMIUM") 
+          : "PREMIUM",
+        regularSaving: Number(formData.regularSaving) || 0,
+        productCode: formData.productCode || "CEE",
+        firstPremium: Number(formData.firstPremium) || 0,
+        sumAssured: Number(formData.sumAssured) || 0,
+        maritalStatus: formData.maritalStatus || "Single",
+        country: formData.country || "Nigeria",
+        agentCode: formData.agentCode || "",
+        agentDescription: formData.agentDescription || "",
+        meansID: formData.meansID || "National ID",
+        idNo: formData.idNo || "",
+        chronicIllness: formData.chronicIllness || "",
+        mop: formData.mop || "",
+        paymentType: formData.paymentType || "Cash",
+        paymentAmount: Number(formData.paymentAmount) || 0,
         dateofpayment: formData.dateofpayment ? new Date(formData.dateofpayment).toISOString() : new Date().toISOString(),
-        issueDate: formData.issueDate ? new Date(formData.issueDate).toISOString() : new Date().toISOString(),
-        expiryDate: formData.expiryDate ? new Date(formData.expiryDate).toISOString() : new Date().toISOString(),
+        receiptNo: formData.receiptNo || "",
+        bankName: formData.bankName || "",
+        accountNo: formData.accountNo || "",
+        placeOfBirth: formData.placeOfBirth || "",
+        spouseName: formData.spouseName || "",
+        govtOfOrigin: formData.govtOfOrigin || "",
+        resAddress: formData.resAddress || "",
+        landMark: formData.landMark || "",
+        nin: formData.nin || "",
+        bvn: formData.bvn || "",
+        employmentType: formData.employmentType || "Employee",
+        employerName: formData.employerName || "",
+        employerAddress: formData.employerAddress || "",
+        employerNumber: formData.employerNumber || "",
+        employerEmail: formData.employerEmail || "",
         dateEmployed: formData.dateEmployed ? new Date(formData.dateEmployed).toISOString() : new Date().toISOString(),
+        height: formData.height || "",
+        weight: formData.weight || "",
+        sport: formData.sport || "",
+        infirmity: formData.infirmity || "NO",
+        stroke: formData.stroke || "NO",
+        treatment: formData.treatment || "NO",
+        workAbesent: formData.workAbesent || "NO",
+        smoke: formData.smoke || "NO",
+        aviation: formData.aviation || "NO",
+        religion: formData.religion || "Christianity",
+        designation: formData.designation || "",
+        issueDate: formData.issueDate ? new Date(formData.issueDate).toISOString() : new Date().toISOString(),
+        expiryDate: formData.expiryDate ? new Date(formData.expiryDate).toISOString() : new Date().toISOString()
       };
+
+      console.log("📤 Submitting traditional policy payload:", JSON.stringify(payload, null, 2));
       
+      let response;
       if (isEditMode) {
-        // ✅ CORRECT: Use POST with /tradpolicy/edit/{policyNo}
         const policyNo = formData.policyNo || formData.proposalNo;
         if (!policyNo) {
-          alert("Policy number is required for update");
+          toast({
+            title: "Error",
+            description: "Policy number is required for update",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
           return;
         }
         
-        await apiCall.post(`/v1/lifepolicyAdmin/tradpolicy/edit/${encodeURIComponent(policyNo)}`, payload);
-        alert("Traditional policy updated successfully!");
+        console.log(`📤 Updating traditional policy: ${policyNo}`);
+        response = await apiCall.post(`/v1/lifepolicyAdmin/tradpolicy/edit/${encodeURIComponent(policyNo)}`, payload);
+        
+        toast({
+          title: "Success ✅",
+          description: `Traditional policy updated successfully! Policy No: ${policyNo}`,
+          variant: "default",
+        });
       } else {
-        // ✅ Create new policy
-        await apiCall.post("/v1/lifepolicyAdmin/tradpolicy/create", payload);
-        alert("Traditional policy created successfully!");
+        console.log("📤 Creating new traditional policy");
+        response = await apiCall.post("/v1/lifepolicyAdmin/tradpolicy/create", payload);
+        
+        // ✅ Handle response - the API returns 200 with data
+        const policyNo = response?.data?.policyNo || response?.data?.proposalNo || "";
+        const message = response?.data?.message || "Traditional policy created successfully!";
+        
+        // ✅ Show calculation details if available
+        let description = `${message}`;
+        if (response?.data?.calculation) {
+          const calc = response.data.calculation;
+          description += `\nPolicy No: ${policyNo}`;
+          if (calc.sumAssured) description += `\nSum Assured: ₦${Number(calc.sumAssured).toLocaleString()}`;
+          if (calc.annualPremium) description += `\nAnnual Premium: ₦${Number(calc.annualPremium).toLocaleString()}`;
+        }
+        
+        toast({
+          title: "Success 🎉",
+          description: description,
+          variant: "default",
+        });
       }
-      navigate("/underwriting/individual/policy-admin");
+      
+      console.log("✅ Traditional policy operation successful:", response?.data);
+      
+      // ✅ Navigate after successful operation with a slight delay
+      setTimeout(() => {
+        navigate("/underwriting/individual/policy-admin");
+      }, 1500);
+      
     } catch (err: any) {
-      alert(`Failed to ${isEditMode ? 'update' : 'create'} policy: ` + (err?.response?.data?.message || err.message || "Unknown error"));
+      // ✅ Detailed error logging
+      console.error("❌ Traditional policy operation failed:", {
+        error: err,
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        config: err.config,
+      });
+      
+      // ✅ Extract detailed error message
+      let errorMessage = "Unknown error occurred";
+      let errorDetails = "";
+      
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        const serverData = err.response.data;
+        errorMessage = serverData?.message || serverData?.error || serverData?.detail || err.message;
+        errorDetails = serverData?.details || serverData?.errors || "";
+        
+        // Log the full response data for debugging
+        console.error("Server response data:", serverData);
+        
+        // Check for specific error patterns
+        if (err.response.status === 500) {
+          errorMessage = "Server error occurred. Please check the server logs for details.";
+        } else if (err.response.status === 400) {
+          errorMessage = serverData?.message || "Invalid data submitted. Please check all fields.";
+        } else if (err.response.status === 404) {
+          errorMessage = "Resource not found. Please try again.";
+        } else if (err.response.status === 409) {
+          errorMessage = "Conflict: The policy may already exist.";
+        }
+      } else if (err.request) {
+        // The request was made but no response was received
+        errorMessage = "No response from server. Please check your network connection.";
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        errorMessage = err.message || "Request setup failed";
+      }
+      
+      // ✅ Show detailed error toast
+      toast({
+        title: `Error ${isEditMode ? 'Updating' : 'Creating'} Traditional Policy`,
+        description: `${errorMessage}${errorDetails ? `\nDetails: ${errorDetails}` : ''}`,
+        variant: "destructive",
+      });
+      
     } finally {
       setIsSubmitting(false);
     }

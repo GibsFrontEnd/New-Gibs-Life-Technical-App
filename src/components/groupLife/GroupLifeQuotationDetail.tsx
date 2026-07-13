@@ -131,6 +131,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     opt.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -142,11 +144,11 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelect = (option: ApiDropdownOption) => {
-    onChange(option.id);
-    setIsOpen(false);
-    setSearchTerm("");
-  };
+ const handleSelect = (option: ApiDropdownOption) => {
+  onChange(option.id);
+  setIsOpen(false);
+  setSearchTerm("");
+};
 
   const handleClear = () => {
     onChange("");
@@ -160,9 +162,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       </Label>
       <div className="relative">
         <div
-          className={`flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer ${
-            disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:border-gray-400'
-          } ${isOpen ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'}`}
+          className={`flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:border-gray-400'
+            } ${isOpen ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'}`}
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
           <span className={`${selectedOption ? 'text-gray-900' : 'text-gray-400'}`}>
@@ -219,9 +220,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                     key={option.id}
                     type="button"
                     onClick={() => handleSelect(option)}
-                    className={`w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-0 ${
-                      option.id === value ? 'bg-blue-50' : ''
-                    }`}
+                    className={`w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-0 ${option.id === value ? 'bg-blue-50' : ''
+                      }`}
                   >
                     <div className="font-medium text-sm">{option.name}</div>
                     {option.code && (
@@ -259,7 +259,6 @@ const GroupLifeQuotationDetail: React.FC = () => {
   const [businessSectors, setBusinessSectors] = useState<ApiDropdownOption[]>([]);
   const [products, setProducts] = useState<ApiDropdownOption[]>([]);
   const [insuredTypes, setInsuredTypes] = useState<ApiDropdownOption[]>([]);
-  const [schemeTypes, setSchemeTypes] = useState<ApiDropdownOption[]>([]);
   const [rateTypes, setRateTypes] = useState<ApiDropdownOption[]>([]);
 
   // Loading states for dropdowns
@@ -273,7 +272,6 @@ const GroupLifeQuotationDetail: React.FC = () => {
     businessSectors: true,
     products: true,
     insuredTypes: true,
-    schemeTypes: true,
     rateTypes: true,
   });
 
@@ -288,7 +286,6 @@ const GroupLifeQuotationDetail: React.FC = () => {
     businessSectors: false,
     products: false,
     insuredTypes: false,
-    schemeTypes: false,
     rateTypes: false,
   });
 
@@ -299,7 +296,7 @@ const GroupLifeQuotationDetail: React.FC = () => {
   const fetchDropdownData = async (endpoint: string, params?: Record<string, any>): Promise<ApiDropdownOption[]> => {
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      
+
       let url = `${SERVER_URL}${endpoint}`;
       if (params) {
         const queryParams = new URLSearchParams();
@@ -312,7 +309,7 @@ const GroupLifeQuotationDetail: React.FC = () => {
           url += `?${queryParams.toString()}`;
         }
       }
-      
+
       const response = await fetch(url, {
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -325,7 +322,7 @@ const GroupLifeQuotationDetail: React.FC = () => {
       }
 
       const data = await response.json();
-      
+
       if (Array.isArray(data)) return data;
       if (data.data) return data.data;
       if (data.items) return data.items;
@@ -339,117 +336,126 @@ const GroupLifeQuotationDetail: React.FC = () => {
   };
 
   // Fetch all dropdown data
- // Fetch all dropdown data
-const fetchAllDropdowns = async () => {
-  const endpoints = [
-    { 
-      key: 'products', 
-      url: '/v1/Products',
-      params: { PageNo: 1, PageSize: 100 },
-      mapper: (item: any) => ({
-        id: item.productID || item.riskID || item.id,
-        name: item.productName || item.description || item.name,
-        code: item.productID || item.code,
-        ...item
-      })
-    },
-    { 
-      key: 'accountExecutives', 
-      url: '/Users',
-      params: { page: 1, pageSize: 100 },
-      mapper: (item: any) => ({
-        id: item.id || item.userId || item.userID,
-        name: item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || item.username || item.name,
-        code: item.userId || item.id,
-        ...item
-      })
-    },
-    { 
-      key: 'agentBrokers', 
-      url: '/v1/Agents',
-      mapper: (item: any) => ({
-        id: item.agentID || item.id,
-        name: item.agent || item.name,
-        code: item.agentID || item.code,
-        phone: item.phone1,
-        email: item.email,
-        ...item
-      })
-    },
-    { 
-      key: 'branches', 
-      url: '/lookups/branches',
-      mapper: (item: any) => ({
-        id: item.branchID || item.id,
-        name: item.description || item.name,
-        code: item.branchID2 || item.code,
-        regionID: item.regionID,
-        stateID: item.stateID,
-        manager: item.manager,
-        address: item.address,
-        ...item
-      })
-    },
-    { 
-      key: 'businessSources', 
-      url: '/grouplife/policies/policy-business-types',
-      mapper: (item: any) => ({
-        id: item.value || item.id,           // ✅ Fixed: Use 'value' as id
-        name: item.text || item.name,        // ✅ Fixed: Use 'text' as name
-        code: item.value || item.code,
-        ...item
-      })
-    },
-    { 
-      key: 'accountTypes', 
-      url: '/grouplife/policies/business-share-types',
-      mapper: (item: any) => ({
-        id: item.value || item.id,           // ✅ Fixed: Use 'value' as id
-        name: item.text || item.name,        // ✅ Fixed: Use 'text' as name
-        code: item.value || item.code,
-        ...item
-      })
-    },
-    { 
-      key: 'rateTypes', 
-      url: '/lookups/premium-rate',
-      mapper: (item: any) => ({
-        id: item.id || item.rateId || item.rateTypeId,
-        name: item.name || item.rateName || item.description,
-        value: item.rateValue || item.value || item.rate,
-        code: item.code || item.rateCode,
-        ...item
-      })
-    },
-  ];
+  const fetchAllDropdowns = async () => {
+    const endpoints = [
+      {
+        key: 'products',
+        url: '/v1/Products',
+        params: { PageNo: 1, PageSize: 100 },
+        mapper: (item: any) => ({
+          id: item.productID || item.riskID || item.id,
+          name: item.productName || item.description || item.name,
+          code: item.productID || item.code,
+          ...item
+        })
+      },
+      {
+        key: 'accountExecutives',
+        url: '/lookups/account-executives',
+        mapper: (item: any) => ({
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
+          ...item
+        })
+      },
+      {
+        key: 'agentBrokers',
+        url: '/v1/Agents',
+        mapper: (item: any) => ({
+          id: item.agentID || item.id,
+          name: item.agent || item.name,
+          code: item.agentID || item.code,
+          phone: item.phone1,
+          email: item.email,
+          ...item
+        })
+      },
+      {
+        key: 'branches',
+        url: '/lookups/branches',
+        mapper: (item: any) => ({
+          id: item.branchID || item.id,
+          name: item.description || item.name,
+          code: item.branchID2 || item.code,
+          regionID: item.regionID,
+          stateID: item.stateID,
+          manager: item.manager,
+          address: item.address,
+          ...item
+        })
+      },
+      {
+        key: 'busChannels',
+        url: '/lookups/channels',
+        mapper: (item: any) => ({
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
+          ...item
+        })
+      },
+      {
+        key: 'businessSources',
+        url: '/grouplife/policies/policy-business-types',
+        mapper: (item: any) => ({
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
+          ...item
+        })
+      },
+      {
+        key: 'accountTypes',
+        url: '/lookups/account-types',
+        mapper: (item: any) => ({
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
+          ...item
+        })
+      },
+      // {
+      //   key: 'rateTypes',
+      //   url: '/lookups/premium-rate',
+      //   mapper: (item: any) => ({
+      //     id: item.id || item.rateId || item.rateTypeId,
+      //     name: item.name || item.rateName || item.description,
+      //     value: item.rateValue || item.value || item.rate,
+      //     code: item.code || item.rateCode,
+      //     ...item
+      //   })
+      // },
+    ];
 
-  setDropdownLoading(prev => Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
+    setDropdownLoading(prev => Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
 
-  const promises = endpoints.map(async ({ key, url, params, mapper }) => {
-    try {
-      const rawData = await fetchDropdownData(url, params);
-      const formattedData = rawData.map((item: any) => mapper(item));
+    const promises = endpoints.map(async ({ key, url, params, mapper }) => {
+      try {
+        const rawData = await fetchDropdownData(url, params);
+        const formattedData = rawData.map((item: any) => mapper(item));
 
-      switch (key) {
-        case 'products': setProducts(formattedData); break;
-        case 'accountExecutives': setAccountExecutives(formattedData); break;
-        case 'agentBrokers': setAgentBrokers(formattedData); break;
-        case 'branches': setBranches(formattedData); break;
-        case 'businessSources': setBusinessSources(formattedData); break;
-        case 'accountTypes': setAccountTypes(formattedData); break;
-        case 'rateTypes': setRateTypes(formattedData); break;
+        switch (key) {
+          case 'products': setProducts(formattedData); break;
+          case 'accountExecutives': setAccountExecutives(formattedData); break;
+          case 'agentBrokers': setAgentBrokers(formattedData); break;
+          case 'branches': setBranches(formattedData); break;
+          case 'busChannels': setBusChannels(formattedData); break;
+          case 'businessSources': setBusinessSources(formattedData); break;
+          case 'accountTypes': setAccountTypes(formattedData); break;
+          case 'rateTypes': setRateTypes(formattedData); break;
+        }
+        setDropdownLoading(prev => ({ ...prev, [key]: false }));
+        setDropdownErrors(prev => ({ ...prev, [key]: false }));
+      } catch (error) {
+        console.error(`Failed to fetch ${key}:`, error);
+        setDropdownLoading(prev => ({ ...prev, [key]: false }));
+        setDropdownErrors(prev => ({ ...prev, [key]: true }));
       }
-      setDropdownLoading(prev => ({ ...prev, [key]: false }));
-      setDropdownErrors(prev => ({ ...prev, [key]: false }));
-    } catch (error) {
-      console.error(`Failed to fetch ${key}:`, error);
-      setDropdownLoading(prev => ({ ...prev, [key]: false }));
-      setDropdownErrors(prev => ({ ...prev, [key]: true }));
-    }
-  });
+    });
 
-  await Promise.all(promises);
-};
+    await Promise.all(promises);
+  };
 
   useEffect(() => {
     if (isNewQuotation) {
@@ -491,11 +497,11 @@ const fetchAllDropdowns = async () => {
       .split("T")[0],
     coverDay: "0.00",
     clientName: "",
-    groupFactorAmount: "1000", // ✅ Default: 1000
-    insuredType: "company", // ✅ Default: company
+    groupFactorAmount: "1000",
+    insuredType: "company",
     schemeTypes: "",
-    groupLifeFactor: "2", // ✅ Default: 2
-    rateType: "PRAN RATE", // ✅ Default: PRAN RATE
+    groupLifeFactor: "2",
+    rateType: "PRAN RATE",
     existingClients: false,
     useFixedRate: false,
     useAverageAge: false,
@@ -554,14 +560,14 @@ const fetchAllDropdowns = async () => {
     setIsFetchingRate(true);
     try {
       const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch exchange rate");
       }
-      
+
       const data = await response.json();
       const rate = data.rates?.[toCurrency];
-      
+
       if (rate) {
         setFormData(prev => ({ ...prev, exRate: rate }));
         toast({
@@ -637,11 +643,10 @@ const fetchAllDropdowns = async () => {
 
   const handleSave = async () => {
     const missingFields = [];
-    
+
     if (!formData.clientName || formData.clientName.trim() === "") {
       missingFields.push("Client Name");
     }
-    if (!formData.schemeTypes) missingFields.push("Scheme Types");
     if (!formData.accountExecutiveId) missingFields.push("Account Executive");
     if (!formData.branchId) missingFields.push("Branch/Location");
     if (!formData.businessSource) missingFields.push("Business Source");
@@ -658,57 +663,26 @@ const fetchAllDropdowns = async () => {
       return;
     }
 
-    if (!currentQuotation?.members || currentQuotation.members.length === 0) {
-      toast({
-        title: "No members",
-        description: "Add members before saving the quotation",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const members = currentQuotation.members.map((m) => ({
-      name: m.employeeNames || m.name || "Unknown",
-      dateOfBirth: m.dateOfBirth || new Date().toISOString().split('T')[0],
-      gender: (m.sex || "M") as "M" | "F",
-      salary: m.basicSalary || m.salary || 0,
-      sumAssured: m.sumInsured || m.sumAssured || 0,
-      premium: m.premium || 0,
-      relationship: m.relationship || "",
-      staffNo: m.staffNo || `STAFF-${Date.now()}`,
-      employeeNames: m.employeeNames || m.name || "Unknown",
-      basicSalary: m.basicSalary || 0,
-      housingAllowance: m.housingAllowance || 0,
-      transportAllowance: m.transportAllowance || 0,
-      hireDate: m.hireDate || new Date().toISOString().split('T')[0],
-    }));
-
-    const totalSumInsured = members.reduce((sum, m) => sum + (m.sumAssured || 0), 0);
-    const totalPremium = members.reduce((sum, m) => sum + (m.premium || 0), 0);
-    const loadingRate = Number.parseFloat(formData.loadingPercent) || 0;
-    const reductionRate = Number.parseFloat(formData.reductionPercent) || 0;
-    const netPremiumDue = totalPremium * (1 + loadingRate / 100) * (1 - reductionRate / 100);
+    // Get subRiskId from selected product
+    const selectedProduct = products.find(p => p.id === formData.product);
+    const subRiskId = selectedProduct?.code || (formData.product === "credit-life" ? "CR-001" : "GL-001");
 
     // Get premium rate from selected rate type
     const selectedRateType = rateTypes.find(r => r.id === formData.rateType);
     const premiumRatePercent = selectedRateType?.value || 2.0;
 
-    // Get subRiskId from selected product
-    const selectedProduct = products.find(p => p.id === formData.product);
-    const subRiskId = selectedProduct?.code || (formData.product === "credit-life" ? "CR-001" : "GL-001");
-
     const quotationData = {
       transactionType: formData.product === "credit-life" ? "Credit Life" : "Group Life",
       class: formData.insuredType || "Company",
       subRiskId: subRiskId,
-      entryDate: formData.transactionDate 
-        ? new Date(formData.transactionDate).toISOString() 
+      entryDate: formData.transactionDate
+        ? new Date(formData.transactionDate).toISOString()
         : new Date().toISOString(),
-      startDate: formData.effectiveDate 
-        ? new Date(formData.effectiveDate).toISOString() 
+      startDate: formData.effectiveDate
+        ? new Date(formData.effectiveDate).toISOString()
         : new Date().toISOString(),
-      expiryDate: formData.expiryDate 
-        ? new Date(formData.expiryDate).toISOString() 
+      expiryDate: formData.expiryDate
+        ? new Date(formData.expiryDate).toISOString()
         : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
       accountExecutiveId: formData.accountExecutiveId,
       branchId: formData.branchId,
@@ -761,11 +735,11 @@ const fetchAllDropdowns = async () => {
         "TransportAllowance",
         "HireDate"
       ];
-      
-      const csvContent = headers.join(",") + "\n" + 
+
+      const csvContent = headers.join(",") + "\n" +
         "EMP001,John Doe,M,1990-01-15,100000,50000,30000,2020-01-01\n" +
         "EMP002,Jane Smith,F,1985-06-20,120000,60000,35000,2019-03-15";
-      
+
       const blob = new Blob([csvContent], { type: format === "csv" ? "text/csv" : "application/vnd.ms-excel" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -773,7 +747,7 @@ const fetchAllDropdowns = async () => {
       a.download = format === "csv" ? "group-members-template.csv" : "group-members-template.xlsx";
       a.click();
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: "Template downloaded",
         description: `Template downloaded as ${format.toUpperCase()}`,
@@ -807,10 +781,10 @@ const fetchAllDropdowns = async () => {
     setUploading(true);
     try {
       const parseResult = await dispatch(parseExcelMembers(selectedFile)).unwrap();
-      
+
       if (parseResult.members) {
         setUploadedMembersRaw(parseResult.members);
-        
+
         const mapped = parseResult.members.map((m: any) => ({
           id: `temp-${m.staffNo || Math.random().toString(36).slice(2)}`,
           employeeNames: m.employeeNames || m.name || "Unknown",
@@ -827,9 +801,9 @@ const fetchAllDropdowns = async () => {
           transportAllowance: m.transportAllowance || 0,
           hireDate: m.hireDate || "",
         }));
-        
+
         dispatch(setMembersForCurrentQuotation(mapped));
-        
+
         toast({
           title: "Members uploaded",
           description: `Imported ${parseResult.members.length} member(s)`,
@@ -862,107 +836,11 @@ const fetchAllDropdowns = async () => {
       });
       return;
     }
-    if (!uploadedMembersRaw || uploadedMembersRaw.length === 0) {
-      toast({
-        title: "No members",
-        description: "Upload members before compute",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    try {
-      const computedMembers = [];
-      let totalSumInsured = 0;
-      let totalPremium = 0;
-
-      for (const member of uploadedMembersRaw) {
-        const memberData = {
-          name: member.employeeNames || member.name,
-          dateOfBirth: member.dateOfBirth,
-          gender: member.sex || "M",
-          salary: member.basicSalary || 0,
-          sumAssured: (member.basicSalary || 0) * 2,
-          premium: 0,
-        };
-        
-        try {
-          const result = await dispatch(computeMemberPremium(memberData)).unwrap();
-          computedMembers.push({
-            ...member,
-            sumAssured: result.sumAssured || memberData.sumAssured,
-            premium: result.premium || 0,
-            anb: result.anb || 0,
-          });
-          totalSumInsured += result.sumAssured || memberData.sumAssured;
-          totalPremium += result.premium || 0;
-        } catch (err) {
-          console.error("Error computing member:", err);
-          const defaultSumAssured = memberData.sumAssured;
-          const defaultPremium = defaultSumAssured * 0.01;
-          computedMembers.push({
-            ...member,
-            sumAssured: defaultSumAssured,
-            premium: defaultPremium,
-            anb: 0,
-          });
-          totalSumInsured += defaultSumAssured;
-          totalPremium += defaultPremium;
-        }
-      }
-
-      const loadingRate = Number.parseFloat(formData.loadingPercent) || 0;
-      const reductionRate = Number.parseFloat(formData.reductionPercent) || 0;
-      const netPremiumDue = totalPremium * (1 + loadingRate / 100) * (1 - reductionRate / 100);
-
-      dispatch(
-        setComputedTotalsForCurrentQuotation({
-          totalSumInsured: totalSumInsured,
-          totalPremium: totalPremium,
-          netPremiumDue: netPremiumDue,
-          loadingPercentage: loadingRate,
-          reductionPercentage: reductionRate,
-        })
-      );
-
-      const mappedMembers = computedMembers.map((m: any) => ({
-        id: `temp-${m.staffNo || Math.random().toString(36).slice(2)}`,
-        staffNo: m.staffNo,
-        employeeNames: m.employeeNames || m.name,
-        sex: m.sex,
-        dateOfBirth: m.dateOfBirth,
-        anb: m.anb || 0,
-        totalEmolument: (m.basicSalary || 0) + (m.housingAllowance || 0) + (m.transportAllowance || 0),
-        sumInsured: m.sumAssured || 0,
-        premium: m.premium || 0,
-        rate: m.rate || 0,
-        basicSalary: m.basicSalary || 0,
-        housingAllowance: m.housingAllowance || 0,
-        transportAllowance: m.transportAllowance || 0,
-        hireDate: m.hireDate || "",
-      }));
-      dispatch(setMembersForCurrentQuotation(mappedMembers));
-
-      setFormData((prev) => ({
-        ...prev,
-        totalSumInsured: totalSumInsured.toFixed(2),
-        totalPremium: totalPremium.toFixed(2),
-        netPremiumDue: netPremiumDue.toFixed(2),
-        loadingPercent: loadingRate.toString(),
-        reductionPercent: reductionRate.toString(),
-      }));
-
-      toast({
-        title: "Preview ready",
-        description: `Quotation computed successfully. Total Premium: ${totalPremium.toFixed(2)}`,
-      });
-    } catch (e: any) {
-      toast({
-        title: "Compute failed",
-        description: e?.message || "Unable to compute quotation",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Preview ready",
+      description: "Quotation details look good.",
+    });
   };
 
   const handleFileSelect = async (file: File | null) => {
@@ -1062,7 +940,7 @@ const fetchAllDropdowns = async () => {
         setShowTemplateDropdown(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showTemplateDropdown]);
@@ -1283,7 +1161,7 @@ const fetchAllDropdowns = async () => {
                             <SelectItem value="USD">USD </SelectItem>
                             <SelectItem value="EUR">EUR </SelectItem>
                             <SelectItem value="GBP">GBP </SelectItem>
-                          
+
                           </SelectContent>
                         </Select>
                         <Button
@@ -1301,7 +1179,7 @@ const fetchAllDropdowns = async () => {
                           )}
                         </Button>
                       </div>
-                    
+
                     </div>
 
                     {/* Exchange Rate */}
@@ -1334,26 +1212,6 @@ const fetchAllDropdowns = async () => {
                         searchPlaceholder="Search product..."
                       />
                     </div>
-
-                    {/* Scheme Types - Searchable Dropdown */}
-                    <div className="space-y-2">
-                      <SearchableDropdown
-                        options={schemeTypes.length > 0 ? schemeTypes : [
-                          { id: "group-life", name: "Group Life" },
-                          { id: "credit-life", name: "Credit Life" }
-                        ]}
-                        value={formData.schemeTypes}
-                        onChange={(value) => handleInputChange("schemeTypes", value)}
-                        placeholder="Select Scheme Type"
-                        label="Scheme Types"
-                        loading={dropdownLoading.schemeTypes}
-                        error={dropdownErrors.schemeTypes}
-                        required={true}
-                        searchPlaceholder="Search scheme type..."
-                      />
-                    </div>
-
-                  
 
                     {/* Account Executive - Searchable Dropdown */}
                     <div className="space-y-2">
@@ -1403,19 +1261,15 @@ const fetchAllDropdowns = async () => {
                     {/* Bus Channels - Searchable Dropdown */}
                     <div className="space-y-2">
                       <SearchableDropdown
-                        options={busChannels.length > 0 ? busChannels : [
-                          { id: "CH-001", name: "Direct Sales" },
-                          { id: "CH-002", name: "Partners" },
-                          { id: "CH-003", name: "Digital" }
-                        ]}
+                        options={busChannels}
                         value={formData.busChannelId}
                         onChange={(value) => handleInputChange("busChannelId", value)}
-                        placeholder="Select Bus Channel"
-                        label="Bus Channels"
+                        placeholder="Select Business Channel"
+                        label="Business Channels"
                         loading={dropdownLoading.busChannels}
                         error={dropdownErrors.busChannels}
                         required={true}
-                        searchPlaceholder="Search bus channel..."
+                        searchPlaceholder="Search business channel..."
                       />
                     </div>
 
@@ -1433,28 +1287,6 @@ const fetchAllDropdowns = async () => {
                         searchPlaceholder="Search account type..."
                       />
                     </div>
-
-                    {/* Business Sector - Searchable Dropdown */}
-                    <div className="space-y-2">
-                      <SearchableDropdown
-                        options={businessSectors.length > 0 ? businessSectors : [
-                          { id: "FINANCE", name: "Finance" },
-                          { id: "HEALTHCARE", name: "Healthcare" },
-                          { id: "TECHNOLOGY", name: "Technology" },
-                          { id: "MANUFACTURING", name: "Manufacturing" },
-                          { id: "OIL_GAS", name: "Oil & Gas" }
-                        ]}
-                        value={formData.businessSector}
-                        onChange={(value) => handleInputChange("businessSector", value)}
-                        placeholder="Select Business Sector"
-                        label="Business Sector"
-                        loading={dropdownLoading.businessSectors}
-                        error={dropdownErrors.businessSectors}
-                        searchPlaceholder="Search business sector..."
-                      />
-                    </div>
-
-                
 
                     {/* Cover Day */}
                     <div className="space-y-2">
@@ -1476,10 +1308,6 @@ const fetchAllDropdowns = async () => {
                         </Button>
                       </div>
                     </div>
-
-                   
-
-                   
 
                     {/* Quotation Status */}
                     <div className="space-y-2">
@@ -1503,124 +1331,10 @@ const fetchAllDropdowns = async () => {
                     </div>
                   </div>
 
-                
+
                 </div>
               )}
             </div>
-
-            {/* Import Members Section */}
-            {/* <div className="border rounded-lg shadow-sm mb-4">
-              <div className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100">
-                <span className="font-semibold">Import Members</span>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="flex flex-wrap gap-2 items-center">
-                  <div className="relative inline-block">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
-                      className="bg-transparent flex items-center gap-2"
-                    >
-                      <span>Template Options</span>
-                      <svg 
-                        className={`w-4 h-4 transition-transform ${showTemplateDropdown ? 'rotate-180' : ''}`}
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </Button>
-                    
-                    {showTemplateDropdown && (
-                      <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
-                        <div className="py-1" role="menu">
-                          <button
-                            onClick={() => {
-                              downloadTemplate("csv");
-                              setShowTemplateDropdown(false);
-                            }}
-                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            role="menuitem"
-                          >
-                            Download CSV Template
-                          </button>
-                          <button
-                            onClick={() => {
-                              downloadTemplate("excel");
-                              setShowTemplateDropdown(false);
-                            }}
-                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            role="menuitem"
-                          >
-                            Download Excel Template
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                  <input
-                    type="file"
-                    accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
-                  />
-                  <Button
-                    onClick={handleUpload}
-                    disabled={
-                      !selectedFile ||
-                      validating ||
-                      uploading ||
-                      validationErrors.length > 0
-                    }
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {uploading ? "Uploading..." : "Upload"}
-                  </Button>
-                </div>
-
-                {validationErrors.length > 0 && (
-                  <div className="rounded-md border p-3 text-sm text-red-600 bg-red-50">
-                    <div className="font-semibold mb-1">Validation Errors</div>
-                    <ul className="list-disc ml-5 space-y-1">
-                      {validationErrors.slice(0, 10).map((err, idx) => (
-                        <li key={idx}>{err}</li>
-                      ))}
-                    </ul>
-                    {validationErrors.length > 10 && (
-                      <p className="mt-2 text-sm text-gray-600">
-                        + {validationErrors.length - 10} more errors not displayed.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div> */}
-
-            {/* Member Details Section */}
-            {/* <div className="border rounded-lg shadow-sm mb-4">
-              <button
-                type="button"
-                onClick={() => toggleSection("memberDetails")}
-                className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <span className="font-semibold">Member Details</span>
-              </button>
-              {expandedSections.memberDetails && (
-                <div className="p-6">
-                  <MemberManagementTable
-                    members={currentQuotation?.members || []}
-                    onAddMember={handleAddMember}
-                    onUpdateMember={handleUpdateMember}
-                    onDeleteMember={handleDeleteMember}
-                    groupFactorAmount={Number.parseFloat(formData.groupFactorAmount)}
-                    readOnly={false}
-                  />
-                </div>
-              )}
-            </div> */}
 
             {/* Extension Details Section */}
             <div className="border rounded-lg shadow-sm mb-4">
@@ -1720,7 +1434,6 @@ const fetchAllDropdowns = async () => {
               </Button>
               <Button
                 onClick={handleComputePreview}
-                disabled={!uploadedMembersRaw?.length}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
                 Preview (Compute)
