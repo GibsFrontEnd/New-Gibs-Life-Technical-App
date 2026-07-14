@@ -16,8 +16,8 @@ const UnderwritingGroupSidebar = () => {
       style={{ backgroundColor: SIDEBAR_BG }}
     >
       <div className="font-bold text-lg pt-5 pl-3 pb-8">
-        <span className="max-md:hidden">GIBSLIFE ENTERPRISE</span>
-        <span className="md:hidden">G</span>
+        <span className="max-md:hidden">MICRO-LIFE ENTERPRISE</span>
+        <span className="md:hidden">M</span>
       </div>
       <nav className="flex-1 py-2.5">
         {menuItems.map((item) => {

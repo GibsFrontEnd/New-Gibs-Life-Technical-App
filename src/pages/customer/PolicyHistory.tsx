@@ -983,7 +983,7 @@ const handleViewDetails = async (policy: Policy) => {
     const phoneNumber = "+2348000000000";
     const email = "support@gibsonlife.com";
 
-    const message = `Contact GIBSLIFE Support:\nPhone: ${phoneNumber}\nEmail: ${email}`;
+    const message = `Contact MICROLIFE Support:\nPhone: ${phoneNumber}\nEmail: ${email}`;
     alert(message);
   };
 

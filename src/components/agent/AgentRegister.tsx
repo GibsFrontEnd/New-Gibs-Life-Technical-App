@@ -185,7 +185,7 @@ const AgentRegister: React.FC = () => {
       <button onClick={() => navigate("/")}>
         <img
           src={logoImage}
-          alt="GIBSLIFE Logo"
+          alt="MICROLIFE Logo"
           className="sticky top-5 left-5 w-30 h-20"
         />
       </button>

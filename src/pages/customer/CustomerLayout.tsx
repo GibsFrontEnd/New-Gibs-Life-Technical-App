@@ -214,7 +214,7 @@ const CustomerLayout: React.FC = () => {
               <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center transform rotate-45">
                 <div className="w-4 h-4 lg:w-6 lg:h-6 bg-white rounded transform -rotate-45"></div>
               </div>
-              <span className="text-lg lg:text-xl font-bold">GIBSLIFE</span>
+              <span className="text-lg lg:text-xl font-bold">MICRO-LIFE</span>
             </div>
             
             {/* Close button for mobile */}
