@@ -25,17 +25,13 @@ const CSUSidebar = () => {
     location.pathname.startsWith(`${itemPath}/`);
 
   return (
-    <aside
-      className="fixed left-0 top-16 h-[calc(100vh-64px)] z-100 text-white flex flex-col overflow-y-auto md:w-52 max-md:w-16"
-      style={{ backgroundColor: SIDEBAR_BG }}
-    >
+   <aside
+  className="fixed left-0 top-16 h-[calc(100vh-64px)] z-100 text-white flex-col overflow-y-auto md:w-52 hidden md:flex"
+  style={{ backgroundColor: SIDEBAR_BG }}
+>
       {/* Brand */}
-      <div className="font-bold text-sm pt-5 pl-4 pb-4 border-b border-white/10 max-md:hidden">
-        GIBSLIFE ENTERPRISE
-      </div>
-      <div className="font-bold text-sm pt-5 pb-4 text-center border-b border-white/10 md:hidden">
-        G
-      </div>
+      
+     
 
       <nav className="flex-1 py-2.5">
         {menuItems.map((item, index) => {

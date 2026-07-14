@@ -24,7 +24,11 @@ import {
   Bell,
   RotateCcw,
   Calculator,
-  FolderOpen
+  FolderOpen,
+  Building2,
+  Bus,
+  Flame,
+  Car
 } from "lucide-react";
 
 const SIDEBAR_BG = "#0d47a1";        // Dark blue
@@ -93,6 +97,22 @@ const sections = [
       { path: "/underwriting/credit-life/scheme-renewals", label: "Scheme Renewals", icon: RefreshCw },
       { path: "/underwriting/credit-life/endorsements", label: "Endorsements", icon: FilePen },
       { path: "/underwriting/credit-life/maintenance", label: "Maintenance", icon: Settings },
+      { 
+        path: "/underwriting/credit-life/general-bus", 
+        label: "General Bus", 
+        icon: Building2,
+        subItems: [
+          { path: "/underwriting/credit-life/general-bus/fire", label: "Fire", icon: Flame },
+          { path: "/underwriting/credit-life/general-bus/motor", label: "Motor", icon: Car },
+        ]
+      },
+      { 
+        path: "/underwriting/credit-life/package-bus", 
+        label: "Package Bus", 
+        icon: Bus
+        // No subItems for Package Bus as requested
+      },
+      
     ],
   },
   {
@@ -184,10 +204,10 @@ const UnderwritingSidebar = () => {
   };
 
   return (
-    <aside
-      className="fixed left-0 top-16 h-[calc(100vh-64px)] z-100 text-white flex flex-col overflow-y-auto md:w-52 max-md:w-"
-      style={{ backgroundColor: SIDEBAR_BG }}
-    >
+   <aside
+  className="fixed left-0 top-16 h-[calc(100vh-64px)] z-100 text-white flex-col overflow-y-auto md:w-52 hidden md:flex"
+  style={{ backgroundColor: SIDEBAR_BG }}
+>
       <nav className="flex-1 py-2 overflow-y-auto">
         {/* Overview — top-level link */}
         <NavLink

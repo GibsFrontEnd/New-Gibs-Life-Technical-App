@@ -60,10 +60,9 @@ const UnderwritingOverview = () => {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 p-2 lg:p-6 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in duration-900 p-2 lg:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <header>
-       
         <h1 className="text-3xl font-black text-gray-800 tracking-tight">Underwriting Overview</h1>
         <p className="text-gray-500 mt-1">
           Convert proposals into policies and schemes, then administer the full policy lifecycle.

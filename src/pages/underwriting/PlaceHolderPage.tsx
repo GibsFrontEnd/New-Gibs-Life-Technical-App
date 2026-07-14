@@ -6,21 +6,27 @@ interface PlaceholderPageProps {
 
 const PlaceholderPage = ({ title }: PlaceholderPageProps) => {
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[500px] px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md w-full text-center">
-        <div className="flex justify-center mb-6">
-          <div className="bg-blue-100 rounded-full p-4">
-            <Clock size={48} className="text-[#0d47a1]" />
+    <div className="flex items-center justify-center h-full min-h-[400px] p-8">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 max-w-md w-full">
+        <div className="flex flex-col items-center text-center">
+          {/* Icon */}
+          <div className="bg-blue-50 rounded-full p-4 mb-6">
+            <Clock size={40} className="text-[#0d47a1]" />
           </div>
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">{title}</h2>
-        <p className="text-gray-600 mb-6">
-          This page is currently under development. Content will be available soon.
-        </p>
-        <div className="flex justify-center gap-2">
-          <div className="w-2 h-2 bg-blue-300 rounded-full animate-pulse"></div>
-          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse delay-100"></div>
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200"></div>
+
+          {/* Content */}
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            {title}
+          </h2>
+          <p className="text-gray-500 text-sm leading-relaxed">
+            This page is under construction. We're working on something great!
+          </p>
+
+          {/* Status pill */}
+          <div className="mt-6 inline-flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-full border border-gray-200">
+            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+            <span className="text-xs text-gray-600">In progress</span>
+          </div>
         </div>
       </div>
     </div>

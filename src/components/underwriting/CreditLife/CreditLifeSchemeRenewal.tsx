@@ -52,13 +52,6 @@ import {
   DialogTitle,
   DialogSubTitle,
 } from "../../UI/dialog";
-import { useAppDispatch, useAppSelector } from "../../../hooks/use-apps";
-// import {
-//   fetchGroupLifeQuotations,
-//   fetchGroupLifeQuotationsByAgent,
-//   selectGroupLifeQuotations,
-//   setCurrentQuotation,
-// } from "../../../features/reducers/groupLifeReducers/groupLifeQuotationSlice";
 import { formatDate, formatCurrency } from "../../../utils/ui-utilities";
 import { useToast } from "../../../hooks/use-toast";
 import { Checkbox } from "../../UI/checkbox";
@@ -66,11 +59,11 @@ import { SERVER_URL } from "../../../utils/constants";
 
 export default function CreditLifeSchemeRenewals() {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const { toast } = useToast();
-  // Using Group Life selector since we're using the same endpoint
-  const { quotations, loading } = useAppSelector(selectGroupLifeQuotations);
-  const isLoading = Boolean(loading?.list);
+  
+  // Local state instead of Redux
+  const [quotations, setQuotations] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [isMobile, setIsMobile] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -109,49 +102,19 @@ export default function CreditLifeSchemeRenewals() {
     return quote.companyName || quote.surName;
   };
 
+  // Placeholder function - will be replaced with real API call
   const refreshQuotations = () => {
-    const agentId = localStorage.getItem("agentId");
-
-    if (agentId) {
-      dispatch(
-        fetchGroupLifeQuotationsByAgent({
-          agentCode: agentId,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    } else {
-      dispatch(
-        fetchGroupLifeQuotations({
-          filters: filterCriteria,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    }
+    setLoading(true);
+    // Simulate API call with empty data
+    setTimeout(() => {
+      setQuotations([]);
+      setLoading(false);
+    }, 500);
   };
 
   useEffect(() => {
-    const agentId = localStorage.getItem("agentId");
-
-    if (agentId) {
-      dispatch(
-        fetchGroupLifeQuotationsByAgent({
-          agentCode: agentId,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    } else {
-      dispatch(
-        fetchGroupLifeQuotations({
-          filters: filterCriteria,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    }
-  }, [dispatch, currentPage, pageSize]);
+    refreshQuotations();
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -191,129 +154,40 @@ export default function CreditLifeSchemeRenewals() {
   };
 
   const handleProcessRenewal = async (quote: any) => {
-    setSelectedForRenewal(quote);
-    const effectiveDate = quote.effectiveDate || quote.startDate;
-    if (effectiveDate) {
-      const date = new Date(effectiveDate);
-      date.setFullYear(date.getFullYear() + 1);
-      setRenewalDate(date.toISOString().split('T')[0]);
-    } else {
-      setRenewalDate(new Date().toISOString().split('T')[0]);
-    }
-    setShowRenewalDialog(true);
+    toast({
+      title: "Coming Soon",
+      description: "Credit life renewal feature will be available soon",
+      variant: "default",
+    });
+    // Keep the dialog for when the feature is ready
+    // setSelectedForRenewal(quote);
+    // const effectiveDate = quote.effectiveDate || quote.startDate;
+    // if (effectiveDate) {
+    //   const date = new Date(effectiveDate);
+    //   date.setFullYear(date.getFullYear() + 1);
+    //   setRenewalDate(date.toISOString().split('T')[0]);
+    // } else {
+    //   setRenewalDate(new Date().toISOString().split('T')[0]);
+    // }
+    // setShowRenewalDialog(true);
   };
 
   const confirmRenewal = async () => {
-    if (!selectedForRenewal || !renewalDate) {
-      toast({
-        title: "Error",
-        description: "Please select a renewal date",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsProcessingRenewal(true);
-      const quoteId = getQuotationId(selectedForRenewal);
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-
-      const response = await fetch(
-        `${SERVER_URL}/api/v1/creditLife/renew-scheme`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            quotationId: quoteId,
-            renewalDate: renewalDate,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to process renewal");
-      }
-
-      toast({
-        title: "Success",
-        description: `Scheme ${getQuotationNumber(selectedForRenewal)} renewed successfully!`,
-        variant: "default",
-      });
-
-      setShowRenewalDialog(false);
-      setSelectedForRenewal(null);
-      refreshQuotations();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process renewal",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingRenewal(false);
-    }
+    toast({
+      title: "Coming Soon",
+      description: "Renewal processing will be available soon",
+      variant: "default",
+    });
+    setShowRenewalDialog(false);
+    setSelectedForRenewal(null);
   };
 
   const handleBulkRenewal = async () => {
-    if (selectedQuotations.size === 0) return;
-
-    try {
-      setProcessError("");
-      const quotesToRenew = Array.from(selectedQuotations);
-      setProcessingRenewals(new Set(quotesToRenew));
-
-      let successCount = 0;
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-
-      for (const quoteId of quotesToRenew) {
-        try {
-          const response = await fetch(
-            `${SERVER_URL}/api/v1/creditLife/renew-scheme`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              },
-              body: JSON.stringify({
-                quotationId: quoteId,
-                renewalDate: new Date().toISOString().split('T')[0],
-              }),
-            }
-          );
-
-          if (response.ok) {
-            successCount++;
-          }
-        } catch (err) {
-          console.error(`Failed to renew ${quoteId}:`, err);
-        }
-      }
-
-      if (successCount > 0) {
-        setSuccessMessage(
-          `Successfully renewed ${successCount} out of ${quotesToRenew.length} schemes!`
-        );
-        setShowSuccessToast(true);
-
-        setTimeout(() => {
-          setShowSuccessToast(false);
-        }, 5000);
-      }
-
-      refreshQuotations();
-      setSelectedQuotations(new Set());
-      setIsAllSelected(false);
-    } catch (err) {
-      const errorMessage = err?.message || "Unknown error occurred";
-      setProcessError("Error during bulk renewal: " + errorMessage);
-    } finally {
-      setProcessingRenewals(new Set());
-    }
+    toast({
+      title: "Coming Soon",
+      description: "Bulk renewal feature will be available soon",
+      variant: "default",
+    });
   };
 
   const applyFilters = () => {
@@ -337,22 +211,9 @@ export default function CreditLifeSchemeRenewals() {
     refreshQuotations();
   };
 
-  const raw = quotations ?? {};
-  let itemsArray: any[] = [];
-
-  if (Array.isArray(raw)) {
-    itemsArray = raw;
-  } else if (Array.isArray(raw.items)) {
-    itemsArray = raw.items;
-  } else if (Array.isArray(raw.data?.items)) {
-    itemsArray = raw.data.items;
-  } else {
-    itemsArray = [];
-  }
-
   const getDisplayQuotations = () => {
     // Filter for schemes eligible for renewal
-    return itemsArray.filter((quote: any) => {
+    return quotations.filter((quote: any) => {
       const status = quote.status?.toUpperCase();
       return status === "ACTIVE" || status === "PENDING" || status === "PROSPECT";
     });
@@ -413,9 +274,11 @@ export default function CreditLifeSchemeRenewals() {
   };
 
   const handleViewScheme = (quote: any) => {
-    dispatch(setCurrentQuotation(quote));
-    const quoteNumber = getQuotationNumber(quote);
-    navigate(`/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`);
+    toast({
+      title: "Coming Soon",
+      description: "View scheme details will be available soon",
+      variant: "default",
+    });
   };
 
   return (
@@ -643,21 +506,32 @@ export default function CreditLifeSchemeRenewals() {
 
           {/* Data Display Area */}
           <div className="border border-border rounded-lg min-h-96 bg-white">
-            {isLoading ? (
+            {loading ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mb-4"></div>
                 <p className="text-gray-600 font-medium">Loading schemes...</p>
                 <p className="text-gray-400 text-sm mt-2">Please wait while we fetch the data</p>
               </div>
             ) : itemsForDisplay.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <RefreshCw className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-sm font-medium mb-2">
-                  {hasActiveFilters ? "No schemes match your filters" : "No schemes available for renewal"}
+              <div className="p-8 text-center">
+                <RefreshCw className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium text-gray-700 mb-2">No Credit Life Schemes Available for Renewal</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  {hasActiveFilters 
+                    ? "No schemes match your filter criteria. Try adjusting your search." 
+                    : "Credit life schemes eligible for renewal will appear here once they are set up."}
                 </p>
-                <p className="text-xs">
-                  {hasActiveFilters ? "Try adjusting your search criteria or clear filters." : "All schemes are either cancelled or already renewed."}
-                </p>
+                {hasActiveFilters && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearAllFilters}
+                    className="mt-2"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Clear Filters
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="p-4">

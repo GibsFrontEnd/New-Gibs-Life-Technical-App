@@ -13,9 +13,9 @@ const menuItems = [
 const ReinsuranceSidebar = () => {
   return (
     <aside
-      className="fixed left-0 top-16 h-[calc(100vh-64px)] z-100 text-white flex flex-col overflow-y-auto md:w-52 max-md:w-15"
-      style={{ backgroundColor: SIDEBAR_BG }}
-    >
+  className="fixed left-0 top-16 h-[calc(100vh-64px)] z-100 text-white flex-col overflow-y-auto md:w-52 hidden md:flex"
+  style={{ backgroundColor: SIDEBAR_BG }}
+>
       <nav className="flex-1 py-2.5">
         {menuItems.map((item) => {
           const link = `${basePath}/${item.path}`;

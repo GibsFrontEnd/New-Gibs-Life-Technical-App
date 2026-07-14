@@ -76,7 +76,7 @@ const AdminOverview = () => {
       
       // Fallback data for development/demo
       setMetrics({
-        totalUsers: 1284,
+        totalUsers: 1022,
         activeUsers: 1032,
         userGrowth: 12.5,
         systemStatus: 'Operational',
@@ -115,7 +115,7 @@ const AdminOverview = () => {
         value: data.totalUsers.toLocaleString(),
         change: `${data.userGrowth > 0 ? '+' : ''}${data.userGrowth}%`,
         isPositive: data.userGrowth > 0,
-        description: `${data.activeUsers.toLocaleString()} active users this month`,
+        description: ` active users this month`,
       },
       {
         label: "System Status",
@@ -173,12 +173,10 @@ const AdminOverview = () => {
   const displayMetrics = metrics ? formatMetrics(metrics) : [];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 p-2 lg:p-6 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in duration-900 p-2 lg:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <header>
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#0d47a1] mb-1">
-          GIBSLIFE ERP
-        </p>
+
         <h1 className="text-3xl font-black text-gray-800 tracking-tight">Admin Dashboard</h1>
         <p className="text-gray-500 mt-1">
           Manage system settings, security, and view key metrics.
@@ -205,7 +203,7 @@ const AdminOverview = () => {
               )}
             </div>
             <div className="mb-2">
-              <span className="text-2xl font-bold text-gray-800">{metric.value}</span>
+              
             </div>
             <div className="flex items-center justify-between">
               <span className={`text-sm font-medium ${

@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./reducers/authReducers/authSlice";
+import agentReducer from '../features/reducers/csuReducers/agentSlice'
 import roleReducer from "./reducers/adminReducers/roleSlice";
 import uiReducer from "./reducers/uiReducers/uiSlice";
 import permissionReducer from "./reducers/adminReducers/permissionSlice";
@@ -26,6 +27,7 @@ import claimsReducer from './reducers/claimsReducers/claimsSlice';
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+   agents: agentReducer,
     ui: uiReducer,
     roles: roleReducer,
     permissions: permissionReducer,
@@ -48,6 +50,7 @@ export const store = configureStore({
     documents: documentReducer,
     investmentProposals: investmentProposalsReducer,
     claims: claimsReducer,
+
 
   },
 });

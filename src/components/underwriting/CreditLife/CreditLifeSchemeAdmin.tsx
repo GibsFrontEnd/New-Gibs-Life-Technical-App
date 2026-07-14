@@ -56,38 +56,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../UI/alert-dialog";
-import { useAppDispatch, useAppSelector } from "../../../hooks/use-apps";
-// import {
-  // fetchGroupLifeQuotations,
-  // fetchGroupLifeQuotationsByAgent,
-  // selectGroupLifeQuotations,
-  // setCurrentQuotation,
-  // deleteGroupLifeQuotation,
-// } from "../../../features/reducers/groupLifeReducers/groupLifeQuotationSlice";
 import { formatDate, formatCurrency } from "../../../utils/ui-utilities";
 import { useToast } from "../../../hooks/use-toast";
 import { Checkbox } from "../../UI/checkbox";
 
-interface CreditLifeQuotation {
-  id: string;
-  quotationNumber: string;
-  companyName: string;
-  transactionDate: string;
-  effectiveDate: string;
-  expiryDate: string;
-  totalMembers: number;
-  totalSumInsured: number;
-  totalPremium: number;
-  status: "PROSPECT" | "ACTIVE" | "PENDING" | "CANCELLED";
-}
-
 export default function CreditLifeSchemeAdmin() {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const { toast } = useToast();
-  // Using Group Life selector since we're using the same endpoint
-  const { quotations, loading } = useAppSelector(selectGroupLifeQuotations);
-  const isLoading = Boolean(loading?.list);
+  
+  // Local state
+  const [quotations, setQuotations] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [isMobile, setIsMobile] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -99,7 +78,7 @@ export default function CreditLifeSchemeAdmin() {
     status: "all",
     schemeType: "all",
     insuredType: "all",
-    tag: "CL", // Credit Life tag
+    tag: "CL",
   });
 
   const [selectedQuotations, setSelectedQuotations] = useState<Set<string>>(new Set());
@@ -127,49 +106,19 @@ export default function CreditLifeSchemeAdmin() {
     return quote.companyName || quote.surName;
   };
 
+  // Placeholder function - will be replaced with real API call
   const refreshQuotations = () => {
-    const agentId = localStorage.getItem("agentId");
-
-    if (agentId) {
-      dispatch(
-        fetchGroupLifeQuotationsByAgent({
-          agentCode: agentId,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    } else {
-      dispatch(
-        fetchGroupLifeQuotations({
-          filters: filterCriteria,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    }
+    setLoading(true);
+    // Simulate API call with empty data
+    setTimeout(() => {
+      setQuotations([]);
+      setLoading(false);
+    }, 500);
   };
 
   useEffect(() => {
-    const agentId = localStorage.getItem("agentId");
-
-    if (agentId) {
-      dispatch(
-        fetchGroupLifeQuotationsByAgent({
-          agentCode: agentId,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    } else {
-      dispatch(
-        fetchGroupLifeQuotations({
-          filters: filterCriteria,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    }
-  }, [dispatch, currentPage, pageSize]);
+    refreshQuotations();
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -209,82 +158,19 @@ export default function CreditLifeSchemeAdmin() {
   };
 
   const handleApproveQuotation = async (quoteId: string, quoteNo: string) => {
-    if (!quoteId) {
-      setApproveError("Invalid quotation ID");
-      return;
-    }
-
-    try {
-      setApprovingQuotations((prev) => new Set(prev).add(quoteId));
-      setApproveError("");
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setSuccessMessage(`Scheme ${quoteNo} approved successfully!`);
-      setShowSuccessToast(true);
-
-      setTimeout(() => {
-        setShowSuccessToast(false);
-      }, 5000);
-
-      refreshQuotations();
-
-      const newSelected = new Set(selectedQuotations);
-      newSelected.delete(quoteId);
-      setSelectedQuotations(newSelected);
-    } catch (err) {
-      const errorMessage = err?.message || "Unknown error occurred";
-      setApproveError("Failed to approve scheme: " + errorMessage);
-      console.error("Error approving scheme:", err);
-    } finally {
-      setApprovingQuotations((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(quoteId);
-        return newSet;
-      });
-    }
+    toast({
+      title: "Coming Soon",
+      description: "Credit life approval feature will be available soon",
+      variant: "default",
+    });
   };
 
   const handleBulkApprove = async () => {
-    if (selectedQuotations.size === 0) return;
-
-    try {
-      setApproveError("");
-
-      const quotesToApprove = Array.from(selectedQuotations);
-      setApprovingQuotations(new Set(quotesToApprove));
-
-      let successCount = 0;
-
-      for (const quoteId of quotesToApprove) {
-        try {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          successCount++;
-        } catch (err) {
-          console.error(`Failed to approve ${quoteId}:`, err);
-        }
-      }
-
-      if (successCount > 0) {
-        setSuccessMessage(
-          `Successfully approved ${successCount} out of ${quotesToApprove.length} schemes!`
-        );
-        setShowSuccessToast(true);
-
-        setTimeout(() => {
-          setShowSuccessToast(false);
-        }, 5000);
-      }
-
-      refreshQuotations();
-      setSelectedQuotations(new Set());
-      setIsAllSelected(false);
-    } catch (err) {
-      const errorMessage = err?.message || "Unknown error occurred";
-      setApproveError("Error during bulk approval: " + errorMessage);
-    } finally {
-      setApprovingQuotations(new Set());
-    }
+    toast({
+      title: "Coming Soon",
+      description: "Bulk approval feature will be available soon",
+      variant: "default",
+    });
   };
 
   const applyFilters = () => {
@@ -311,22 +197,8 @@ export default function CreditLifeSchemeAdmin() {
     refreshQuotations();
   };
 
-  const raw = quotations ?? {};
-  let itemsArray: any[] = [];
-
-  if (Array.isArray(raw)) {
-    itemsArray = raw;
-  } else if (Array.isArray(raw.items)) {
-    itemsArray = raw.items;
-  } else if (Array.isArray(raw.data?.items)) {
-    itemsArray = raw.data.items;
-  } else {
-    itemsArray = [];
-  }
-
   const getDisplayQuotations = () => {
-    // Filter for Credit Life schemes (you can filter by tag or any other field)
-    return itemsArray;
+    return quotations;
   };
 
   const hasActiveFilters =
@@ -353,46 +225,32 @@ export default function CreditLifeSchemeAdmin() {
   };
 
   const handleEditQuotation = (quote: any) => {
-    dispatch(setCurrentQuotation(quote));
-    const quoteNumber = getQuotationNumber(quote);
-    navigate(`/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`);
+    toast({
+      title: "Coming Soon",
+      description: "Edit feature will be available soon",
+      variant: "default",
+    });
   };
 
   const handleNewQuotation = () => {
-    dispatch(setCurrentQuotation(null));
-    navigate(`/underwriting/group-life-quotations/new`);
+    toast({
+      title: "Coming Soon",
+      description: "New credit life scheme creation will be available soon",
+      variant: "default",
+    });
   };
 
   const handleDeleteQuotation = (quote: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDeletingQuotation(quote);
-    setShowDeleteDialog(true);
+    toast({
+      title: "Coming Soon",
+      description: "Delete feature will be available soon",
+      variant: "default",
+    });
   };
 
   const confirmDeleteQuotation = async () => {
-    if (!deletingQuotation) return;
-
-    try {
-      const quoteNumber = getQuotationNumber(deletingQuotation);
-      await dispatch(deleteGroupLifeQuotation(quoteNumber)).unwrap();
-
-      toast({
-        title: "Success",
-        description: "Scheme deleted successfully",
-        variant: "default",
-      });
-
-      refreshQuotations();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete scheme",
-        variant: "destructive",
-      });
-    } finally {
-      setShowDeleteDialog(false);
-      setDeletingQuotation(null);
-    }
+    // Placeholder
   };
 
   const getStatusBadge = (status: string) => {
@@ -414,45 +272,6 @@ export default function CreditLifeSchemeAdmin() {
     <div className="min-h-screen">
       <div className="container mx-auto">
         <div className="rounded-lg">
-          {/* SUCCESS TOAST */}
-          {showSuccessToast && (
-            <div className="fixed top-20 right-4 z-[100] animate-in slide-in-from-right duration-300">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg max-w-sm">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Check className="h-5 w-5 text-green-400" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-green-800">{successMessage}</p>
-                  </div>
-                  <div className="ml-auto pl-3">
-                    <button
-                      onClick={() => setShowSuccessToast(false)}
-                      className="inline-flex bg-green-50 rounded-md p-1.5 text-green-500 hover:bg-green-100"
-                    >
-                      <span className="sr-only">Dismiss</span>
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ERROR MESSAGES */}
-          {approveError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center">
-              <div className="text-red-500 mr-2">⚠️</div>
-              <p className="text-red-700">{approveError}</p>
-              <button
-                onClick={() => setApproveError("")}
-                className="ml-auto text-red-500 hover:text-red-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
           {/* Header Card */}
           <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200 mb-6">
             <div className="p-4 pb-0">
@@ -479,37 +298,6 @@ export default function CreditLifeSchemeAdmin() {
               </div>
             </CardContent>
           </Card>
-
-          {/* SELECTION ACTIONS */}
-          {selectedQuotations.size > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="text-blue-700 font-medium">
-                  {selectedQuotations.size} scheme
-                  {selectedQuotations.size !== 1 ? "s" : ""} selected
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleBulkApprove}
-                  disabled={approvingQuotations.size > 0}
-                  className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {approvingQuotations.size > 0 ? (
-                    <>
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                      Approving...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Approve Selected ({selectedQuotations.size})
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
 
           {/* Filters Section */}
           <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -657,28 +445,28 @@ export default function CreditLifeSchemeAdmin() {
 
           {/* Data Display Area */}
           <div className="border border-border rounded-lg min-h-96 bg-white">
-            {isLoading ? (
+            {loading ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mb-4"></div>
                 <p className="text-gray-600 font-medium">Loading credit life schemes...</p>
                 <p className="text-gray-400 text-sm mt-2">Please wait while we fetch your data</p>
               </div>
-            ) : itemsArray.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-sm font-medium mb-2">
-                  {hasActiveFilters ? "No schemes match your filters" : "No credit life schemes found"}
+            ) : quotations.length === 0 ? (
+              <div className="p-8 text-center">
+                <CreditCard className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium text-gray-700 mb-2">No Credit Life Schemes Available</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Credit life insurance schemes will appear here once they are set up.
                 </p>
-                <p className="text-xs">
-                  {hasActiveFilters
-                    ? "Try adjusting your search criteria or clear filters to see all schemes."
-                    : "Create a new credit life scheme to get started."}
-                </p>
-                {hasActiveFilters && (
-                  <Button variant="outline" size="sm" onClick={clearAllFilters} className="mt-3">
-                    Clear Filters
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNewQuotation}
+                  className="mt-2"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create New Scheme
+                </Button>
               </div>
             ) : (
               <div className="p-4">
@@ -825,26 +613,6 @@ export default function CreditLifeSchemeAdmin() {
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Credit Life Scheme</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this scheme for{" "}
-              <strong>{deletingQuotation ? getCompanyName(deletingQuotation) : ""}</strong>?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteQuotation} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

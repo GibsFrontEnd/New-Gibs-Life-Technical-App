@@ -19,7 +19,7 @@ const CSUOverview = () => {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 p-2 lg:p-6">
+   <div className="space-y-8 animate-in fade-in duration-900 p-2 lg:p-6 max-w-7xl mx-auto">
       <header>
        
         <h1 className="text-3xl font-black text-gray-800 tracking-tight">CSU Overview</h1>

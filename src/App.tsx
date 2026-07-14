@@ -33,7 +33,7 @@ import Claims from "./pages/Claims";
 import ClaimsOverview from "./pages/claims/claims-page.overview";
 import ClaimsSubPage from "./pages/claims/claims-page.subpage";
 import Reinsurance from "./pages/Reinsurance";
-import ReinsuranceOverview from "./pages/reinsurance/reinsurance-page.overview";
+// import ReinsuranceOverview from "./pages/reinsurance/reinsurance-page.overview";
 import Quotations from "./pages/Quotations";
 import QuotationsOverview from "./pages/quotations/quotations-page.overview";
 import QuotationsSubPage from "./pages/quotations/quotations-page.subpage";
@@ -67,6 +67,8 @@ import GroupLifePartialWithdrawalClaims from "./pages/claims/GroupLifeClaims/Gro
 import GroupLifeClaimFormPage from "./components/claims/GroupLife/GroupLifeFormPage"
 import CreditLifeDeathClaims from "./pages/claims/CreditLife/CreditLifeDeathClaims";
 import CreditLifeClaimFormPage from "./components/claims/CreditLife/CreditLifeFormPage";
+
+import PlaceholderPage from "./pages/underwriting/PlaceHolderPage";
 
 const App: React.FC = () => {
   useAuth();
@@ -168,6 +170,11 @@ const App: React.FC = () => {
             <Route path="group-life/maintenance" element={<UnderwritingSubPage />} />
             <Route path="credit-life/scheme-admin" element={<UnderwritingSubPage />} />
             <Route path="credit-life/scheme-renewals" element={<UnderwritingSubPage />} />
+            <Route path="credit-life/endorsements" element={<UnderwritingSubPage />} />
+            <Route path="credit-life/maintenance" element={<UnderwritingSubPage />} />
+            <Route path="credit-life/general-bus/fire" element={<UnderwritingSubPage />} />
+            <Route path="credit-life/general-bus/motor" element={<UnderwritingSubPage />} />
+            <Route path="credit-life/package-bus" element={<UnderwritingSubPage />} />
           </Route>
 
           {/* 
@@ -227,17 +234,40 @@ const App: React.FC = () => {
           </Route>
 
           <Route path="/reinsurance" element={<Reinsurance />}>
-            <Route path="overview" element={<ReinsuranceOverview />} />
+            <Route path="overview" element={<PlaceholderPage title="Reinsurance Overview" />} />
           </Route>
 
-          <Route path="/admin" element={<Admin />}>
-            <Route index element={<AdminOverview />} />
-            <Route path="security" element={<AdminSecurity />} />
-            <Route path="company" element={<AdminCompany />} />
-            <Route path="products" element={<AdminProducts />} />
-            <Route path="features" element={<AdminFeatures />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
+         
+
+
+<Route path="/admin" element={<Admin />}>
+  <Route index element={<AdminOverview />} />
+  <Route path="security" element={<AdminSecurity />} />
+  <Route path="company" element={<AdminCompany />} />
+  <Route path="products" element={<AdminProducts />} />
+  <Route path="features" element={<AdminFeatures />} />
+  <Route path="settings" element={<AdminSettings />} />
+  
+  {/* Configurations category placeholder - matches sidebar path */}
+  <Route path="configurations" element={<PlaceholderPage title="Configurations" />} />
+  
+  {/* Individual configuration sub-items */}
+  <Route path="configurations/product-main-class" element={<PlaceholderPage title="Product Main Class" />} />
+  <Route path="configurations/product-lines" element={<PlaceholderPage title="Product Lines" />} />
+  <Route path="configurations/product-settings" element={<PlaceholderPage title="Product Settings" />} />
+  <Route path="configurations/product-sections" element={<PlaceholderPage title="Product Sections" />} />
+  <Route path="configurations/product-covers" element={<PlaceholderPage title="Product Covers" />} />
+  <Route path="configurations/product-smi" element={<PlaceholderPage title="Product SMI" />} />
+  <Route path="configurations/bus-channel" element={<PlaceholderPage title="Bus Channel" />} />
+  <Route path="configurations/sub-channel" element={<PlaceholderPage title="Sub Channel" />} />
+  <Route path="configurations/commission-rates" element={<PlaceholderPage title="Commission Rates" />} />
+  <Route path="configurations/interest-rates" element={<PlaceholderPage title="Interest Rates" />} />
+  <Route path="configurations/premium-rates" element={<PlaceholderPage title="Premium Rates" />} />
+  <Route path="configurations/allocation-rates" element={<PlaceholderPage title="Allocation Rates" />} />
+  <Route path="configurations/medical-test" element={<PlaceholderPage title="Medical Test" />} />
+  <Route path="configurations/test-distribution" element={<PlaceholderPage title="Test Distribution" />} />
+  <Route path="configurations/medical-hospital" element={<PlaceholderPage title="Medical Hospital" />} />
+</Route>
         </Route>
 
         {/* REDIRECT EVERYONE TO /dashboard */}

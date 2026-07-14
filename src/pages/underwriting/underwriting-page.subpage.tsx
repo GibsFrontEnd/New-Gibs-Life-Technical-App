@@ -195,8 +195,15 @@ const UnderwritingSubPage = () => {
   }
   if (pathname === "/underwriting/credit-life/maintenance") {
     return <PlaceholderPage title="Credit Life Maintenance" />;
+  } if (pathname === "/underwriting/credit-life/general-bus/fire") {
+    return <PlaceholderPage title="General Bus Fire" />;
+  } if (pathname === "/underwriting/credit-life/general-bus/motor") {
+    return <PlaceholderPage title="General Bus Motor" />;
+  } if (pathname === "/underwriting/credit-life/package-bus") {
+    return <PlaceholderPage title="Package Bus" />;
   }
 
+ 
   // ============================================
   // CONVERT TO POLICY ROUTES
   // ============================================
