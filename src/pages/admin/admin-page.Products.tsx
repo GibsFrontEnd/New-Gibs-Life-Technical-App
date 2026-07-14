@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import "./AdminProducts.css";
-import ProductsSubRiskSections from "@/components/admin/product-page/products.subRiskSections";
-import ProductsRisks from "@/components/admin/product-page/products.risks";
-import ProductSubRisk from "@/components/admin/product-page/product.sub-risk";
-import SubRiskSMIManagement from "@/components/admin/product-page/product.sub-risk-smis";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/UI/tabs";
+import ProductsSubRiskSections from "../../components/admin/product-page/products.subRiskSections";
+import ProductsRisks from "../../components/admin/product-page/products.risks";
+import ProductSubRisk from "../../components/admin/product-page/product.sub-risk";
+import SubRiskSMIManagement from "../../components/admin/product-page/product.sub-risk-smis";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/UI/tabs";
 
 const tabs = [
   { title: "Product", content: <ProductSubRisk /> },

@@ -1,10 +1,11 @@
+// EditGroupLifeQuotationDetail.tsx
 // @ts-nocheck
 
-import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "../UI/new-button";
-import { Input } from "../Ui/new-input";
-import { Label } from "../ui/label";
+import { Input } from "../UI/new-input";
+import { Label } from "../UI/label";
 import {
   Select,
   SelectContent,
@@ -12,40 +13,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../UI/new-select";
-import { ArrowLeft } from "lucide-react";
-import { useToast } from "../ui/use-toast";
-import type { GroupLifeMember } from "../../types/groupLifeQuotation";
-import MemberManagementTable from "./MemberManagementTable";
+import { ArrowLeft, RefreshCw, Loader2, ChevronDown, X, Users, CreditCard, Paperclip } from "lucide-react";
+import { useToast } from "../UI/use-toast";
+import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
 import {
-  fetchGroupLifeQuotationById,
-  updateGroupLifeQuotation as apiUpdateQuotation,
-  addMemberToCurrentQuotation as apiAddMember,
-  updateMemberInCurrentQuotation as apiUpdateMember,
-  removeMemberFromCurrentQuotation as apiRemoveMember,
-  computeQuotation as apiComputeQuotation,
-  type ComputeQuotationMember,
-  type ComputeQuotationPayload,
-} from "../../api/groupLifeQuotation";
+  selectGroupLifeQuotations,
+  fetchGroupLifePolicy,
+  updateGroupLifePolicy,
+  setCurrentQuotation,
+  setMembersForCurrentQuotation,
+  setComputedTotalsForCurrentQuotation,
+  clearCurrentQuotation,
+  removePolicyMember,
+  savePolicyMember,
+  computeMemberPremium,
+} from "../../features/reducers/groupLifeReducers/groupLifeQuotationSlice";
+import type { GroupLifeMember } from "../../features/reducers/groupLifeReducers/groupLifeQuotationSlice";
+import MemberManagementTable from "./MemberManagementTable";
 import { formatDate } from "@/utils/ui-utilities";
+import { SERVER_URL } from "../../utils/constants";
+import { debounce } from "lodash";
 
-const formatDateForInput = (dateString: string): string => {
-  if (!dateString) return "";
+// Import the tabs components
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../UI/tabs";
+import GroupLifeDetailsTab from "./GroupLifeDetailsTab";
+import CreditNotesTab from "./CreditNotesTab";
+import AttachmentsTab from "./AttachmentsTab";
 
-  // If already in YYYY-MM-DD format, return as is
-  if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    return dateString;
-  }
-
-  // Parse the ISO date and convert to YYYY-MM-DD
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return ""; // Invalid date
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
+// ==================== TYPES ====================
 
 interface GroupLifeExtensionRow {
   itemNo: number;
@@ -56,6 +51,7 @@ interface GroupLifeExtensionRow {
 
 interface CompleteQuotationFormData {
   quotationNumber: string;
+  policyNo: string;
   transactionDate: string;
   effectiveDate: string;
   expiryDate: string;
@@ -79,21 +75,248 @@ interface CompleteQuotationFormData {
   totalPremium: string;
   reductionPercent: string;
   netPremiumDue: string;
+  currency: string;
+  exRate: number;
+  accountExecutiveId: string;
+  branchId: string;
+  businessSource: string;
+  agentBrokerId: string;
+  accountTypeId: string;
+  busChannelId: string;
+  subChannelId: string;
+  proportionPercent: number;
+  premiumRatePercent: number;
+  businessSector: string;
+  product: string;
 }
 
-const EditGroupLifeQuotationDetail: React.FC = () => {
-  const { Param } = useParams<{ Param: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+// Dropdown option types from API
+interface ApiDropdownOption {
+  id: string;
+  name: string;
+  code?: string;
+  value?: string;
+  label?: string;
+  [key: string]: any;
+}
 
-  const [quotationData, setQuotationData] = useState<any>(null);
+// Searchable Dropdown Component
+interface SearchableDropdownProps {
+  options: ApiDropdownOption[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  label: string;
+  loading: boolean;
+  error: boolean;
+  required?: boolean;
+  disabled?: boolean;
+  searchPlaceholder?: string;
+}
+
+const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+  label,
+  loading,
+  error,
+  required = false,
+  disabled = false,
+  searchPlaceholder = "Search...",
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectedOption = options.find(opt => opt.id === value);
+
+  const filteredOptions = options.filter(opt =>
+    opt.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    opt.code?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (option: ApiDropdownOption) => {
+    onChange(option.id);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const handleClear = () => {
+    onChange("");
+    setSearchTerm("");
+  };
+
+  return (
+    <div className="space-y-2" ref={dropdownRef}>
+      <Label className="text-sm font-medium">
+        {label} {required && <span className="text-red-500">*</span>}
+      </Label>
+      <div className="relative">
+        <div
+          className={`flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer ${
+            disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:border-gray-400'
+          } ${isOpen ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'}`}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+        >
+          <span className={`${selectedOption ? 'text-gray-900' : 'text-gray-400'}`}>
+            {selectedOption?.name || placeholder}
+          </span>
+          <div className="flex items-center gap-1">
+            {selectedOption && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClear();
+                }}
+                className="p-0.5 hover:bg-gray-200 rounded-full"
+              >
+                <X className="h-3 w-3 text-gray-500" />
+              </button>
+            )}
+            <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+
+        {isOpen && !disabled && (
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+            <div className="p-2 border-b border-gray-200">
+              <Input
+                ref={inputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="h-8 text-sm"
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+              />
+            </div>
+            <div className="max-h-48 overflow-y-auto">
+              {loading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                  <span className="ml-2 text-sm text-gray-500">Loading...</span>
+                </div>
+              ) : error ? (
+                <div className="py-4 text-center text-sm text-red-500">
+                  Failed to load options
+                </div>
+              ) : filteredOptions.length === 0 ? (
+                <div className="py-4 text-center text-sm text-gray-500">
+                  No options available
+                </div>
+              ) : (
+                filteredOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => handleSelect(option)}
+                    className={`w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-0 ${
+                      option.id === value ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <div className="font-medium text-sm">{option.name}</div>
+                    {option.code && (
+                      <div className="text-xs text-gray-500">Code: {option.code}</div>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const formatDateForInput = (dateString: string): string => {
+  if (!dateString) return "";
+  if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return dateString;
+  }
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const EditGroupLifeQuotationDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const policyNo = id ? decodeURIComponent(id) : "";
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useAppDispatch();
+  const { toast } = useToast();
+  const { currentQuotation, loading } = useAppSelector(selectGroupLifeQuotations);
+
   const [members, setMembers] = useState<GroupLifeMember[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const isInitializedRef = useRef(false);
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("policy");
+
+  // Track if dropdowns are loaded
+  const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // State for dropdown options
+  const [accountExecutives, setAccountExecutives] = useState<ApiDropdownOption[]>([]);
+  const [branches, setBranches] = useState<ApiDropdownOption[]>([]);
+  const [businessSources, setBusinessSources] = useState<ApiDropdownOption[]>([]);
+  const [agentBrokers, setAgentBrokers] = useState<ApiDropdownOption[]>([]);
+  const [accountTypes, setAccountTypes] = useState<ApiDropdownOption[]>([]);
+  const [busChannels, setBusChannels] = useState<ApiDropdownOption[]>([]);
+  const [businessSectors, setBusinessSectors] = useState<ApiDropdownOption[]>([]);
+  const [products, setProducts] = useState<ApiDropdownOption[]>([]);
+  const [rateTypes, setRateTypes] = useState<ApiDropdownOption[]>([]);
+
+  // Loading states for dropdowns
+  const [dropdownLoading, setDropdownLoading] = useState({
+    accountExecutives: true,
+    branches: true,
+    businessSources: true,
+    agentBrokers: true,
+    accountTypes: true,
+    busChannels: true,
+    businessSectors: true,
+    products: true,
+    rateTypes: true,
+  });
+
+  // Error states for dropdowns
+  const [dropdownErrors, setDropdownErrors] = useState({
+    accountExecutives: false,
+    branches: false,
+    businessSources: false,
+    agentBrokers: false,
+    accountTypes: false,
+    busChannels: false,
+    businessSectors: false,
+    products: false,
+    rateTypes: false,
+  });
 
   const [formData, setFormData] = useState<CompleteQuotationFormData>({
     quotationNumber: "[AUTO]",
+    policyNo: "",
     transactionDate: new Date().toISOString().split("T")[0],
     effectiveDate: new Date().toISOString().split("T")[0],
     expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
@@ -125,11 +348,20 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     totalPremium: "0.00",
     reductionPercent: "0",
     netPremiumDue: "0.00",
+    currency: "NGN",
+    exRate: 1,
+    accountExecutiveId: "",
+    branchId: "",
+    businessSource: "",
+    agentBrokerId: "",
+    accountTypeId: "",
+    busChannelId: "",
+    subChannelId: "",
+    proportionPercent: 100,
+    premiumRatePercent: 2.0,
+    businessSector: "",
+    product: "",
   });
-
-  const [uploadedMembersRaw, setUploadedMembersRaw] = useState<
-    ComputeQuotationMember[] | null
-  >(null);
 
   const [expandedSections, setExpandedSections] = useState({
     policyDetails: true,
@@ -138,251 +370,499 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     quotationStatus: true,
   });
 
-  // Fetch quotation on mount
-  useEffect(() => {
-    const loadQuotation = async () => {
-      if (!Param) return;
-
-      try {
-        setLoading(true);
-        const response = await fetchGroupLifeQuotationById(Param);
-        const data = response?.data?.data ?? response?.data ?? response;
-
-        console.log("Loaded quotation data:", data); // Debug log
-        console.log("Member calculations:", data?.memberCalculations);
-
-        setQuotationData(data);
-
-        // Transform memberCalculations to GroupLifeMember format
-        if (data.memberCalculations && Array.isArray(data.memberCalculations)) {
-          const transformedMembers: GroupLifeMember[] =
-            data.memberCalculations.map((member: any) => ({
-              id: `${member.staffNo}`,
-              staffNo: member.staffNo,
-              employeeNames: member.employeeNames,
-              sex: member.sex,
-              dateOfBirth: member.dateOfBirth,
-              anb: member.anb,
-              totalEmolument: member.totalEmolument,
-              sumInsured: member.sumAssured,
-              premium: member.totalMemberPremium,
-              rate: member.premiumRate,
-              basicSalary: member.basicSalary,
-              housingAllowance: member.housingAllowance,
-              transportAllowance: member.transportAllowance,
-              hireDate: member.hireDate,
-            }));
-
-          console.log("Transformed members:", transformedMembers); // Debug log
-          setMembers(transformedMembers);
-
-          // Also store raw members for compute operations
-          const rawMembers: ComputeQuotationMember[] =
-            data.memberCalculations.map((member: any) => ({
-              staffNo: member.staffNo,
-              employeeNames: member.employeeNames,
-              sex: member.sex,
-              dateOfBirth: member.dateOfBirth,
-              basicSalary: member.basicSalary || 0,
-              housingAllowance: member.housingAllowance || 0,
-              transportAllowance: member.transportAllowance || 0,
-              hireDate: member.hireDate || new Date().toISOString(),
-              permanentDisabilityRate: member.permanentDisabilityRate || 0,
-              temporaryDisabilityRate: member.temporaryDisabilityRate || 0,
-              medicalExpensesRate: member.medicalExpensesRate || 0,
-              funeralExtensionRate: member.funeralExtensionRate || 0,
-              criticalIllnessRate: member.criticalIllnessRate || 0,
-            }));
-          setUploadedMembersRaw(rawMembers);
-        } else {
-          console.warn("No memberCalculations found in response"); // Debug log
-          setMembers([]);
-        }
-
-        console.log("Date values before formatting:", {
-          transactionDate: data.transactionDate,
-          effectiveDate: data.effectiveDate,
-          expiryDate: data.expiryDate,
-        });
-
-        console.log("Date values after formatting:", {
-          transactionDate: formatDateForInput(data.transactionDate),
-          effectiveDate: formatDateForInput(data.effectiveDate),
-          expiryDate: formatDateForInput(data.expiryDate),
-        });
-
-        // Set form data with properly formatted dates
-        setFormData({
-          quotationNumber: data.quotationNumber || "[AUTO]",
-          transactionDate: formatDateForInput(data.transactionDate),
-          effectiveDate: formatDateForInput(data.effectiveDate),
-          expiryDate: formatDateForInput(data.expiryDate),
-          coverDay: data.coverDays != null ? data.coverDays.toString() : "0.00",
-          clientName: data.clientName || "",
-          groupFactorAmount:
-            data.groupFactorAmount != null
-              ? data.groupFactorAmount.toString()
-              : "1000.00",
-          insuredType: data.insuredType || "",
-          schemeTypes: data.schemeType || "",
-          groupLifeFactor:
-            data.groupLifeFactor != null
-              ? data.groupLifeFactor.toString()
-              : "0",
-          rateType: data.rateType || "",
-          existingClients: data.existingClient || false,
-          useFixedRate: data.useFixedRate || false,
-          useAverageAge: data.useAverageAge || false,
-          gpaRates: false,
-          uploadMemberDetails: false,
-          groupLifeExtension: data.groupLifeExtension || false,
-          extensionRows:
-            Array.isArray(data.extensions) && data.extensions.length > 0
-              ? data.extensions.map((ext: any) => ({
-                  itemNo: ext.itemNo,
-                  description: ext.description || "",
-                  rate: ext.rate != null ? ext.rate.toString() : "0",
-                  itemValue:
-                    ext.itemValue != null ? ext.itemValue.toString() : "0",
-                }))
-              : [
-                  { itemNo: 1, description: "", rate: "0", itemValue: "0" },
-                  { itemNo: 2, description: "", rate: "0", itemValue: "0" },
-                  { itemNo: 3, description: "", rate: "0", itemValue: "0" },
-                  { itemNo: 4, description: "", rate: "0", itemValue: "0" },
-                  { itemNo: 5, description: "", rate: "0", itemValue: "0" },
-                ],
-          totalSumInsured:
-            data.totalSumInsured != null
-              ? data.totalSumInsured.toFixed(2)
-              : "0.00",
-          loadingPercent:
-            data.loadingAmount != null ? data.loadingAmount.toString() : "0",
-          quotationStatus: data.status || "PROSPECT",
-          totalPremium:
-            data.totalBasicPremium != null
-              ? data.totalBasicPremium.toFixed(2)
-              : "0.00",
-          reductionPercent:
-            data.reductionAmount != null
-              ? data.reductionAmount.toString()
-              : "0",
-          netPremiumDue:
-            data.netPremium != null ? data.netPremium.toFixed(2) : "0.00",
-        });
-
-        console.log("Form data set:", formData); // Debug log - Note: This might show old state due to closure
-      } catch (error: any) {
-        console.error("Load quotation error:", error);
-        toast({
-          title: "Error",
-          description: error?.message || "Failed to load quotation",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadQuotation();
-  }, [Param, toast]);
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
   const handleInputChange = (
     field: keyof CompleteQuotationFormData,
-    value: string | boolean
+    value: string | boolean | number
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Add this helper function near the top of the component, after the state declarations
-  const formatDateForBackend = (dateString: string): string => {
-    if (!dateString) return new Date().toISOString();
+  // ==================== FETCH DROPDOWN OPTIONS FROM API ====================
 
-    // If it's already in ISO format, return as is
-    if (dateString.includes("T")) return dateString;
+  const fetchDropdownData = async (endpoint: string, params?: Record<string, any>): Promise<ApiDropdownOption[]> => {
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      
+      let url = `${SERVER_URL}${endpoint}`;
+      if (params) {
+        const queryParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            queryParams.append(key, value.toString());
+          }
+        });
+        if (queryParams.toString()) {
+          url += `?${queryParams.toString()}`;
+        }
+      }
+      
+      const response = await fetch(url, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        }
+      });
 
-    // Convert YYYY-MM-DD to ISO DateTime format
-    const date = new Date(dateString);
-    return date.toISOString();
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (Array.isArray(data)) return data;
+      if (data.data) return data.data;
+      if (data.items) return data.items;
+      if (data.records) return data.records;
+      if (data.results) return data.results;
+      return [];
+    } catch (error) {
+      console.error(`Error fetching from ${endpoint}:`, error);
+      throw error;
+    }
   };
 
+  // Fetch all dropdown data - CORRECTED with all endpoints
+  const fetchAllDropdowns = async () => {
+    const endpoints = [
+      { 
+        key: 'products', 
+        url: '/v1/Products',
+        params: { PageNo: 1, PageSize: 100 },
+        mapper: (item: any) => ({
+          id: item.productID || item.riskID || item.id || item.subRiskId,
+          name: item.productName || item.description || item.name || item.subRiskName,
+          code: item.productID || item.code || item.subRiskId,
+          ...item
+        })
+      },
+      { 
+        key: 'accountExecutives', 
+        url: '/lookups/account-executives',  // ✅ FIXED: Correct endpoint
+        mapper: (item: any) => ({
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
+          ...item
+        })
+      },
+      { 
+        key: 'agentBrokers', 
+        url: '/v1/Agents',
+        mapper: (item: any) => ({
+          id: item.agentID || item.id,
+          name: item.agent || item.name,
+          code: item.agentID || item.code,
+          phone: item.phone1,
+          email: item.email,
+          ...item
+        })
+      },
+      { 
+        key: 'branches', 
+        url: '/lookups/branches',
+        mapper: (item: any) => ({
+          id: item.branchID || item.id,
+          name: item.description || item.name,
+          code: item.branchID2 || item.code,
+          regionID: item.regionID,
+          stateID: item.stateID,
+          manager: item.manager,
+          address: item.address,
+          ...item
+        })
+      },
+      { 
+        key: 'busChannels', 
+        url: '/lookups/channels',
+        mapper: (item: any) => ({
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
+          ...item
+        })
+      },
+      { 
+        key: 'businessSources', 
+        url: '/lookups/business-sources',
+        mapper: (item: any) => ({
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
+          ...item
+        })
+      },
+      { 
+        key: 'accountTypes', 
+        url: '/lookups/account-types',
+        mapper: (item: any) => ({
+          id: item.value || item.id,
+          name: item.text || item.name,
+          code: item.value || item.code,
+          ...item
+        })
+      },
+      { 
+        key: 'rateTypes', 
+        url: '/lookups/premium-rate',
+        params: { productCode: 'GL', duration: 12, age: 0 },
+        mapper: (item: any) => ({
+          id: item.id || item.rateId || item.rateTypeId || item.value,
+          name: item.name || item.rateName || item.description || item.text,
+          value: item.rateValue || item.value || item.rate,
+          code: item.code || item.rateCode,
+          ...item
+        })
+      },
+    ];
+
+    setDropdownLoading(prev => Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
+
+    const promises = endpoints.map(async ({ key, url, params, mapper }) => {
+      try {
+        const rawData = await fetchDropdownData(url, params);
+        console.log(`🔍 Raw data for ${key}:`, rawData);
+        const formattedData = rawData.map((item: any) => mapper(item));
+        console.log(`✅ Formatted data for ${key}:`, formattedData);
+
+        switch (key) {
+          case 'products': setProducts(formattedData); break;
+          case 'accountExecutives': setAccountExecutives(formattedData); break;
+          case 'agentBrokers': setAgentBrokers(formattedData); break;
+          case 'branches': setBranches(formattedData); break;
+          case 'busChannels': setBusChannels(formattedData); break;
+          case 'businessSources': setBusinessSources(formattedData); break;
+          case 'accountTypes': setAccountTypes(formattedData); break;
+          case 'rateTypes': setRateTypes(formattedData); break;
+        }
+        setDropdownLoading(prev => ({ ...prev, [key]: false }));
+        setDropdownErrors(prev => ({ ...prev, [key]: false }));
+      } catch (error) {
+        console.error(`Failed to fetch ${key}:`, error);
+        setDropdownLoading(prev => ({ ...prev, [key]: false }));
+        setDropdownErrors(prev => ({ ...prev, [key]: true }));
+      }
+    });
+
+    await Promise.all(promises);
+    console.log("✅ All dropdowns loaded");
+  };
+
+  // Fetch dropdown data and mark as loaded
+  useEffect(() => {
+    const loadDropdowns = async () => {
+      await fetchAllDropdowns();
+      setDropdownsLoaded(true);
+      console.log("✅ Dropdowns loaded successfully");
+    };
+    loadDropdowns();
+  }, []);
+
+  // Fetch exchange rate from external API
+  const fetchExchangeRate = async (fromCurrency: string, toCurrency: string = "NGN") => {
+    setIsFetchingRate(true);
+    try {
+      const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch exchange rate");
+      }
+      
+      const data = await response.json();
+      const rate = data.rates?.[toCurrency];
+      
+      if (rate) {
+        setFormData(prev => ({ ...prev, exRate: rate }));
+        toast({
+          description: `Exchange rate updated: 1 ${fromCurrency} = ${rate.toFixed(4)} ${toCurrency}`,
+          duration: 2000,
+        });
+      } else {
+        throw new Error("Rate not available");
+      }
+    } catch (error) {
+      console.error("Error fetching exchange rate:", error);
+      toast({
+        description: `Could not fetch live rate. Please try again later.`,
+        duration: 2000,
+        variant: "destructive",
+      });
+    } finally {
+      setIsFetchingRate(false);
+    }
+  };
+
+  const handleCurrencyChange = (currencyValue: string) => {
+    setFormData(prev => ({ ...prev, currency: currencyValue }));
+    if (currencyValue !== "NGN") {
+      fetchExchangeRate(currencyValue, "NGN");
+    } else {
+      setFormData(prev => ({ ...prev, exRate: 1 }));
+      toast({
+        description: "Base currency selected: NGN",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleRefreshRate = () => {
+    if (formData.currency && formData.currency !== "NGN") {
+      fetchExchangeRate(formData.currency, "NGN");
+    } else {
+      toast({
+        description: "Using base currency NGN",
+        duration: 2000,
+      });
+    }
+  };
+
+  // Client search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const handleClientSearch = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        return;
+      }
+
+      setSearching(true);
+      try {
+        const response = await fetch(
+          `${SERVER_URL}/v1/Customers/search?SearchText=${encodeURIComponent(query)}`
+        );
+        if (!response.ok) throw new Error("Search failed");
+        const data = await response.json();
+        setSearchResults(data);
+      } catch (error) {
+        toast({
+          title: "Search Error",
+          description: "Failed to search for existing clients.",
+          variant: "destructive",
+        });
+      } finally {
+        setSearching(false);
+      }
+    }, 500),
+    []
+  );
+
+  const selectClient = (client: any) => {
+    let clientName = "";
+    if (client.isOrg && client.orgName) {
+      clientName = client.orgName;
+    } else {
+      const titlePart = client.title ? `${client.title} ` : "";
+      const firstPart = client.firstName ? `${client.firstName} ` : "";
+      const lastPart = client.lastName || "";
+      clientName = (titlePart + firstPart + lastPart).trim() || client.customerID;
+    }
+    setSelectedClientId(client.customerID);
+    handleInputChange("clientName", clientName);
+    setSearchResults([]);
+    setSearchQuery("");
+    handleInputChange("existingClients", false);
+  };
+
+  useEffect(() => {
+    if (formData.existingClients) {
+      handleClientSearch(searchQuery);
+    }
+  }, [searchQuery, formData.existingClients, handleClientSearch]);
+
+  // Load quotation data AFTER dropdowns are ready
+  useEffect(() => {
+    if (!dropdownsLoaded) {
+      console.log("⏳ Waiting for dropdowns to load...");
+      return;
+    }
+
+    const loadQuotation = async () => {
+      if (!policyNo) {
+        console.warn("⚠️ No policy number found in URL");
+        return;
+      }
+
+      console.log("🔍 Fetching quotation with policy number:", policyNo);
+
+      try {
+        const result = await dispatch(
+          fetchGroupLifePolicy(policyNo)
+        ).unwrap();
+
+        console.log("📦 Full API Response:", result);
+        
+        const data = result.data || result;
+        
+        console.log("✅ Extracted quotation data:", data);
+
+        // Find matching dropdown values
+        const findOptionId = (options: ApiDropdownOption[], searchValue: string): string => {
+          if (!searchValue) return "";
+          
+          console.log(`🔍 Searching for: "${searchValue}" in ${options.length} options`);
+          
+          // Try exact match first
+          let found = options.find(opt => 
+            opt.id?.toLowerCase() === searchValue.toLowerCase() ||
+            opt.name?.toLowerCase() === searchValue.toLowerCase() ||
+            opt.code?.toLowerCase() === searchValue.toLowerCase()
+          );
+          
+          // Try partial match if no exact match
+          if (!found) {
+            found = options.find(opt => 
+              opt.name?.toLowerCase().includes(searchValue.toLowerCase()) ||
+              searchValue.toLowerCase().includes(opt.name?.toLowerCase() || '')
+            );
+          }
+          
+          console.log(`✅ Found:`, found);
+          return found?.id || "";
+        };
+
+        // Map API response to form fields
+        const updatedFormData = {
+          quotationNumber: data.policyNo || data.quotationNumber || "[AUTO]",
+          policyNo: data.policyNo || policyNo,
+          transactionDate: data.entryDate ? formatDateForInput(data.entryDate) : new Date().toISOString().split("T")[0],
+          effectiveDate: data.startDate ? formatDateForInput(data.startDate) : new Date().toISOString().split("T")[0],
+          expiryDate: data.expiryDate ? formatDateForInput(data.expiryDate) : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split("T")[0],
+          coverDay: data.coverDays != null ? data.coverDays.toString() : "0.00",
+          clientName: data.insuredName || data.companyName || data.clientName || "",
+          groupFactorAmount: data.groupFactorAmount != null ? data.groupFactorAmount.toString() : "1000.00",
+          insuredType: data.insuredType || "",
+          schemeTypes: data.subRiskName || data.schemeType || "GROUP LIFE",
+          groupLifeFactor: data.groupLifeFactor != null ? data.groupLifeFactor.toString() : "0",
+          rateType: data.rateType || "",
+          existingClients: false,
+          useFixedRate: data.useFixedRate || false,
+          useAverageAge: data.useAverageAge || false,
+          gpaRates: false,
+          uploadMemberDetails: false,
+          groupLifeExtension: data.groupLifeExtension || false,
+          extensionRows: Array.isArray(data.extensions) && data.extensions.length > 0
+            ? data.extensions.map((ext: any) => ({
+                itemNo: ext.itemNo,
+                description: ext.description || "",
+                rate: ext.rate != null ? ext.rate.toString() : "0",
+                itemValue: ext.itemValue != null ? ext.itemValue.toString() : "0",
+              }))
+            : [
+                { itemNo: 1, description: "", rate: "0", itemValue: "0" },
+                { itemNo: 2, description: "", rate: "0", itemValue: "0" },
+                { itemNo: 3, description: "", rate: "0", itemValue: "0" },
+                { itemNo: 4, description: "", rate: "0", itemValue: "0" },
+                { itemNo: 5, description: "", rate: "0", itemValue: "0" },
+              ],
+          totalSumInsured: data.totalSumInsured != null ? data.totalSumInsured.toFixed(2) : "0.00",
+          loadingPercent: data.loadingPercentage != null ? data.loadingPercentage.toString() : "0",
+          quotationStatus: data.status || "PROSPECT",
+          totalPremium: data.totalPremium != null ? data.totalPremium.toFixed(2) : "0.00",
+          reductionPercent: data.reductionPercentage != null ? data.reductionPercentage.toString() : "0",
+          netPremiumDue: data.netPremiumDue != null ? data.netPremiumDue.toFixed(2) : "0.00",
+          currency: data.currency || "NGN",
+          exRate: data.exchangeRate || 1,
+          accountExecutiveId: findOptionId(accountExecutives, data.accountExecutiveId || data.accountExecutive || ""),
+          branchId: findOptionId(branches, data.branchId || data.branch || ""),
+          businessSource: findOptionId(businessSources, data.businessSource || ""),
+          agentBrokerId: findOptionId(agentBrokers, data.agentBrokerId || data.agentBroker || ""),
+          accountTypeId: findOptionId(accountTypes, data.accountTypeId || data.accountType || ""),
+          busChannelId: findOptionId(busChannels, data.busChannelId || data.busChannel || ""),
+          subChannelId: data.subChannelId || data.subChannel || "",
+          proportionPercent: data.proportionPercent || 100,
+          premiumRatePercent: data.premiumRatePercent || 2.0,
+          businessSector: data.businessSector || "",
+          product: findOptionId(products, data.subRiskId || data.subRiskName || ""),
+        };
+
+        console.log("📋 Form data to set:", updatedFormData);
+        setFormData(updatedFormData);
+
+        // Set members if available
+        if (data.members && Array.isArray(data.members)) {
+          const mappedMembers = data.members.map((m: any) => ({
+            id: m.id || m.memberId || `temp-${Math.random().toString(36).slice(2)}`,
+            staffNo: m.staffNo || "",
+            employeeNames: m.name || m.employeeNames || "Unknown",
+            sex: m.gender || m.sex || "M",
+            dateOfBirth: m.dateOfBirth ? formatDateForInput(m.dateOfBirth) : "",
+            anb: m.anb || 0,
+            basicSalary: m.salary || m.basicSalary || 0,
+            housingAllowance: m.housingAllowance || 0,
+            transportAllowance: m.transportAllowance || 0,
+            totalEmolument: m.totalEmolument || m.salary || 0,
+            sumInsured: m.sumAssured || 0,
+            premium: m.premium || 0,
+            rate: m.rate || 0,
+            hireDate: m.hireDate ? formatDateForInput(m.hireDate) : "",
+          }));
+          setMembers(mappedMembers);
+          console.log("👥 Members loaded:", mappedMembers.length);
+        }
+
+        dispatch(setCurrentQuotation(data));
+        setDataLoaded(true);
+        console.log("✅ Form data updated successfully");
+
+      } catch (error: any) {
+        console.error("❌ Load quotation error:", error);
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to load quotation",
+          variant: "destructive",
+        });
+        setDataLoaded(true);
+      }
+    };
+
+    loadQuotation();
+
+    return () => {
+      dispatch(clearCurrentQuotation());
+    };
+  }, [policyNo, dispatch, toast, dropdownsLoaded, accountExecutives, branches, businessSources, agentBrokers, accountTypes, busChannels, products]);
+
   const handleAddMember = async (member: Omit<GroupLifeMember, "id">) => {
-    if (!id) {
+    if (!policyNo) {
       toast({
         title: "Error",
-        description: "Quotation ID is required",
+        description: "Policy number is required",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      // Prepare new member data for backend
-      const newMemberData: ComputeQuotationMember = {
-        staffNo: member.staffNo || `STAFF-${Date.now()}`,
-        employeeNames: member.employeeNames,
-        sex: member.sex,
-        dateOfBirth: formatDateForBackend(member.dateOfBirth),
-        basicSalary: member.basicSalary || 0,
-        housingAllowance: member.housingAllowance || 0,
-        transportAllowance: member.transportAllowance || 0,
-        hireDate: formatDateForBackend(
-          member.hireDate || new Date().toISOString().split("T")[0]
-        ),
-        permanentDisabilityRate: 0,
-        temporaryDisabilityRate: 0,
-        medicalExpensesRate: 0,
-        funeralExtensionRate: 0,
-        criticalIllnessRate: 0,
-      };
-
-      // Add to the members list
-      const updatedMembersRaw = [...(uploadedMembersRaw || []), newMemberData];
-
-      // Prepare the full quotation update payload with the new member
-      const quotationData = {
-        transactionDate: formatDateForBackend(formData.transactionDate),
-        effectiveDate: formatDateForBackend(formData.effectiveDate),
-        expiryDate: formatDateForBackend(formData.expiryDate),
-        insuredType: formData.insuredType,
-        schemeType: formData.schemeTypes,
-        clientName: formData.clientName,
-        groupLifeFactor: Number.parseFloat(formData.groupLifeFactor) || 0,
-        groupFactorAmount: Number.parseFloat(formData.groupFactorAmount) || 0,
-        useFixedRate: formData.useFixedRate,
-        fixedRate: 0,
-        useAverageAge: formData.useAverageAge,
-        averageAge: 0,
-        loadingRate: Number.parseFloat(formData.loadingPercent) || 0,
-        reductionRate: Number.parseFloat(formData.reductionPercent) || 0,
-        coverDays: Number.parseFloat(formData.coverDay) || 0,
-        members: updatedMembersRaw,
-      };
-
-      // Call PUT endpoint to update the entire quotation with the new member
-      await apiUpdateQuotation(id, quotationData);
-
-      // Update local state
-      const newMember: GroupLifeMember = {
+      const newMember = {
         ...member,
-        id: `${newMemberData.staffNo}`,
-        staffNo: newMemberData.staffNo,
+        id: `temp-${Date.now()}`,
       };
-      setMembers((prev) => [...prev, newMember]);
-      setUploadedMembersRaw(updatedMembersRaw);
 
-      // Recalculate totals
-      // calculateTotals([...members, newMember]);
+      const result = await dispatch(
+        savePolicyMember({
+          policyNo: policyNo,
+          memberData: newMember,
+        })
+      ).unwrap();
+
+      if (result && result.members) {
+        setMembers(result.members);
+      } else {
+        setMembers([...members, newMember]);
+      }
 
       toast({
         title: "Success",
         description: "Member added successfully",
       });
     } catch (error: any) {
-      console.error("Add member error:", error); // Debug log
+      console.error("Add member error:", error);
       toast({
         title: "Error",
         description: error?.message || "Failed to add member",
@@ -392,73 +872,37 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   };
 
   const handleUpdateMember = async (index: number, member: GroupLifeMember) => {
-    if (!id) return;
+    if (!policyNo) {
+      toast({
+        title: "Error",
+        description: "Policy number is required",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      // Prepare the updated member list
-      const updatedMembers = [...members];
-      updatedMembers[index] = member;
+      const result = await dispatch(
+        savePolicyMember({
+          policyNo: policyNo,
+          memberData: member,
+        })
+      ).unwrap();
 
-      // Prepare all members data for backend
-      const updatedMembersRaw = updatedMembers.map((m, i) => {
-        const existingRaw = uploadedMembersRaw?.[i];
-        return {
-          staffNo: m.staffNo || `STAFF-${Date.now()}`,
-          employeeNames: m.employeeNames,
-          sex: m.sex,
-          dateOfBirth: formatDateForBackend(m.dateOfBirth),
-          basicSalary: m.basicSalary || existingRaw?.basicSalary || 0,
-          housingAllowance:
-            m.housingAllowance || existingRaw?.housingAllowance || 0,
-          transportAllowance:
-            m.transportAllowance || existingRaw?.transportAllowance || 0,
-          hireDate: formatDateForBackend(
-            m.hireDate || existingRaw?.hireDate || new Date().toISOString()
-          ),
-          permanentDisabilityRate: existingRaw?.permanentDisabilityRate || 0,
-          temporaryDisabilityRate: existingRaw?.temporaryDisabilityRate || 0,
-          medicalExpensesRate: existingRaw?.medicalExpensesRate || 0,
-          funeralExtensionRate: existingRaw?.funeralExtensionRate || 0,
-          criticalIllnessRate: existingRaw?.criticalIllnessRate || 0,
-        } as ComputeQuotationMember;
-      });
-
-      // Prepare the full quotation update payload
-      const quotationData = {
-        transactionDate: formatDateForBackend(formData.transactionDate),
-        effectiveDate: formatDateForBackend(formData.effectiveDate),
-        expiryDate: formatDateForBackend(formData.expiryDate),
-        insuredType: formData.insuredType,
-        schemeType: formData.schemeTypes,
-        clientName: formData.clientName,
-        groupLifeFactor: Number.parseFloat(formData.groupLifeFactor) || 0,
-        groupFactorAmount: Number.parseFloat(formData.groupFactorAmount) || 0,
-        useFixedRate: formData.useFixedRate,
-        fixedRate: 0,
-        useAverageAge: formData.useAverageAge,
-        averageAge: 0,
-        loadingRate: Number.parseFloat(formData.loadingPercent) || 0,
-        reductionRate: Number.parseFloat(formData.reductionPercent) || 0,
-        coverDays: Number.parseFloat(formData.coverDay) || 0,
-        members: updatedMembersRaw,
-      };
-
-      // Call PUT endpoint to update the entire quotation with updated members
-      await apiUpdateQuotation(id, quotationData);
-
-      // Update local state
-      setMembers(updatedMembers);
-      setUploadedMembersRaw(updatedMembersRaw);
-
-      // Recalculate totals
-      // calculateTotals(updatedMembers);
+      if (result && result.members) {
+        setMembers(result.members);
+      } else {
+        const updatedMembers = [...members];
+        updatedMembers[index] = member;
+        setMembers(updatedMembers);
+      }
 
       toast({
         title: "Success",
         description: "Member updated successfully",
       });
     } catch (error: any) {
-      console.error("Update member error:", error); // Debug log
+      console.error("Update member error:", error);
       toast({
         title: "Error",
         description: error?.message || "Failed to update member",
@@ -468,50 +912,38 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   };
 
   const handleDeleteMember = async (index: number) => {
-    if (!id) return;
+    if (!policyNo) {
+      toast({
+        title: "Error",
+        description: "Policy number is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const memberToDelete = members[index];
+    if (!memberToDelete?.id) {
+      toast({
+        title: "Error",
+        description: "Member ID is required",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      // Remove the member from the list
-      const updatedMembers = members.filter((_, i) => i !== index);
-      const updatedMembersRaw =
-        uploadedMembersRaw?.filter((_, i) => i !== index) || [];
+      await dispatch(
+        removePolicyMember(memberToDelete.id)
+      ).unwrap();
 
-      // Prepare the full quotation update payload without the deleted member
-      const quotationData = {
-        transactionDate: formatDateForBackend(formData.transactionDate),
-        effectiveDate: formatDateForBackend(formData.effectiveDate),
-        expiryDate: formatDateForBackend(formData.expiryDate),
-        insuredType: formData.insuredType,
-        schemeType: formData.schemeTypes,
-        clientName: formData.clientName,
-        groupLifeFactor: Number.parseFloat(formData.groupLifeFactor) || 0,
-        groupFactorAmount: Number.parseFloat(formData.groupFactorAmount) || 0,
-        useFixedRate: formData.useFixedRate,
-        fixedRate: 0,
-        useAverageAge: formData.useAverageAge,
-        averageAge: 0,
-        loadingRate: Number.parseFloat(formData.loadingPercent) || 0,
-        reductionRate: Number.parseFloat(formData.reductionPercent) || 0,
-        coverDays: Number.parseFloat(formData.coverDay) || 0,
-        members: updatedMembersRaw,
-      };
-
-      // Call PUT endpoint to update the entire quotation with the deleted member removed
-      await apiUpdateQuotation(id, quotationData);
-
-      // Update local state
-      setMembers(updatedMembers);
-      setUploadedMembersRaw(updatedMembersRaw);
-
-      // Recalculate totals
-      // calculateTotals(updatedMembers);
+      setMembers(members.filter((_, i) => i !== index));
 
       toast({
         title: "Success",
         description: "Member deleted successfully",
       });
     } catch (error: any) {
-      console.error("Delete member error:", error); // Debug log
+      console.error("Delete member error:", error);
       toast({
         title: "Error",
         description: error?.message || "Failed to delete member",
@@ -519,27 +951,6 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
       });
     }
   };
-
-  // const calculateTotals = (memberList: GroupLifeMember[] = members) => {
-  //   const totalSumInsured = memberList.reduce(
-  //     (sum, m) => sum + m.sumInsured,
-  //     0
-  //   );
-  //   const totalPremium = memberList.reduce((sum, m) => sum + m.premium, 0);
-
-  //   const loadingAmount =
-  //     (totalPremium * Number.parseFloat(formData.loadingPercent)) / 100;
-  //   const reductionAmount =
-  //     (totalPremium * Number.parseFloat(formData.reductionPercent)) / 100;
-  //   const netPremium = totalPremium + loadingAmount - reductionAmount;
-
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     totalSumInsured: totalSumInsured.toFixed(2),
-  //     totalPremium: totalPremium.toFixed(2),
-  //     netPremiumDue: netPremium.toFixed(2),
-  //   }));
-  // };
 
   const handleGetCoverDay = () => {
     const effective = new Date(formData.effectiveDate);
@@ -550,186 +961,710 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   };
 
   const handleComputePreview = async () => {
-    if (!uploadedMembersRaw || uploadedMembersRaw.length === 0) {
+    if (!members || members.length === 0) {
       toast({
         title: "No members",
-        description: "Members must be available to compute",
+        description: "Please add members before computing",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const payload: ComputeQuotationPayload = {
-        quotationNumber: formData.quotationNumber || "TEMP",
-        transactionDate: formData.transactionDate,
-        effectiveDate: formData.effectiveDate,
-        expiryDate: formData.expiryDate,
-        insuredType: formData.insuredType,
-        schemeType: formData.schemeTypes,
-        clientName: formData.clientName,
-        groupLifeFactor: Number.parseFloat(formData.groupLifeFactor) || 0,
-        groupFactorAmount: Number.parseFloat(formData.groupFactorAmount) || 0,
-        useFixedRate: formData.useFixedRate,
-        fixedRate: 0,
-        useAverageAge: formData.useAverageAge,
-        averageAge: 0,
-        loadingRate: Number.parseFloat(formData.loadingPercent) || 0,
-        reductionRate: Number.parseFloat(formData.reductionPercent) || 0,
-        coverDays: Number.parseFloat(formData.coverDay) || 0,
-        members: uploadedMembersRaw,
-      };
+      let totalSumInsured = 0;
+      let totalPremium = 0;
+      const computedMembers = [];
 
-      console.log("Compute payload:", payload); // Debug log
-      const response = await apiComputeQuotation(payload);
-      console.log("Compute response:", response); // Debug log
+      for (const member of members) {
+        const memberData = {
+          name: member.employeeNames || member.name || "Unknown",
+          dateOfBirth: member.dateOfBirth || new Date().toISOString().split('T')[0],
+          gender: member.sex || member.gender || "M",
+          salary: member.basicSalary || member.salary || 0,
+          sumAssured: member.sumInsured || member.sumAssured || 0,
+          premium: member.premium || 0,
+        };
 
-      // Extract the actual data from the response
-      const computedData = response?.data?.data || response?.data || response;
-      console.log("Computed data:", computedData); // Debug log
-
-      if (computedData?.memberCalculations) {
-        // Map memberCalculations to GroupLifeMember format
-        const mappedMembers = computedData.memberCalculations.map(
-          (member: any) => ({
-            id: `${member.staffNo}`,
-            staffNo: member.staffNo,
-            employeeNames: member.employeeNames,
-            sex: member.sex,
-            dateOfBirth: member.dateOfBirth,
-            anb: member.anb,
-            totalEmolument: member.totalEmolument,
-            sumInsured: member.sumAssured,
-            premium: member.totalMemberPremium,
-            rate: member.premiumRate,
-            basicSalary: member.basicSalary,
-            housingAllowance: member.housingAllowance,
-            transportAllowance: member.transportAllowance,
-            hireDate: member.hireDate,
-          })
-        );
-
-        // Update members in local state
-        setMembers(mappedMembers);
-        console.log("Updated members:", mappedMembers); // Debug log
+        try {
+          const result = await dispatch(computeMemberPremium(memberData)).unwrap();
+          const computedMember = {
+            ...member,
+            sumInsured: result.sumAssured || memberData.sumAssured,
+            premium: result.premium || 0,
+            anb: result.anb || 0,
+          };
+          computedMembers.push(computedMember);
+          totalSumInsured += computedMember.sumInsured;
+          totalPremium += computedMember.premium;
+        } catch (err) {
+          console.error("Error computing member:", err);
+          computedMembers.push(member);
+          totalSumInsured += member.sumInsured || 0;
+          totalPremium += member.premium || 0;
+        }
       }
 
-      // Extract the computed values
-      const totalSumInsured = computedData?.totalSumInsured || 0;
-      const totalBasicPremium = computedData?.totalBasicPremium || 0;
-      const netPremium = computedData?.netPremium || 0;
-      const loadingAmount = computedData?.loadingAmount || 0;
-      const reductionAmount = computedData?.reductionAmount || 0;
+      const loadingRate = Number.parseFloat(formData.loadingPercent) || 0;
+      const reductionRate = Number.parseFloat(formData.reductionPercent) || 0;
+      const netPremiumDue = totalPremium * (1 + loadingRate / 100) * (1 - reductionRate / 100);
 
-      console.log("Extracted values:", {
-        totalSumInsured,
-        totalBasicPremium,
-        netPremium,
-        loadingAmount,
-        reductionAmount,
-      }); // Debug log
+      dispatch(
+        setComputedTotalsForCurrentQuotation({
+          totalSumInsured: totalSumInsured,
+          totalPremium: totalPremium,
+          netPremiumDue: netPremiumDue,
+          loadingPercentage: loadingRate,
+          reductionPercentage: reductionRate,
+        })
+      );
 
-      // Update form data with computed values
-      setFormData((prev) => {
-        const updated = {
-          ...prev,
-          totalSumInsured: totalSumInsured.toFixed(2),
-          totalPremium: totalBasicPremium.toFixed(2),
-          netPremiumDue: netPremium.toFixed(2),
-          loadingPercent: loadingAmount.toString(),
-          reductionPercent: reductionAmount.toString(),
-        };
-        console.log("Updated formData:", updated); // Debug log
-        return updated;
-      });
+      setMembers(computedMembers);
+
+      setFormData((prev) => ({
+        ...prev,
+        totalSumInsured: totalSumInsured.toFixed(2),
+        totalPremium: totalPremium.toFixed(2),
+        netPremiumDue: netPremiumDue.toFixed(2),
+        loadingPercent: loadingRate.toString(),
+        reductionPercent: reductionRate.toString(),
+      }));
 
       toast({
         title: "Preview ready",
-        description: `Quotation recomputed successfully.`,
+        description: `Quotation recomputed successfully. Total Premium: ${totalPremium.toFixed(2)}`,
       });
-    } catch (e: any) {
-      console.error("Compute error:", e); // Debug log
+    } catch (error: any) {
+      console.error("Compute error:", error);
       toast({
         title: "Compute failed",
-        description: e?.message || "Unable to compute quotation",
+        description: error?.message || "Unable to compute quotation",
         variant: "destructive",
       });
     }
   };
 
   const handleSave = async () => {
-    if (
-      !formData.clientName ||
-      !formData.insuredType ||
-      !formData.schemeTypes
-    ) {
+    const missingFields = [];
+    
+    if (!formData.clientName || formData.clientName.trim() === "") {
+      missingFields.push("Client Name");
+    }
+    if (!formData.schemeTypes) missingFields.push("Scheme Types");
+    if (!formData.accountExecutiveId) missingFields.push("Account Executive");
+    if (!formData.branchId) missingFields.push("Branch/Location");
+    if (!formData.businessSource) missingFields.push("Business Source");
+    if (!formData.accountTypeId) missingFields.push("Account Types");
+    if (!formData.busChannelId) missingFields.push("Bus Channels");
+    if (!formData.product) missingFields.push("Product");
+
+    if (missingFields.length > 0) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields.",
+        description: `Please fill in: ${missingFields.join(", ")}`,
         variant: "destructive",
       });
       return;
     }
 
-    if (!uploadedMembersRaw || uploadedMembersRaw.length === 0) {
-      toast({
-        title: "No members",
-        description: "Members must be available to save",
-        variant: "destructive",
-      });
-      return;
-    }
+    // ✅ REMOVED: Members are NOT required to save
+    // if (!members || members.length === 0) {
+    //   toast({
+    //     title: "No members",
+    //     description: "Members must be available to save",
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
-    const quotationData = {
-      transactionDate: formData.transactionDate,
+    const policyData = {
+      policyNo: formData.policyNo || policyNo,
+      companyName: formData.clientName,
+      transDate: formData.transactionDate,
       effectiveDate: formData.effectiveDate,
       expiryDate: formData.expiryDate,
+      subRiskName: formData.schemeTypes,
       insuredType: formData.insuredType,
-      schemeType: formData.schemeTypes,
-      clientName: formData.clientName,
-      groupLifeFactor: Number.parseFloat(formData.groupLifeFactor) || 0,
-      groupFactorAmount: Number.parseFloat(formData.groupFactorAmount) || 0,
-      useFixedRate: formData.useFixedRate,
-      fixedRate: 0,
-      useAverageAge: formData.useAverageAge,
-      averageAge: 0,
-      loadingRate: Number.parseFloat(formData.loadingPercent) || 0,
-      reductionRate: Number.parseFloat(formData.reductionPercent) || 0,
-      coverDays: Number.parseFloat(formData.coverDay) || 0,
-      members: uploadedMembersRaw,
+      totalMembers: members?.length || 0,
+      totalSumInsured: Number.parseFloat(formData.totalSumInsured) || 0,
+      totalPremium: Number.parseFloat(formData.totalPremium) || 0,
+      netPremiumDue: Number.parseFloat(formData.netPremiumDue) || 0,
+      loadingPercentage: Number.parseFloat(formData.loadingPercent) || 0,
+      reductionPercentage: Number.parseFloat(formData.reductionPercent) || 0,
+      status: formData.quotationStatus as "PROSPECT" | "ACTIVE" | "PENDING" | "CANCELLED",
+      accountExecutiveId: formData.accountExecutiveId,
+      branchId: formData.branchId,
+      businessSource: formData.businessSource,
+      agentBrokerId: formData.agentBrokerId,
+      accountTypeId: formData.accountTypeId,
+      busChannelId: formData.busChannelId,
+      subChannelId: formData.subChannelId,
+      proportionPercent: formData.proportionPercent || 100,
+      premiumRatePercent: formData.premiumRatePercent || 2.0,
+      currency: formData.currency || "NGN",
+      exchangeRate: formData.exRate || 1,
+      businessSector: formData.businessSector,
+      product: formData.product,
+      members: members && members.length > 0 ? members.map((m) => ({
+        name: m.employeeNames || m.name || "Unknown",
+        dateOfBirth: m.dateOfBirth,
+        gender: (m.sex || m.gender || "M") as "M" | "F",
+        salary: m.basicSalary || m.salary || 0,
+        sumAssured: m.sumInsured || m.sumAssured || 0,
+        premium: m.premium || 0,
+        staffNo: m.staffNo || "",
+        housingAllowance: m.housingAllowance || 0,
+        transportAllowance: m.transportAllowance || 0,
+        hireDate: m.hireDate || new Date().toISOString().split("T")[0],
+      })) : [],
     };
 
     try {
-      if (id) {
-        await dispatch(
-          updateGroupLifeQuotation({ id, data: quotationData })
-        ).unwrap();
-        toast({
-          title: "Success",
-          description: "Quotation updated successfully.",
-        });
-        navigate("/quotations/group-life/");
-      }
+      setSaving(true);
+      await dispatch(
+        updateGroupLifePolicy({
+          policyNo: formData.policyNo || policyNo,
+          policyData: policyData,
+        })
+      ).unwrap();
+      
+      toast({
+        title: "Success",
+        description: "Quotation updated successfully.",
+      });
+      navigate("/underwriting/group-life-quotations");
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err || "Failed to save quotation.",
+        description: err?.message || "Failed to save quotation.",
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleCancel = () => {
-    navigate("/quotations/group-life/");
+    navigate("/underwriting/group-life-quotations");
   };
 
-  if (loading) {
+  // Show loading state while data loads
+  if (loading.detail || !dropdownsLoaded || !dataLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-lg">Loading quotation...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-lg">
+            {!dropdownsLoaded ? "Loading options..." : "Loading scheme details..."}
+          </div>
+        </div>
       </div>
     );
   }
+
+  // Render Policy Details content (the main edit form)
+  const renderPolicyDetails = () => {
+    return (
+      <>
+        {/* Policy Details Section */}
+        <div className="border rounded-lg shadow-sm mb-4">
+          <button
+            type="button"
+            onClick={() => toggleSection("policyDetails")}
+            className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <span className="font-semibold">Scheme Policy Details</span>
+          </button>
+          {expandedSections.policyDetails && (
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Policy Number */}
+                <div className="space-y-2">
+                  <Label htmlFor="quotationNumber" className="text-sm font-medium">
+                    Policy Number
+                  </Label>
+                  <Input
+                    id="quotationNumber"
+                    value={formData.policyNo || formData.quotationNumber}
+                    className="bg-gray-50"
+                    readOnly
+                  />
+                </div>
+
+                {/* Entry Date */}
+                <div className="space-y-2">
+                  <Label htmlFor="transactionDate" className="text-sm font-medium">
+                    Entry Date <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="transactionDate"
+                    type="date"
+                    value={formData.transactionDate}
+                    onChange={(e) => handleInputChange("transactionDate", e.target.value)}
+                  />
+                </div>
+
+                {/* Effective Date */}
+                <div className="space-y-2">
+                  <Label htmlFor="effectiveDate" className="text-sm font-medium">
+                    Effective Date <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="effectiveDate"
+                    type="date"
+                    value={formData.effectiveDate}
+                    onChange={(e) => handleInputChange("effectiveDate", e.target.value)}
+                  />
+                </div>
+
+                {/* Expiry Date */}
+                <div className="space-y-2">
+                  <Label htmlFor="expiryDate" className="text-sm font-medium">
+                    Expiry Date <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="expiryDate"
+                    type="date"
+                    value={formData.expiryDate}
+                    onChange={(e) => handleInputChange("expiryDate", e.target.value)}
+                  />
+                </div>
+
+                {/* Agent/Broker */}
+                <div className="space-y-2">
+                  <SearchableDropdown
+                    options={agentBrokers}
+                    value={formData.agentBrokerId}
+                    onChange={(value) => handleInputChange("agentBrokerId", value)}
+                    placeholder="Select Agent/Broker"
+                    label="Agent/Broker"
+                    loading={dropdownLoading.agentBrokers}
+                    error={dropdownErrors.agentBrokers}
+                    searchPlaceholder="Search agent/broker..."
+                  />
+                </div>
+
+                {/* Insured Details / Client Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="clientName" className="text-sm font-medium">
+                    Insured Details <span className="text-red-500">*</span>
+                  </Label>
+                  {formData.existingClients ? (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Input
+                          id="clientNameSearch"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search for existing clients..."
+                          className={searching ? "pr-8" : ""}
+                        />
+                        {searching && (
+                          <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                          </div>
+                        )}
+                      </div>
+
+                      {searchResults.length > 0 && (
+                        <div className="border rounded-md max-h-60 overflow-y-auto shadow-sm bg-white">
+                          {searchResults.map((client) => {
+                            let displayName = "";
+                            if (client.isOrg && client.orgName) {
+                              displayName = client.orgName;
+                            } else {
+                              const titlePart = client.title ? `${client.title} ` : "";
+                              const firstPart = client.firstName ? `${client.firstName} ` : "";
+                              const lastPart = client.lastName || "";
+                              displayName = (titlePart + firstPart + lastPart).trim() || client.customerID;
+                            }
+
+                            return (
+                              <button
+                                key={client.customerID}
+                                type="button"
+                                onClick={() => selectClient(client)}
+                                className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100"
+                              >
+                                <div className="font-medium">{displayName}</div>
+                                <div className="text-xs text-gray-500">
+                                  ID: {client.customerID}
+                                  {client.phoneLine1 && ` • Phone: ${client.phoneLine1}`}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <textarea
+                      id="clientName"
+                      value={formData.clientName}
+                      onChange={(e) => handleInputChange("clientName", e.target.value)}
+                      className="w-full min-h-[80px] px-3 py-2 bg-gray-50 border rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      placeholder="Enter client name..."
+                    />
+                  )}
+                  <div className="flex items-center space-x-2 mt-1">
+                    <input
+                      type="checkbox"
+                      id="existingClients"
+                      checked={formData.existingClients}
+                      onChange={(e) => handleInputChange("existingClients", e.target.checked)}
+                      className="rounded"
+                    />
+                    <Label htmlFor="existingClients" className="text-sm">
+                      Existing Clients
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Proportion % */}
+                <div className="space-y-2">
+                  <Label htmlFor="proportionPercent" className="text-sm font-medium">
+                    Proportion% <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="proportionPercent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.proportionPercent}
+                    onChange={(e) => handleInputChange("proportionPercent", parseFloat(e.target.value) || 0)}
+                    placeholder="Enter proportion percentage"
+                  />
+                </div>
+
+                {/* Foreign Currency */}
+                <div className="space-y-2">
+                  <Label htmlFor="currency" className="text-sm font-medium">
+                    Foreign Currency <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={formData.currency}
+                      onValueChange={handleCurrencyChange}
+                      className="flex-1"
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="- select -" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NGN">NGN</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      onClick={handleRefreshRate}
+                      variant="outline"
+                      size="icon"
+                      disabled={isFetchingRate || formData.currency === "NGN"}
+                      title="Refresh Exchange Rate"
+                    >
+                      {isFetchingRate ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Exchange Rate */}
+                <div className="space-y-2">
+                  <Label htmlFor="exchangeRate" className="text-sm font-medium">
+                    Exchange Rate <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="exchangeRate"
+                    type="number"
+                    step="0.0001"
+                    value={formData.exRate}
+                    onChange={(e) => handleInputChange("exRate", parseFloat(e.target.value) || 1)}
+                    className="bg-gray-50"
+                    disabled={isFetchingRate}
+                  />
+                </div>
+
+                {/* Product */}
+                <div className="space-y-2">
+                  <SearchableDropdown
+                    options={products}
+                    value={formData.product}
+                    onChange={(value) => handleInputChange("product", value)}
+                    placeholder="Select Product"
+                    label="Product"
+                    loading={dropdownLoading.products}
+                    error={dropdownErrors.products}
+                    required={true}
+                    searchPlaceholder="Search product..."
+                  />
+                </div>
+
+                {/* Account Executive */}
+                <div className="space-y-2">
+                  <SearchableDropdown
+                    options={accountExecutives}
+                    value={formData.accountExecutiveId}
+                    onChange={(value) => handleInputChange("accountExecutiveId", value)}
+                    placeholder="Select Account Executive"
+                    label="Account Executive"
+                    loading={dropdownLoading.accountExecutives}
+                    error={dropdownErrors.accountExecutives}
+                    required={true}
+                    searchPlaceholder="Search account executive..."
+                  />
+                </div>
+
+                {/* Branch/Location */}
+                <div className="space-y-2">
+                  <SearchableDropdown
+                    options={branches}
+                    value={formData.branchId}
+                    onChange={(value) => handleInputChange("branchId", value)}
+                    placeholder="Select Branch/Location"
+                    label="Branch/Location"
+                    loading={dropdownLoading.branches}
+                    error={dropdownErrors.branches}
+                    required={true}
+                    searchPlaceholder="Search branch..."
+                  />
+                </div>
+
+                {/* Business Source */}
+                <div className="space-y-2">
+                  <SearchableDropdown
+                    options={businessSources}
+                    value={formData.businessSource}
+                    onChange={(value) => handleInputChange("businessSource", value)}
+                    placeholder="Select Business Source"
+                    label="Business Source"
+                    loading={dropdownLoading.businessSources}
+                    error={dropdownErrors.businessSources}
+                    required={true}
+                    searchPlaceholder="Search business source..."
+                  />
+                </div>
+
+                {/* Bus Channels */}
+                <div className="space-y-2">
+                  <SearchableDropdown
+                    options={busChannels}
+                    value={formData.busChannelId}
+                    onChange={(value) => handleInputChange("busChannelId", value)}
+                    placeholder="Select Bus Channel"
+                    label="Bus Channels"
+                    loading={dropdownLoading.busChannels}
+                    error={dropdownErrors.busChannels}
+                    required={true}
+                    searchPlaceholder="Search bus channel..."
+                  />
+                </div>
+
+                {/* Account Types */}
+                <div className="space-y-2">
+                  <SearchableDropdown
+                    options={accountTypes}
+                    value={formData.accountTypeId}
+                    onChange={(value) => handleInputChange("accountTypeId", value)}
+                    placeholder="Select Account Type"
+                    label="Account Types"
+                    loading={dropdownLoading.accountTypes}
+                    error={dropdownErrors.accountTypes}
+                    required={true}
+                    searchPlaceholder="Search account type..."
+                  />
+                </div>
+
+                {/* Cover Day */}
+                <div className="space-y-2">
+                  <Label htmlFor="coverDay" className="text-sm font-medium">
+                    Cover Day
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="coverDay"
+                      value={formData.coverDay}
+                      onChange={(e) => handleInputChange("coverDay", e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleGetCoverDay}
+                      className="bg-primary hover:bg-primary/80 text-white whitespace-nowrap"
+                    >
+                      Get Cover Day
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Quotation Status */}
+                <div className="space-y-2">
+                  <Label htmlFor="quotationStatus" className="text-sm font-medium">
+                    Scheme Status
+                  </Label>
+                  <Select
+                    value={formData.quotationStatus}
+                    onValueChange={(value) => handleInputChange("quotationStatus", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="PROSPECT" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PROSPECT">PROSPECT</SelectItem>
+                      <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                      <SelectItem value="PENDING">PENDING</SelectItem>
+                      <SelectItem value="CANCELLED">CANCELLED</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+       
+
+        {/* Extension Details Section */}
+        <div className="border rounded-lg shadow-sm mb-4">
+          <button
+            type="button"
+            onClick={() => toggleSection("extensionDetails")}
+            className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <span className="font-semibold">
+              Group Life Extension Details
+            </span>
+          </button>
+          {expandedSections.extensionDetails && (
+            <div className="p-6">
+              <p className="text-sm text-gray-500">
+                No extension details available.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Scheme Status Section */}
+        <div className="border rounded-lg shadow-sm mb-4">
+          <button
+            type="button"
+            onClick={() => toggleSection("quotationStatus")}
+            className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <span className="font-semibold">Scheme Status</span>
+          </button>
+          {expandedSections.quotationStatus && (
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="totalSumInsured"
+                    className="text-sm font-medium"
+                  >
+                    Total Sum Insured:
+                  </Label>
+                  <Input
+                    id="totalSumInsured"
+                    value={formData.totalSumInsured}
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="totalPremium"
+                    className="text-sm font-medium"
+                  >
+                    Total Premium:
+                  </Label>
+                  <Input
+                    id="totalPremium"
+                    value={formData.totalPremium}
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="loadingPercent"
+                    className="text-sm font-medium"
+                  >
+                    Loading %:
+                  </Label>
+                  <Input
+                    id="loadingPercent"
+                    value={formData.loadingPercent}
+                    onChange={(e) =>
+                      handleInputChange("loadingPercent", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="reductionPercent"
+                    className="text-sm font-medium"
+                  >
+                    Reduction %:
+                  </Label>
+                  <Input
+                    id="reductionPercent"
+                    value={formData.reductionPercent}
+                    onChange={(e) =>
+                      handleInputChange("reductionPercent", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="netPremiumDue"
+                    className="text-sm font-medium"
+                  >
+                    Net Premium Due:
+                  </Label>
+                  <Input
+                    id="netPremiumDue"
+                    value={formData.netPremiumDue}
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-4 pt-4 bg-transparent p-6 rounded-xl">
+          <Button
+            type="button"
+            onClick={handleCancel}
+            variant="outline"
+            className="px-8 bg-transparent"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleComputePreview}
+            disabled={!members?.length}
+            className="bg-indigo-600 hover:bg-indigo-700"
+          >
+            Recompute
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            className="bg-green-600 hover:bg-green-700 text-white px-8"
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -742,474 +1677,149 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
               className="mb-4 bg-transparent"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Quotations
+              Back to Schemes
             </Button>
 
             <div className="mb-6">
               <h1 className="text-2xl font-semibold">
-                Edit Group Life Quotation
+                Edit Group Life Scheme
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {formData.quotationNumber}
-              </p>
-            </div>
-
-            {/* Policy Details Section */}
-            <div className="border rounded-lg shadow-sm  mb-4">
-              <button
-                type="button"
-                onClick={() => toggleSection("policyDetails")}
-                className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <span className="font-semibold">Quotation Policy Details</span>
-              </button>
-              {expandedSections.policyDetails && (
-                <div className="p-6 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="quotationNumber"
-                        className="text-sm font-medium"
-                      >
-                        Quotation Number:
-                      </Label>
-                      <Input
-                        id="quotationNumber"
-                        value={formData.quotationNumber}
-                        className="bg-gray-50"
-                        readOnly
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="insuredType"
-                        className="text-sm font-medium"
-                      >
-                        Insured Type:
-                      </Label>
-                      <Select
-                        value={formData.insuredType}
-                        onValueChange={(value) =>
-                          handleInputChange("insuredType", value)
-                        }
-                      >
-                        <SelectTrigger disabled className="bg-gray-50">
-                          <SelectValue placeholder="- select -" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="company">Company</SelectItem>
-                          <SelectItem value="individual">Individual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="transactionDate"
-                        className="text-sm font-medium"
-                      >
-                        Transaction Date:
-                      </Label>
-                      <Input
-                        id="transactionDate"
-                        type="date"
-                        value={formData.transactionDate}
-                        onChange={(e) =>
-                          handleInputChange("transactionDate", e.target.value)
-                        }
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="schemeTypes"
-                        className="text-sm font-medium"
-                      >
-                        Scheme Types:
-                      </Label>
-                      <Select
-                        value={formData.schemeTypes}
-                        onValueChange={(value) =>
-                          handleInputChange("schemeTypes", value)
-                        }
-                      >
-                        <SelectTrigger disabled className="bg-gray-50">
-                          <SelectValue placeholder="- select -" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="credit-life">
-                            Credit life
-                          </SelectItem>
-                          <SelectItem value="group-life">Group life</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="effectiveDate"
-                        className="text-sm font-medium"
-                      >
-                        Effective Date:
-                      </Label>
-                      <Input
-                        id="effectiveDate"
-                        type="date"
-                        value={formData.effectiveDate}
-                        onChange={(e) =>
-                          handleInputChange("effectiveDate", e.target.value)
-                        }
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="expiryDate"
-                        className="text-sm font-medium"
-                      >
-                        Expiry Date:
-                      </Label>
-                      <Input
-                        id="expiryDate"
-                        type="date"
-                        value={formData.expiryDate}
-                        onChange={(e) =>
-                          handleInputChange("expiryDate", e.target.value)
-                        }
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="coverDay" className="text-sm font-medium">
-                        Cover Day:
-                      </Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="coverDay"
-                          value={formData.coverDay}
-                          onChange={(e) =>
-                            handleInputChange("coverDay", e.target.value)
-                          }
-                          readOnly
-                          className="bg-gray-50"
-                        />
-                        <Button
-                          type="button"
-                          onClick={handleGetCoverDay}
-                          className="bg-primary hover:bg-primary/80 text-white whitespace-nowrap"
-                          disabled
-                        >
-                          Get Cover Day
-                        </Button>
-                      </div>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <input
-                          type="checkbox"
-                          id="existingClients"
-                          checked={formData.existingClients}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "existingClients",
-                              e.target.checked
-                            )
-                          }
-                          className="rounded"
-                          disabled
-                        />
-                        <Label htmlFor="existingClients" className="text-sm">
-                          Existing Clients
-                        </Label>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="groupLifeFactor"
-                        className="text-sm font-medium"
-                      >
-                        Group Life Factor:
-                      </Label>
-                      <Select
-                        value={formData.groupLifeFactor}
-                        onValueChange={(value) =>
-                          handleInputChange("groupLifeFactor", value)
-                        }
-                      >
-                        <SelectTrigger disabled className="bg-gray-50">
-                          <SelectValue placeholder="0" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">0</SelectItem>
-                          <SelectItem value="2">2</SelectItem>
-                          <SelectItem value="3">3</SelectItem>
-                          <SelectItem value="4">4</SelectItem>
-                          <SelectItem value="5">5</SelectItem>
-                          <SelectItem value="6">6</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="clientName"
-                        className="text-sm font-medium"
-                      >
-                        Client Name:
-                      </Label>
-                      <textarea
-                        id="clientName"
-                        value={formData.clientName}
-                        onChange={(e) =>
-                          handleInputChange("clientName", e.target.value)
-                        }
-                        className="w-full min-h-[80px] px-3 py-2 bg-gray-50 border rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        placeholder="Enter client name..."
-                        readOnly
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="rateType" className="text-sm font-medium">
-                        Rate Type:
-                      </Label>
-                      <Select
-                        value={formData.rateType}
-                        onValueChange={(value) =>
-                          handleInputChange("rateType", value)
-                        }
-                      >
-                        <SelectTrigger disabled className="bg-gray-50">
-                          <SelectValue placeholder="-select-" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PRAN RATE">PRAN RATE</SelectItem>
-                          <SelectItem value="RATE 2.7">RATE 2.7</SelectItem>
-                          <SelectItem value="RATE 2.4">RATE 2.4</SelectItem>
-                          <SelectItem value="RATE 2.06">RATE 2.06</SelectItem>
-                          <SelectItem value="CR RATE 1">CR RATE 1</SelectItem>
-                          <SelectItem value="CR RATE 2">CR RATE 2</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="groupFactorAmount"
-                        className="text-sm font-medium"
-                      >
-                        Group Factor Amount:
-                      </Label>
-                      <Input
-                        id="groupFactorAmount"
-                        value={formData.groupFactorAmount}
-                        onChange={(e) =>
-                          handleInputChange("groupFactorAmount", e.target.value)
-                        }
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                  </div>
+              {loading.detail ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                  Loading Scheme...
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Policy Number: {formData.policyNo || formData.quotationNumber}
+                </p>
               )}
             </div>
 
-            {/* Member Details Section */}
-            <div className="border rounded-lg shadow-sm  mb-4">
-              <button
-                type="button"
-                onClick={() => toggleSection("memberDetails")}
-                className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <span className="font-semibold">Member Details</span>
-              </button>
-              {expandedSections.memberDetails && (
-                <div className="p-6">
-                  <MemberManagementTable
+            {/* Main Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="relative">
+                <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto gap-25 overflow-x-auto scrollbar-hide flex-nowrap">
+                  <TabsTrigger 
+                    value="policy" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <span className="hidden xs:inline">Policy Detail</span>
+                      <span className="xs:hidden">Policy Detail</span>
+                    </span>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="group-life" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden xs:inline">Group Life Detail</span>
+                      <span className="xs:hidden">GroupLife Detail</span>
+                    </span>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="debit-note" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden xs:inline">Debit Note</span>
+                      <span className="xs:hidden">Debit Note</span>
+                    </span>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="credit-note" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">Co-Insurance (Credit Note)</span>
+                      <span className="hidden xs:inline sm:hidden">Credit Note</span>
+           
+                    </span>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="attachments" 
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3 
+                      text-xs sm:text-sm font-medium 
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50 
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 
+                      data-[state=active]:bg-transparent rounded-none 
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <Paperclip className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden xs:inline">Attachments</span>
+                      <span className="xs:hidden">Files</span>
+                    </span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <div className="mt-4 sm:mt-6">
+                <TabsContent value="policy" className="mt-0">
+                  {renderPolicyDetails()}
+                </TabsContent>
+
+                <TabsContent value="group-life" className="mt-0">
+                  <GroupLifeDetailsTab 
+                    policyNo={policyNo} 
+                    formData={formData} 
                     members={members}
-                    onAddMember={handleAddMember}
-                    onUpdateMember={handleUpdateMember}
-                    onDeleteMember={handleDeleteMember}
-                    groupFactorAmount={Number.parseFloat(
-                      formData.groupFactorAmount
-                    )}
-                    readOnly={false}
+                    setMembers={setMembers}
                   />
-                </div>
-              )}
-            </div>
+                </TabsContent>
 
-            {/* Extension Details Section */}
-            <div className="border rounded-lg shadow-sm  mb-4">
-              <button
-                type="button"
-                onClick={() => toggleSection("extensionDetails")}
-                className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <span className="font-semibold">
-                  Group Life Extension Details
-                </span>
-              </button>
-              {expandedSections.extensionDetails && (
-                <div className="p-6">
-                  <p className="text-sm text-gray-500">
-                    No extension details available.
-                  </p>
-                </div>
-              )}
-            </div>
+                <TabsContent value="credit-note" className="mt-0">
+                  <CreditNotesTab policyNo={policyNo} />
+                </TabsContent>
 
-            {/* Quotation Status Section */}
-            <div className="border rounded-lg shadow-sm  mb-4">
-              <button
-                type="button"
-                onClick={() => toggleSection("quotationStatus")}
-                className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <span className="font-semibold">Quotation Status</span>
-              </button>
-              {expandedSections.quotationStatus && (
-                <div className="p-6 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="totalSumInsured"
-                        className="text-sm font-medium"
-                      >
-                        Total Sum Insured:
-                      </Label>
-                      <Input
-                        id="totalSumInsured"
-                        value={formData.totalSumInsured}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="totalPremium"
-                        className="text-sm font-medium"
-                      >
-                        Total Premium:
-                      </Label>
-                      <Input
-                        id="totalPremium"
-                        value={formData.totalPremium}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="loadingPercent"
-                        className="text-sm font-medium"
-                      >
-                        Loading %:
-                      </Label>
-                      <Input
-                        id="loadingPercent"
-                        value={formData.loadingPercent}
-                        onChange={(e) =>
-                          handleInputChange("loadingPercent", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="reductionPercent"
-                        className="text-sm font-medium"
-                      >
-                        Reduction %:
-                      </Label>
-                      <Input
-                        id="reductionPercent"
-                        value={formData.reductionPercent}
-                        onChange={(e) =>
-                          handleInputChange("reductionPercent", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="quotationStatus"
-                        className="text-sm font-medium"
-                      >
-                        Quotation Status:
-                      </Label>
-                      <Select
-                        value={formData.quotationStatus}
-                        onValueChange={(value) =>
-                          handleInputChange("quotationStatus", value)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="PROSPECT" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PROSPECT">PROSPECT</SelectItem>
-                          <SelectItem value="PENDING">PENDING</SelectItem>
-                          <SelectItem value="APPROVED">APPROVED</SelectItem>
-                          <SelectItem value="REJECTED">REJECTED</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="netPremiumDue"
-                        className="text-sm font-medium"
-                      >
-                        Net Premium Due:
-                      </Label>
-                      <Input
-                        id="netPremiumDue"
-                        value={formData.netPremiumDue}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-center gap-4 pt-4 bg-transparent p-6 rounded-xl">
-              <Button
-                type="button"
-                onClick={handleCancel}
-                variant="outline"
-                className="px-8 bg-transparent"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleComputePreview}
-                disabled={!uploadedMembersRaw?.length}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                Recompute
-              </Button>
-              <Button
-                type="button"
-                onClick={handleSave}
-                className="bg-green-600 hover:bg-green-700 text-white px-8"
-                disabled={saving}
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
+                <TabsContent value="attachments" className="mt-0">
+                  <AttachmentsTab policyNo={policyNo} />
+                </TabsContent>
+              </div>
+            </Tabs>
           </div>
         </div>
       </div>

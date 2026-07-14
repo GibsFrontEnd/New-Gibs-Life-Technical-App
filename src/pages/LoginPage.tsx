@@ -151,12 +151,12 @@ const LoginPage = () => {
     setError("");
 
     try {
-      console.log("Login data:", data);
+      
 
       const loginUrl = `${API_BASE_URL}/Auth/login?username=${encodeURIComponent(
         data.username,
       )}&password=${encodeURIComponent(data.password)}`;
-      console.log("API URL:", loginUrl);
+      
 
       const response = await axios.post(
         loginUrl,
@@ -183,7 +183,7 @@ const LoginPage = () => {
           // Method 1: Check userType field (this is what your backend uses)
           if (userType) {
             const normalizedUserType = userType.toLowerCase();
-            console.log("userType from backend:", normalizedUserType);
+            
 
             // Map userType to role
             if (
@@ -202,23 +202,21 @@ const LoginPage = () => {
             ) {
               userRole = "agent";
             }
-            console.log("Mapped userRole from userType:", userRole);
+            
           }
           // Method 2: Check if it's a customer by email pattern
           else if (data.username.includes("@")) {
             userRole = "customer";
-            console.log("Detected customer by email pattern");
+         
           }
           // Method 3: Check if username contains patterns
           else if (data.username.toLowerCase().includes("admin")) {
             userRole = "admin";
-            console.log("Detected admin by username pattern");
+           
           } else if (data.username.toLowerCase().includes("customer")) {
             userRole = "customer";
-            console.log("Detected customer by username pattern");
-          } else {
-            console.log("No specific role detected, using default:", userRole);
-          }
+           
+          } 
 
           // Store authentication data - FIXED
           localStorage.setItem("token", token);
@@ -231,7 +229,7 @@ const LoginPage = () => {
           if (responseData.agent && responseData.agent.agentID) {
             const agentId = responseData.agent.agentID;
             localStorage.setItem("agentId", agentId);
-            console.log("✅ Agent ID stored:", agentId);
+            
 
             // Also store the agent name - try from response data first, then from JWT token
             let agentName =
@@ -246,19 +244,16 @@ const LoginPage = () => {
             }
             if (agentName) {
               localStorage.setItem("agentName", agentName);
-              console.log("✅ Agent Name stored:", agentName);
+              
             }
           } else {
             // For non-agents (admins, users), remove any existing agentId
             localStorage.removeItem("agentId");
             localStorage.removeItem("agentName");
-            console.log("ℹ️ No agent data - removed agentId from localStorage");
+            
           }
 
-          console.log("📦 Stored in localStorage:");
-          console.log("- token:", token ? "✓" : "✗");
-          console.log("- agentId:", localStorage.getItem("agentId") || "N/A");
-          console.log("- userRole:", userRole);
+          
 
           toast({
             title: "Login successful!",
@@ -270,21 +265,21 @@ const LoginPage = () => {
           store.dispatch(setTokenExpired(false));
           localStorage.removeItem("redirectAfterLogin");
 
-          console.log("Final user role for redirection:", userRole);
+          
 
           // ROLE-BASED REDIRECTION - UPDATED
           switch (userRole) {
             case "customer":
-              console.log("Redirecting customer to dashboard");
+             
               navigate("/dashboard", { replace: true }); // Changed from "/customer/dashboard"
               break;
             case "admin":
-              console.log("Redirecting to admin dashboard");
+              
               navigate("/admin", { replace: true });
               break;
             case "agent":
             default:
-              console.log("Redirecting to agent dashboard");
+              
               navigate("/dashboard", { replace: true });
           }
         } else {
@@ -630,10 +625,16 @@ const LoginPage = () => {
   return (
     <div className="w-full flex flex-col md:flex-row justify-center items-center min-h-screen gap-12 px-10 md:px-20 py-5 bg-white overflow-auto animate-slideDown">
       <div className="md:flex-1 flex flex-col justify-center items-center">
-        <h1 className="font-sans text-left text-3xl lg:text-5xl text-gray-900 leading-tight lg:leading-[1.2] mb-4 max-w-5xl mx-auto">
-          Welcome to{" "}
-          <span className="bg-gradient-to-r from-blue-400 to-blue-800 bg-clip-text text-transparent">
-            GIBSLIFE Enterprise
+        <h1 className="font-sans text-left text-3xl lg:text-5xl leading-tight lg:leading-[1.2] mb-4 max-w-5xl mx-auto">
+          <span
+            style={{
+              background: "linear-gradient(to right, #4c58ea, #7b3aec)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            Welcome to Technical Portal
           </span>
         </h1>
         <p className="mt-2 text-left text-gray-600">
@@ -648,29 +649,7 @@ const LoginPage = () => {
               : "Log in to manage insurance quotations, create proposals, and streamline your insurance operations efficiently."}
         </p>
 
-        {/* Toggle between Customer Setup and Agent Registration (on login page) */}
-        {!isCustomerSetup && !isForgotPassword && (
-          <div className="flex gap-4 mt-6 mb-4 flex-wrap">
-            <Button
-              type="button"
-              onClick={() => setIsCustomerSetup(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
-            >
-              <FaUserPlus />
-              Customer Setup
-            </Button>
 
-            {/* Create Agent Account Button */}
-
-            <Link
-              to="/agent/register"
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors"
-            >
-              <FaUserTie />
-              <span>Create Agent Account</span>
-            </Link>
-          </div>
-        )}
 
         {/* Back to Sign In button (on customer setup form) */}
         {isCustomerSetup && !isForgotPassword && (
@@ -678,7 +657,8 @@ const LoginPage = () => {
             <Button
               type="button"
               onClick={() => setIsCustomerSetup(false)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex items-center gap-2 text-white border-0"
+              style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
             >
               <FaArrowLeft />
               Back to Sign In
@@ -698,7 +678,8 @@ const LoginPage = () => {
                 setResetCode("");
                 setError("");
               }}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex items-center gap-2 text-white border-0"
+              style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
             >
               <FaArrowLeft />
               Back to Sign In
@@ -765,7 +746,8 @@ const LoginPage = () => {
               <Button
                 // @ts-ignore
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full text-white border-0"
+                style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
                 loading={isLoading}
                 disabled={isLoading}
               >
@@ -882,7 +864,8 @@ const LoginPage = () => {
               <Button
                 // @ts-ignore
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full text-white border-0"
+                style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
                 loading={isLoading}
                 disabled={isLoading}
               >
@@ -928,7 +911,8 @@ const LoginPage = () => {
               <Button
                 // @ts-ignore
                 type="submit"
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                className="w-full text-white border-0"
+                style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
                 loading={isLoading}
                 disabled={isLoading}
               >
@@ -971,7 +955,8 @@ const LoginPage = () => {
                 <Button
                   // @ts-ignore
                   type="submit"
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                  className="flex-1 text-white border-0"
+                  style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
                   loading={isLoading}
                   disabled={isLoading}
                 >
@@ -1048,7 +1033,8 @@ const LoginPage = () => {
               <Button
                 // @ts-ignore
                 type="submit"
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                className="w-full text-white border-0"
+                style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
                 loading={isLoading}
                 disabled={isLoading}
               >

@@ -47,7 +47,7 @@ export const getAllCustomers = createAsyncThunk(
   "customers/getAllCustomers",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/Customers`, {
+      const response = await fetch(`${API_BASE_URL}/v1/Customers`, {
         method: "GET",
         headers: {
           accept: "application/json",
@@ -60,10 +60,41 @@ export const getAllCustomers = createAsyncThunk(
       }
 
       const data = await response.json();
-      return data as Customer[];
+      // API wraps the list in { data: [...] }
+      return (data?.data ?? data) as Customer[];
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to fetch customers"
+      );
+    }
+  }
+);
+
+export const getCustomer = createAsyncThunk(
+  "customers/getCustomer",
+  async (customerId: string, { rejectWithValue }) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/v1/Customers/${encodeURIComponent(customerId)}`,
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            Authorization: "Bearer " + AUTH_TOKEN,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // API may wrap the record in { data: {...} }
+      return (data?.data ?? data) as Customer;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to fetch customer"
       );
     }
   }
@@ -73,11 +104,11 @@ export const createCustomer = createAsyncThunk(
   "customers/createCustomer",
   async (customerData: CreateCustomerRequest, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/Customers`, {
+      const response = await fetch(`${API_BASE_URL}/v1/Customers`, {
         method: "POST",
         headers: {
           accept: "application/json",
-          Authorization: AUTH_TOKEN,
+          Authorization: "Bearer " + AUTH_TOKEN,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(customerData),
@@ -107,11 +138,11 @@ export const updateCustomer = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/Customers/${customerID}`, {
+      const response = await fetch(`${API_BASE_URL}/v1/Customers/${customerID}`, {
         method: "PUT",
         headers: {
           accept: "application/json",
-          Authorization: AUTH_TOKEN,
+          Authorization: "Bearer " + AUTH_TOKEN,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(customerData),
@@ -135,11 +166,11 @@ export const deleteCustomer = createAsyncThunk(
   "customers/deleteCustomer",
   async (customerID: string, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/Customers/${customerID}`, {
+      const response = await fetch(`${API_BASE_URL}/v1/Customers/${customerID}`, {
         method: "DELETE",
         headers: {
           accept: "*/*",
-          Authorization: AUTH_TOKEN,
+          Authorization: "Bearer " + AUTH_TOKEN,
         },
       });
 
@@ -563,6 +594,7 @@ interface CustomerState {
   };
   loading: {
     getAllCustomers: boolean;
+    getCustomer: boolean;
     createCustomer: boolean;
     updateCustomer: boolean;
     deleteCustomer: boolean;
@@ -581,6 +613,7 @@ interface CustomerState {
   };
   error: {
     getAllCustomers: string | null;
+    getCustomer: string | null;
     createCustomer: string | null;
     updateCustomer: string | null;
     deleteCustomer: string | null;
@@ -628,6 +661,7 @@ const initialState: CustomerState = {
   },
   loading: {
     getAllCustomers: false,
+    getCustomer: false,
     createCustomer: false,
     updateCustomer: false,
     deleteCustomer: false,
@@ -646,6 +680,7 @@ const initialState: CustomerState = {
   },
   error: {
     getAllCustomers: null,
+    getCustomer: null,
     createCustomer: null,
     updateCustomer: null,
     deleteCustomer: null,
@@ -732,6 +767,21 @@ const customerSlice = createSlice({
         state.error.getAllCustomers = action.payload as string;
       });
 
+    // Get single customer (by insuredID)
+    builder
+      .addCase(getCustomer.pending, (state) => {
+        state.loading.getCustomer = true;
+        state.error.getCustomer = null;
+      })
+      .addCase(getCustomer.fulfilled, (state, action) => {
+        state.loading.getCustomer = false;
+        state.currentCustomer = action.payload;
+      })
+      .addCase(getCustomer.rejected, (state, action) => {
+        state.loading.getCustomer = false;
+        state.error.getCustomer = action.payload as string;
+      });
+
     // Create customer
     builder
       .addCase(createCustomer.pending, (state) => {
@@ -785,9 +835,9 @@ const customerSlice = createSlice({
         state.loading.deleteCustomer = false;
         state.success.deleteCustomer = true;
         state.customers = state.customers.filter(
-          (c) => c.customerID !== action.payload
+          (c) => c.insuredID !== action.payload
         );
-        if (state.currentCustomer?.customerID === action.payload) {
+        if (state.currentCustomer?.insuredID === action.payload) {
           state.currentCustomer = null;
         }
       })

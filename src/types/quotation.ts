@@ -22,6 +22,7 @@ export interface QuotationCalculatePayload {
   frequency: string;
   remark: string;
   regularSaving: number;
+  sumAssured?: number;
   productCode: string;
   product: string;
   extraRate: number;
@@ -267,6 +268,170 @@ export async function previewQuotation(
 
   return resp.json();
 }
+
+// â”€â”€â”€ Investment Link Quote: Get Premium Rate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export interface PremiumRateParams {
+  productCode: string;
+  duration: number;
+  age: number;
+  rateCode?: string;
+  remark?: string;
+}
+
+export interface PremiumRateResponse {
+  rateCode?: string;
+  rate?: number;
+  remark?: string;
+  [key: string]: any;
+}
+
+export async function getPremiumRate(
+  params: PremiumRateParams
+): Promise<PremiumRateResponse> {
+  const query = new URLSearchParams({
+    productCode: params.productCode,
+    duration: String(params.duration),
+    age: String(params.age),
+    ...(params.rateCode ? { rateCode: params.rateCode } : {}),
+    ...(params.remark ? { remark: params.remark } : {}),
+  }).toString();
+
+  const resp = await fetch(`${BASE_URL}api/lifequotes/get-premium-rate?${query}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  if (!resp.ok) {
+    let errorMessage = "Failed to fetch premium rate";
+    try {
+      const errorData = await resp.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${resp.status}: ${resp.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return resp.json();
+}
+
+// â”€â”€â”€ Investment Link Quote: Preview/Calculate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+// --- Investment Link Quote: Save/Confirm (POST) ---
+export async function calculateInvestmentQuotation(
+  payload: QuotationCalculatePayload
+): Promise<QuotationCalculateResponse> {
+  const resp = await fetch(`${BASE_URL}api/lifequotes/calculate`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    let errorMessage = "Failed to save investment quotation";
+    try {
+      const errorData = await resp.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${resp.status}: ${resp.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return resp.json();
+}
+export async function previewInvestmentQuotation(
+  payload: QuotationCalculatePayload
+): Promise<QuotationCalculateResponse> {
+  const resp = await fetch(`${BASE_URL}api/lifequotes/calculate/preview`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    let errorMessage = "Failed to preview investment quotation";
+    try {
+      const errorData = await resp.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${resp.status}: ${resp.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return resp.json();
+}
+
+// ─── Traditional Quote: Save/Confirm (POST) ─────────────────────
+export async function calculateTradQuotationNew(
+  payload: QuotationCalculatePayload
+): Promise<QuotationCalculateResponse> {
+  const resp = await fetch(`${BASE_URL}api/lifequotes/tradcalculate`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    let errorMessage = "Failed to save traditional quotation";
+    try {
+      const errorData = await resp.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${resp.status}: ${resp.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return resp.json();
+}
+
+// ─── Traditional Quote: Preview/Calculate (POST) ────────────────
+export async function previewTradQuotationNew(
+  payload: QuotationCalculatePayload
+): Promise<QuotationCalculateResponse> {
+  const resp = await fetch(`${BASE_URL}api/lifequotes/tradcalculate/preview`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    let errorMessage = "Failed to preview traditional quotation";
+    try {
+      const errorData = await resp.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${resp.status}: ${resp.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return resp.json();
+}
+
+export async function getSingleQuotation(quoteNo: string): Promise<any> {
+  const resp = await fetch(`${BASE_URL}api/lifequotes/filterquotation?quoteNo=${quoteNo}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  if (!resp.ok) {
+    let errorMessage = "Failed to fetch quotation details";
+    try {
+      const errorData = await resp.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${resp.status}: ${resp.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return resp.json();
+}
+
+
 
 export interface TradQuotationCalculatePayload {
   quoteNo: string;
@@ -560,7 +725,7 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export const getBranches = async (): Promise<Branch[]> => {
-  const resp = await fetch(`${BASE_URL}api/Quotation/Branches`, {
+  const resp = await fetch(`${BASE_URL}api/lookups/branches`, {
     method: "GET",
     headers: getAuthHeaders(),
   });

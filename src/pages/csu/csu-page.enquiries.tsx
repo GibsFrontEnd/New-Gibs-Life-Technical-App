@@ -1,10 +1,10 @@
 import { useState } from "react";
-import EnquiriesPolicies from "@/components/csu/enquiries/enquiries.policies";
-import EnquiriesClaims from "@/components/csu/enquiries/enquiries.claims";
-import EnquiriesVehicles from "@/components/csu/enquiries/enquiries.vehicles";
-import EnquiriesMarines from "@/components/csu/enquiries/enquiries.marines";
-import EnquiriesNaicom from "@/components/csu/enquiries/enquiries.naicom";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/UI/tabs";
+import EnquiriesPolicies from "../../components/csu/enquiries/enquiries.policies";
+import EnquiriesClaims from "../../components/csu/enquiries/enquiries.claims";
+import EnquiriesVehicles from "../../components/csu/enquiries/enquiries.vehicles";
+import EnquiriesMarines from "../../components/csu/enquiries/enquiries.marines";
+import EnquiriesNaicom from "../../components/csu/enquiries/enquiries.naicom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/UI/tabs";
 
 const tabs = [
   { title: "Policies", content: <EnquiriesPolicies /> },

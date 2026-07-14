@@ -27,38 +27,38 @@ export const CreateCustomer = () => {
   const { loading, success, error } = useAppSelector(selectCustomers)
 
   const [formData, setFormData] = useState<CreateCustomerRequest>({
-    title: "string",
-    lastName: "string",
-    firstName: "string",
-    otherName: "string",
+    title: "",
+    lastName: "",
+    firstName: "",
+    otherName: "",
     gender: "MALE",
-    email: "user@example.com",
-    address: "string",
-    phoneLine1: "0",
-    phoneLine2: "0",
-    isOrg: true,
-    orgName: "string",
-    orgRegNumber: "string",
-    orgRegDate: "2025-09-22",
-    taxIdNumber: "string",
-    cityLGA: "string",
-    stateID: "string",
-    nationality: "string",
-    dateOfBirth: "2025-09-22",
+    email: "",
+    address: "",
+    phoneLine1: "",
+    phoneLine2: "",
+    isOrg: false,
+    orgName: "",
+    orgRegNumber: "",
+    orgRegDate: "",
+    password: "",
+    cityLGA: "",
+    stateID: "",
+    nationality: "",
+    dateOfBirth: "",
     kycType: "NOT_AVAILABLE",
-    kycNumber: "string",
-    kycIssueDate: "2025-09-22",
-    kycExpiryDate: "2025-09-22",
+    kycNumber: "",
+    kycIssueDate: "",
+    kycExpiryDate: "",
     nextOfKin: {
-      title: "string",
-      lastName: "string",
-      firstName: "string",
-      otherName: "string",
+      title: "",
+      lastName: "",
+      firstName: "",
+      otherName: "",
       gender: "MALE",
-      email: "user@example.com",
-      address: "string",
-      phoneLine1: "0",
-      phoneLine2: "0",
+      email: "",
+      address: "",
+      phoneLine1: "",
+      phoneLine2: "",
     },
   })
 
@@ -77,7 +77,6 @@ export const CreateCustomer = () => {
       if (!formData.orgName.trim()) newErrors.orgName = "Organization name is required"
       if (!formData.orgRegNumber.trim()) newErrors.orgRegNumber = "Registration number is required"
       if (!formData.orgRegDate.trim()) newErrors.orgRegDate = "Registration date is required"
-      if (!formData.taxIdNumber.trim()) newErrors.taxIdNumber = "Tax ID number is required"
     } else {
       // Individual validation
       if (!formData.firstName.trim()) newErrors.firstName = "First name is required"
@@ -156,11 +155,11 @@ export const CreateCustomer = () => {
       gender: formData.gender,
       nationality: formData.nationality,
       dateOfBirth: formData.dateOfBirth,
-      nextOfKin: formData.nextOfKin,
       email: formData.email,
       address: formData.address,
       phoneLine1: formData.phoneLine1,
       phoneLine2: formData.phoneLine2,
+      password: formData.password,
       cityLGA: formData.cityLGA,
       stateID: formData.stateID,
       kycType: formData.kycType,
@@ -171,18 +170,18 @@ export const CreateCustomer = () => {
     }
 
     if (formData.isOrg) {
-      // Organization fields only
+      // Organization — org fields, no next of kin
       payload = {
         ...payload,
         orgName: formData.orgName,
         orgRegNumber: formData.orgRegNumber,
         orgRegDate: formData.orgRegDate,
-        taxIdNumber: formData.taxIdNumber,
       }
     } else {
-      // Individual fields only
+      // Individual — include next of kin
       payload = {
-        ...payload
+        ...payload,
+        nextOfKin: formData.nextOfKin,
       }
     }
 
@@ -204,7 +203,7 @@ export const CreateCustomer = () => {
       orgName: "",
       orgRegNumber: "",
       orgRegDate: "",
-      taxIdNumber: "",
+      password: "",
       cityLGA: "",
       stateID: "",
       nationality: "",
@@ -328,17 +327,6 @@ export const CreateCustomer = () => {
                     />
                     {errors.orgRegDate && <span className="cc-error-text">{errors.orgRegDate}</span>}
                   </div>
-                  <div className="cc-form-field">
-                    <Label htmlFor="taxIdNumber">Tax ID Number *</Label>
-                    <Input
-                      id="taxIdNumber"
-                      value={formData.taxIdNumber}
-                      onChange={(e) => handleInputChange("taxIdNumber", e.target.value)}
-                      placeholder="Enter tax ID number"
-                      className={errors.taxIdNumber ? "cc-error" : ""}
-                    />
-                    {errors.taxIdNumber && <span className="cc-error-text">{errors.taxIdNumber}</span>}
-                  </div>
                 </>
               ) : (
                 <>
@@ -445,6 +433,18 @@ export const CreateCustomer = () => {
                   className={errors.email ? "cc-error" : ""}
                 />
                 {errors.email && <span className="cc-error-text">{errors.email}</span>}
+              </div>
+              <div className="cc-form-field">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  placeholder="Enter portal password"
+                  className={errors.password ? "cc-error" : ""}
+                />
+                {errors.password && <span className="cc-error-text">{errors.password}</span>}
               </div>
               <div className="cc-form-field">
                 <Label htmlFor="phoneLine1">Primary Phone *</Label>
@@ -562,7 +562,8 @@ export const CreateCustomer = () => {
             </div>
           </div>
 
-          {/* Next of Kin (for individuals) */}
+          {/* Next of Kin (individuals only — not applicable to organizations) */}
+          {!formData.isOrg && (
             <div className="cc-form-section">
               <h3 className="cc-section-title">Next of Kin</h3>
               <div className="cc-form-grid">
@@ -671,6 +672,7 @@ export const CreateCustomer = () => {
                 {errors.nextOfKinAddress && <span className="cc-error-text">{errors.nextOfKinAddress}</span>}
               </div>
             </div>
+          )}
 
           {error.createCustomer && <div className="cc-error-message">{error.createCustomer}</div>}
 
@@ -1200,7 +1202,7 @@ export const EditCustomer = () => {
 export const CustomerDetails = () => {
   const dispatch = useAppDispatch()
   const { showCustomerDetailsDialog } = useAppSelector(selectUiState)
-  const { currentCustomer, customerPolicies, loading } = useAppSelector(selectCustomers)
+  const { currentCustomer, loading } = useAppSelector(selectCustomers)
 
   const handleClose = () => {
     dispatch(setShowCustomerDetailsDialog(false))
@@ -1226,10 +1228,11 @@ export const CustomerDetails = () => {
   }
 
   const getCustomerDisplayName = () => {
-    if (currentCustomer.isOrg) {
-      return currentCustomer.orgName || "Unknown Organization"
-    }
-    return `${currentCustomer.firstName || ""} ${currentCustomer.lastName || ""}`.trim() || "Unknown Individual"
+    return (
+      currentCustomer.fullName ||
+      `${currentCustomer.surName || ""} ${currentCustomer.otherNames || ""}`.trim() ||
+      "Unknown"
+    )
   }
 
   return (
@@ -1244,223 +1247,138 @@ export const CustomerDetails = () => {
           <div className="cd-customer-header">
             <div className="cd-customer-avatar">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                {currentCustomer.isOrg ? (
-                  <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4" />
-                ) : (
-                  <>
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </>
-                )}
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
             <div className="cd-customer-info">
               <h2 className="cd-customer-name">{getCustomerDisplayName()}</h2>
               <div className="cd-customer-meta">
-                <span className={`cd-type-badge ${currentCustomer.isOrg ? "cd-org" : "cd-individual"}`}>
-                  {currentCustomer.isOrg ? "Organization" : "Individual"}
+                <span className="cd-type-badge cd-individual">
+                  {currentCustomer.clientType || "N/A"}
                 </span>
-                <span className="cd-customer-id">ID: {currentCustomer.customerID}</span>
+                <span className="cd-customer-id">ID: {currentCustomer.insuredID}</span>
               </div>
             </div>
           </div>
 
-          {/* Basic Information */}
-          <div className="cd-section">
-            <h3 className="cd-section-title">Basic Information</h3>
-            <div className="cd-info-grid">
-              {currentCustomer.isOrg ? (
-                <>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Organization Name:</span>
-                    <span className="cd-value">{currentCustomer.orgName || "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Registration Number:</span>
-                    <span className="cd-value">{currentCustomer.orgRegNumber || "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Registration Date:</span>
-                    <span className="cd-value">{formatDate(currentCustomer.orgRegDate)}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Tax ID Number:</span>
-                    <span className="cd-value">{currentCustomer.taxIdNumber || "N/A"}</span>
-                  </div>
-                </>
-              ) : (
-                <>
+          {loading.getCustomer ? (
+            <div className="cd-loading-state">
+              <div className="cd-loading-spinner"></div>
+              <p>Loading customer...</p>
+            </div>
+          ) : (
+            <>
+              {/* Basic Information */}
+              <div className="cd-section">
+                <h3 className="cd-section-title">Basic Information</h3>
+                <div className="cd-info-grid">
                   <div className="cd-info-item">
                     <span className="cd-label">Title:</span>
                     <span className="cd-value">{currentCustomer.title || "N/A"}</span>
                   </div>
                   <div className="cd-info-item">
-                    <span className="cd-label">First Name:</span>
-                    <span className="cd-value">{currentCustomer.firstName || "N/A"}</span>
+                    <span className="cd-label">Surname:</span>
+                    <span className="cd-value">{currentCustomer.surName || "N/A"}</span>
                   </div>
                   <div className="cd-info-item">
-                    <span className="cd-label">Last Name:</span>
-                    <span className="cd-value">{currentCustomer.lastName || "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Other Name:</span>
-                    <span className="cd-value">{currentCustomer.otherName || "N/A"}</span>
+                    <span className="cd-label">Other Names:</span>
+                    <span className="cd-value">{currentCustomer.otherNames || "N/A"}</span>
                   </div>
                   <div className="cd-info-item">
                     <span className="cd-label">Gender:</span>
-                    <span className="cd-value">{currentCustomer.gender}</span>
+                    <span className="cd-value">{currentCustomer.sex || "N/A"}</span>
                   </div>
                   <div className="cd-info-item">
                     <span className="cd-label">Date of Birth:</span>
-                    <span className="cd-value">{formatDate(currentCustomer.dateOfBirth)}</span>
+                    <span className="cd-value">{formatDate(currentCustomer.dateofBirth)}</span>
                   </div>
                   <div className="cd-info-item">
-                    <span className="cd-label">Nationality:</span>
-                    <span className="cd-value">{currentCustomer.nationality || "N/A"}</span>
+                    <span className="cd-label">Age:</span>
+                    <span className="cd-value">{currentCustomer.age ?? "N/A"}</span>
                   </div>
-                </>
-              )}
-            </div>
-          </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Marital Status:</span>
+                    <span className="cd-value">{currentCustomer.maritalStatus || "N/A"}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Occupation:</span>
+                    <span className="cd-value">{currentCustomer.occupation || "N/A"}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">National ID:</span>
+                    <span className="cd-value">{currentCustomer.nationalID || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
 
-          {/* Contact Information */}
-          <div className="cd-section">
-            <h3 className="cd-section-title">Contact Information</h3>
-            <div className="cd-info-grid">
-              <div className="cd-info-item">
-                <span className="cd-label">Email:</span>
-                <span className="cd-value">{currentCustomer.email || "N/A"}</span>
-              </div>
-              <div className="cd-info-item">
-                <span className="cd-label">Primary Phone:</span>
-                <span className="cd-value">{currentCustomer.phoneLine1 || "N/A"}</span>
-              </div>
-              <div className="cd-info-item">
-                <span className="cd-label">Secondary Phone:</span>
-                <span className="cd-value">{currentCustomer.phoneLine2 || "N/A"}</span>
-              </div>
-              <div className="cd-info-item">
-                <span className="cd-label">State:</span>
-                <span className="cd-value">{currentCustomer.stateID || "N/A"}</span>
-              </div>
-              <div className="cd-info-item">
-                <span className="cd-label">City/LGA:</span>
-                <span className="cd-value">{currentCustomer.cityLGA || "N/A"}</span>
-              </div>
-            </div>
-            <div className="cd-info-item cd-full-width">
-              <span className="cd-label">Address:</span>
-              <span className="cd-value">{currentCustomer.address}</span>
-            </div>
-          </div>
-
-          {/* KYC Information */}
-          <div className="cd-section">
-            <h3 className="cd-section-title">KYC Information</h3>
-            <div className="cd-info-grid">
-              <div className="cd-info-item">
-                <span className="cd-label">KYC Type:</span>
-                <span className="cd-value">{currentCustomer.kycType.replace("_", " ")}</span>
-              </div>
-              <div className="cd-info-item">
-                <span className="cd-label">KYC Number:</span>
-                <span className="cd-value">{currentCustomer.kycNumber || "N/A"}</span>
-              </div>
-              <div className="cd-info-item">
-                <span className="cd-label">Issue Date:</span>
-                <span className="cd-value">{formatDate(currentCustomer.kycIssueDate)}</span>
-              </div>
-              <div className="cd-info-item">
-                <span className="cd-label">Expiry Date:</span>
-                <span className="cd-value">{formatDate(currentCustomer.kycExpiryDate)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Next of Kin (for individuals) */}
-          {!currentCustomer.isOrg && currentCustomer.nextOfKin && (
-            <div className="cd-section">
-              <h3 className="cd-section-title">Next of Kin</h3>
-              <div className="cd-info-grid">
-                <div className="cd-info-item">
-                  <span className="cd-label">Name:</span>
-                  <span className="cd-value">
-                    {`${currentCustomer.nextOfKin.title || ""} ${currentCustomer.nextOfKin.firstName || ""} ${currentCustomer.nextOfKin.lastName || ""}`.trim() ||
-                      "N/A"}
-                  </span>
+              {/* Contact Information */}
+              <div className="cd-section">
+                <h3 className="cd-section-title">Contact Information</h3>
+                <div className="cd-info-grid">
+                  <div className="cd-info-item">
+                    <span className="cd-label">Email:</span>
+                    <span className="cd-value">
+                      {currentCustomer.email && currentCustomer.email.trim() !== "@"
+                        ? currentCustomer.email
+                        : "N/A"}
+                    </span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Mobile Phone:</span>
+                    <span className="cd-value">{currentCustomer.mobilePhone || "N/A"}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Land Phone:</span>
+                    <span className="cd-value">{currentCustomer.landphone || "N/A"}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">State:</span>
+                    <span className="cd-value">{currentCustomer.state || "N/A"}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Country:</span>
+                    <span className="cd-value">{currentCustomer.country || "N/A"}</span>
+                  </div>
                 </div>
-                <div className="cd-info-item">
-                  <span className="cd-label">Other Name:</span>
-                  <span className="cd-value">{currentCustomer.nextOfKin.otherName || "N/A"}</span>
-                </div>
-                <div className="cd-info-item">
-                  <span className="cd-label">Gender:</span>
-                  <span className="cd-value">{currentCustomer.nextOfKin.gender}</span>
-                </div>
-                <div className="cd-info-item">
-                  <span className="cd-label">Email:</span>
-                  <span className="cd-value">{currentCustomer.nextOfKin.email || "N/A"}</span>
-                </div>
-                <div className="cd-info-item">
-                  <span className="cd-label">Phone:</span>
-                  <span className="cd-value">{currentCustomer.nextOfKin.phoneLine1 || "N/A"}</span>
-                </div>
-              </div>
-              {currentCustomer.nextOfKin.address && (
                 <div className="cd-info-item cd-full-width">
                   <span className="cd-label">Address:</span>
-                  <span className="cd-value">{currentCustomer.nextOfKin.address}</span>
+                  <span className="cd-value">{currentCustomer.address || "N/A"}</span>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
 
-          {/* Customer Policies */}
-          <div className="cd-section">
-            <h3 className="cd-section-title">Customer Policies</h3>
-            {loading.getCustomerPolicies ? (
-              <div className="cd-loading-state">
-                <div className="cd-loading-spinner"></div>
-                <p>Loading policies...</p>
+              {/* Record Information */}
+              <div className="cd-section">
+                <h3 className="cd-section-title">Record Information</h3>
+                <div className="cd-info-grid">
+                  <div className="cd-info-item">
+                    <span className="cd-label">Status:</span>
+                    <span className="cd-value">{currentCustomer.active === 1 ? "Active" : "Inactive"}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Remarks:</span>
+                    <span className="cd-value">{currentCustomer.remarks || "N/A"}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Submitted By:</span>
+                    <span className="cd-value">{currentCustomer.submittedBy || "N/A"}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Submitted On:</span>
+                    <span className="cd-value">{formatDate(currentCustomer.submittedOn)}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Modified By:</span>
+                    <span className="cd-value">{currentCustomer.modifiedBy || "N/A"}</span>
+                  </div>
+                  <div className="cd-info-item">
+                    <span className="cd-label">Modified On:</span>
+                    <span className="cd-value">{formatDate(currentCustomer.modifiedOn)}</span>
+                  </div>
+                </div>
               </div>
-            ) : customerPolicies.length === 0 ? (
-              <div className="cd-empty-policies">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14,2 14,8 20,8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10,9 9,9 8,9" />
-                </svg>
-                <p>No policies found for this customer</p>
-              </div>
-            ) : (
-              <div className="cd-policies-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Policy No</th>
-                      <th>Effective Date</th>
-                      <th>Product</th>
-                      <th>Broker</th>
-                      <th>Premium</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customerPolicies.map((policy, index) => (
-                      <tr key={index}>
-                        <td>{policy.policyNo}</td>
-                        <td>{formatDate(policy.effectiveDate)}</td>
-                        <td>{policy.product}</td>
-                        <td>{policy.broker}</td>
-                        <td>{formatCurrency(policy.premium)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         <div className="cd-form-actions">

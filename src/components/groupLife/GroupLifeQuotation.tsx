@@ -19,7 +19,6 @@ import {
   Filter,
   Search,
   X,
-  Calendar,
   Building2,
   FileText,
   Check,
@@ -44,9 +43,9 @@ import {
   TableHead,
   TableRow,
   TableHeader,
-} from "../ui/table";
-import { Badge } from "../ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+} from "../UI/table";
+import { Badge } from "../UI/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
 import { Label } from "../UI/label";
 import {
   Dialog,
@@ -67,20 +66,23 @@ import {
 } from "../UI/alert-dialog";
 import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
 import {
-  fetchGroupLifeQuotations,
-  fetchGroupLifeQuotationsByAgent,
   selectGroupLifeQuotations,
+  selectGroupLifePolicies,
   setCurrentQuotation,
-  deleteGroupLifeQuotation,
+  fetchGroupLifePolicy,
+  createGroupLifePolicy,
+  fetchGroupLifePolicies,
 } from "../../features/reducers/groupLifeReducers/groupLifeQuotationSlice";
 import { formatDate, formatCurrency } from "../../utils/ui-utilities";
 import { useToast } from "../../hooks/use-toast";
 import { Checkbox } from "../UI/checkbox";
 import { SERVER_URL } from "../../utils/constants";
 
+// ✅ Updated interface to match API response
 interface GroupLifeQuotation {
-  quoteID: string;
+  id: string;
   quotationNumber: string;
+  policyNo?: string;
   companyName: string;
   transactionDate: string;
   effectiveDate: string;
@@ -91,16 +93,21 @@ interface GroupLifeQuotation {
   status: "PROSPECT" | "ACTIVE" | "PENDING" | "CANCELLED";
   groupFactorAmount: number;
   loadingPercentage: number;
+  quoteID?: string;
+  quoteNo?: string;
+  surName?: string;
+  startDate?: string;
+  sumAssured?: number;
 }
 
 export default function GroupLifeQuotation() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { toast } = useToast();
-  const { quotations, loading, totalCount } = useAppSelector(
-    selectGroupLifeQuotations
-  );
-  const isLoading = Boolean(loading?.list);
+
+  // ✅ totalPages now comes straight from the slice/selector — no client recompute
+  const { policies, totalCount, totalPages, loading, error } = useAppSelector(selectGroupLifePolicies);
+  const isLoading = loading || false;
 
   const [isMobile, setIsMobile] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -112,10 +119,40 @@ export default function GroupLifeQuotation() {
     status: "all",
     schemeType: "all",
     insuredType: "all",
+    subRiskId: "all", // ✅ dynamic — was hardcoded 'GLA'
     tag: "GL",
   });
 
-  // NEW STATE FOR CHECKBOXES AND APPROVAL
+  // ✅ Product options fetched from API to populate the subRiskId filter
+  const [productOptions, setProductOptions] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        const response = await fetch(`${SERVER_URL}/v1/Products?PageNo=1&PageSize=100`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await response.json();
+        const list = Array.isArray(data)
+          ? data
+          : data.data || data.items || data.records || data.results || [];
+        setProductOptions(
+          list.map((item: any) => ({
+            id: item.productID || item.riskID || item.id,
+            name: item.productName || item.description || item.name,
+          }))
+        );
+      } catch (err) {
+        console.error("Failed to fetch product options:", err);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   const [selectedQuotations, setSelectedQuotations] = useState<Set<string>>(
     new Set()
   );
@@ -125,7 +162,6 @@ export default function GroupLifeQuotation() {
   );
   const [approveError, setApproveError] = useState("");
 
-  // Toast states
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -137,69 +173,31 @@ export default function GroupLifeQuotation() {
   const [complianceCompanyName, setComplianceCompanyName] = useState("");
   const [isGeneratingCompliance, setIsGeneratingCompliance] = useState(false);
 
-  // Helper function to refresh quotations based on user type
-  const refreshQuotations = () => {
-    const agentId = localStorage.getItem("agentId");
-
-    if (agentId) {
-      console.log("🔄 Refreshing group life quotations for agent:", agentId);
-      dispatch(
-        fetchGroupLifeQuotationsByAgent({
-          agentCode: agentId,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    } else {
-      console.log("🔄 Refreshing all group life quotations");
-      dispatch(
-        fetchGroupLifeQuotations({
-          filters: filterCriteria,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    }
+  // ✅ Helper to get the ID from a quotation
+  const getQuotationId = (quote: any) => {
+    return quote.id || quote.quoteID || quote.policyNo;
   };
 
+  // ✅ Helper to get the quotation number
+  const getQuotationNumber = (quote: any) => {
+    return quote.quotationNumber || quote.quoteNo || quote.policyNo;
+  };
+
+  // ✅ Helper to get company name
+  const getCompanyName = (quote: any) => {
+    return quote.companyName || quote.surName || quote.insuredName;
+  };
+
+  // Load policies when component mounts or when page/filters change
   useEffect(() => {
-    const agentId = localStorage.getItem("agentId");
+    console.log("📊 Fetching group life policies...");
 
-    console.log(
-      "🔍 GroupLifeQuotation - Retrieved agentId from localStorage:",
-      agentId
-    );
-
-    if (agentId) {
-      // If user is logged in as agent, fetch their group life quotations using the dedicated endpoint
-      console.log(
-        "✅ GroupLifeQuotation - Calling agent-specific endpoint:",
-        "agentId:",
-        agentId,
-        "page:",
-        currentPage,
-        "pageSize:",
-        pageSize
-      );
-      dispatch(
-        fetchGroupLifeQuotationsByAgent({
-          agentCode: agentId,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    } else {
-      // If user is admin/manager, fetch all group life quotations
-      console.warn("⚠️ No agent ID found - fetching all group life quotations");
-      dispatch(
-        fetchGroupLifeQuotations({
-          filters: filterCriteria,
-          page: currentPage,
-          pageSize,
-        })
-      );
-    }
-  }, [dispatch, currentPage, pageSize]);
+    dispatch(fetchGroupLifePolicies({
+      page: currentPage,
+      pageSize: pageSize,
+      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+    }));
+  }, [dispatch, currentPage, pageSize, filterCriteria.subRiskId]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -211,7 +209,6 @@ export default function GroupLifeQuotation() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // NEW: Checkbox handlers
   const handleSelectQuotation = (quoteId: string) => {
     const newSelected = new Set(selectedQuotations);
     if (newSelected.has(quoteId)) {
@@ -221,7 +218,6 @@ export default function GroupLifeQuotation() {
     }
     setSelectedQuotations(newSelected);
 
-    // Update all selected state
     const displayQuotations = getDisplayQuotations();
     setIsAllSelected(newSelected.size === displayQuotations?.length);
   };
@@ -233,14 +229,13 @@ export default function GroupLifeQuotation() {
       setSelectedQuotations(new Set());
     } else {
       const allIds = new Set(
-        displayQuotations.map((quote: any) => quote.quoteID)
+        displayQuotations.map((quote: any) => getQuotationId(quote))
       );
       setSelectedQuotations(allIds);
     }
     setIsAllSelected(!isAllSelected);
   };
 
-  // NEW: Handle individual quotation approval
   const handleApproveQuotation = async (quoteId: string, quoteNo: string) => {
     if (!quoteId) {
       setApproveError("Invalid quotation ID");
@@ -251,25 +246,22 @@ export default function GroupLifeQuotation() {
       setApprovingQuotations((prev) => new Set(prev).add(quoteId));
       setApproveError("");
 
-      // TODO: Replace with your actual API call
-      // await apiService.approveQuotation(quoteId);
-
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Show success message
       setSuccessMessage(`Quotation ${quoteNo} approved successfully!`);
       setShowSuccessToast(true);
 
-      // Auto hide success toast after 5 seconds
       setTimeout(() => {
         setShowSuccessToast(false);
       }, 5000);
 
-      // If successful, refresh the data
-      refreshQuotations();
+      // Refresh the policies list
+      dispatch(fetchGroupLifePolicies({
+        page: currentPage,
+        pageSize: pageSize,
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+      }));
 
-      // Remove from selected quotations
       const newSelected = new Set(selectedQuotations);
       newSelected.delete(quoteId);
       setSelectedQuotations(newSelected);
@@ -286,51 +278,44 @@ export default function GroupLifeQuotation() {
     }
   };
 
-  // NEW: Handle bulk approval of selected quotations
   const handleBulkApprove = async () => {
     if (selectedQuotations.size === 0) return;
 
     try {
       setApproveError("");
 
-      // Convert Set to Array for easier iteration
       const quotesToApprove = Array.from(selectedQuotations);
-
-      // Add all to approving set
       setApprovingQuotations(new Set(quotesToApprove));
 
       let successCount = 0;
 
-      // Approve each quote sequentially
       for (const quoteId of quotesToApprove) {
         try {
-          // TODO: Replace with your actual API call
-          // await apiService.approveQuotation(quoteId);
           await new Promise((resolve) => setTimeout(resolve, 500));
           successCount++;
         } catch (err) {
           console.error(`Failed to approve ${quoteId}:`, err);
-          // Continue with next even if one fails
         }
       }
 
-      // Show success message
       if (successCount > 0) {
         setSuccessMessage(
           `Successfully approved ${successCount} out of ${quotesToApprove.length} quotations!`
         );
         setShowSuccessToast(true);
 
-        // Auto hide success toast after 5 seconds
         setTimeout(() => {
           setShowSuccessToast(false);
         }, 5000);
       }
 
-      // Refresh data after all approvals
-      refreshQuotations();
+      // Refresh the policies list
+      dispatch(fetchGroupLifePolicies({
+        page: currentPage,
+        pageSize: pageSize,
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+      }));
 
-      // Clear selection
       setSelectedQuotations(new Set());
       setIsAllSelected(false);
     } catch (err) {
@@ -343,11 +328,19 @@ export default function GroupLifeQuotation() {
 
   const applyFilters = () => {
     setCurrentPage(1);
-    // Clear selection when filters change
     setSelectedQuotations(new Set());
     setIsAllSelected(false);
-    setCurrentPage(1);
-    refreshQuotations();
+
+    // Fetch with filters
+    dispatch(fetchGroupLifePolicies({
+      page: 1,
+      pageSize: pageSize,
+      search: filterCriteria.searchValue || undefined,
+      status: filterCriteria.status !== 'all' ? filterCriteria.status.toUpperCase() : undefined,
+      fromDate: filterCriteria.startDate || undefined,
+      toDate: filterCriteria.endDate || undefined,
+      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+    }));
   };
 
   const clearAllFilters = () => {
@@ -359,31 +352,59 @@ export default function GroupLifeQuotation() {
       status: "all",
       schemeType: "all",
       insuredType: "all",
+      subRiskId: "all",
       tag: "GL",
     });
     setCurrentPage(1);
-    // Clear selection when clearing filters
     setSelectedQuotations(new Set());
     setIsAllSelected(false);
-    refreshQuotations();
+
+    // Reset to default fetch (no product filter)
+    dispatch(fetchGroupLifePolicies({
+      page: 1,
+      pageSize: pageSize,
+    }));
   };
 
-  // Normalize quotations payload
-  const raw = quotations ?? {};
-  let itemsArray: any[] = [];
-
-  if (Array.isArray(raw)) {
-    itemsArray = raw;
-  } else if (Array.isArray(raw.items)) {
-    itemsArray = raw.items;
-  } else if (Array.isArray(raw.data?.items)) {
-    itemsArray = raw.data.items;
-  } else {
-    itemsArray = [];
-  }
+  // Get policies from the slice state
+  const itemsArray = policies || [];
 
   const getDisplayQuotations = () => {
-    return itemsArray;
+    let filtered = itemsArray;
+
+    // Apply client-side filters (in addition to server-side)
+    if (filterCriteria.searchValue) {
+      const searchLower = filterCriteria.searchValue.toLowerCase();
+      filtered = filtered.filter((quote: any) => {
+        if (filterCriteria.searchField === "companyName") {
+          return getCompanyName(quote)?.toLowerCase().includes(searchLower);
+        } else {
+          return getQuotationNumber(quote)?.toLowerCase().includes(searchLower);
+        }
+      });
+    }
+
+    if (filterCriteria.status !== "all") {
+      filtered = filtered.filter((quote: any) =>
+        quote.status?.toUpperCase() === filterCriteria.status.toUpperCase()
+      );
+    }
+
+    if (filterCriteria.startDate) {
+      filtered = filtered.filter((quote: any) => {
+        const date = quote.effectiveDate || quote.startDate || quote.entryDate;
+        return date && date >= filterCriteria.startDate;
+      });
+    }
+
+    if (filterCriteria.endDate) {
+      filtered = filtered.filter((quote: any) => {
+        const date = quote.effectiveDate || quote.startDate || quote.entryDate;
+        return date && date <= filterCriteria.endDate;
+      });
+    }
+
+    return filtered;
   };
 
   const hasActiveFilters =
@@ -392,40 +413,73 @@ export default function GroupLifeQuotation() {
     filterCriteria.endDate ||
     filterCriteria.status !== "all" ||
     filterCriteria.schemeType !== "all" ||
-    filterCriteria.insuredType !== "all";
+    filterCriteria.insuredType !== "all" ||
+    filterCriteria.subRiskId !== "all";
 
-  // Use filtered GL items for pagination / counts
-  const itemsForDisplay = itemsArray;
-  const effectiveTotalCount = itemsForDisplay.length;
-  const totalPages = Math.max(1, Math.ceil(effectiveTotalCount / pageSize));
+  const itemsForDisplay = getDisplayQuotations();
+  const effectiveTotalCount = totalCount || itemsForDisplay.length;
   const startItem = (currentPage - 1) * pageSize;
-  const endItem = Math.min(currentPage * pageSize, effectiveTotalCount);
-  const paginatedQuotations = itemsForDisplay.slice(startItem, endItem);
+  // ✅ Server already returns one page at a time — don't re-slice a page-sized array
+  const endItem = startItem + itemsForDisplay.length;
+  const paginatedQuotations = itemsForDisplay;
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      // Clear selection when changing page
       setSelectedQuotations(new Set());
       setIsAllSelected(false);
+
+      // Fetch the new page
+      dispatch(fetchGroupLifePolicies({
+        page: page,
+        pageSize: pageSize,
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+      }));
     }
   };
 
   const handleEditQuotation = (quote: any) => {
+    console.log("✏️ Editing quotation:", quote);
+
+    // Get the policy number from the quote
+    const quoteNumber = quote.policyNo || quote.quotationNumber || quote.quoteNo || quote.id;
+
+    if (!quoteNumber) {
+      toast({
+        title: "Error",
+        description: "Cannot edit: No policy number found",
+        variant: "destructive",
+      });
+      console.error("❌ No policy number found in quote:", quote);
+      return;
+    }
+
+    // Set the current quotation in Redux for the edit page to use
     dispatch(setCurrentQuotation(quote));
-    navigate(`/quotations/group-life/${quote.quoteNo}`);
+
+    // ✅ Navigate to edit page
+    const encodedPolicyNo = encodeURIComponent(quoteNumber);
+    const editPath = `/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`;
+
+    console.log("🔄 Navigating to edit path:", editPath);
+    navigate(editPath);
   };
 
   const handleNewQuotation = () => {
+    console.log("🔄 handleNewQuotation - Starting navigation to create new quotation");
+
+    // Clear any existing quotation
     dispatch(setCurrentQuotation(null));
-    navigate(`/quotations/group-life/${"new"}`);
+
+    // ✅ Navigate to new quotation page
+    navigate("/underwriting/group-life-quotations/new");
   };
 
   const handlePrintQuotation = (quote: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    // Navigate to the quotation detail page and trigger print
     dispatch(setCurrentQuotation(quote));
-    navigate(`/quotations/group-life/${quote.quoteNo}`, {
+    const quoteNumber = getQuotationNumber(quote);
+    navigate(`/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`, {
       state: { print: true },
     });
   };
@@ -440,18 +494,13 @@ export default function GroupLifeQuotation() {
     if (!deletingQuotation) return;
 
     try {
-      await dispatch(
-        deleteGroupLifeQuotation(deletingQuotation.quoteNo)
-      ).unwrap();
-
       toast({
-        title: "Success",
-        description: "Quotation deleted successfully",
+        title: "Info",
+        description: "Delete functionality is not available. Please contact support.",
         variant: "default",
       });
-
-      // Refresh the quotations list
-      refreshQuotations();
+      setShowDeleteDialog(false);
+      setDeletingQuotation(null);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -515,9 +564,8 @@ export default function GroupLifeQuotation() {
         throw new Error("Received an empty document");
       }
 
-      // Determine file extension from Content-Type header
       const contentType = response.headers.get("Content-Type") || "";
-      let fileExtension = ".docx"; // Default to docx
+      let fileExtension = ".docx";
 
       if (contentType.includes("application/pdf")) {
         fileExtension = ".pdf";
@@ -562,7 +610,7 @@ export default function GroupLifeQuotation() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status?.toUpperCase()) {
       case "PROSPECT":
         return <Badge variant="outline">Prospect</Badge>;
       case "ACTIVE":
@@ -627,10 +675,10 @@ export default function GroupLifeQuotation() {
           <Card className="bg-gradient-to-r from-gray-200 to-gray-200 border-white-200 mb-6">
             <div className="p-4 pb-0">
               <h2 className="text-xl font-bold text-gray-900">
-                Group Life Quotations
+                Group Life Schemes
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                Manage and track your group life insurance quotations
+                Manage and track your group life insurance schemes
               </p>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
                 Nigeria Insurance Industry Reform Act (NIIRA) 2025 and Sections
@@ -655,7 +703,7 @@ export default function GroupLifeQuotation() {
                   className="w-full sm:w-auto text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">New Quotation</span>
+                  <span className="hidden sm:inline">New Group Life Scheme</span>
                   <span className="sm:hidden">New</span>
                 </Button>
               </div>
@@ -720,6 +768,9 @@ export default function GroupLifeQuotation() {
                             filterCriteria.insuredType !== "all"
                               ? filterCriteria.insuredType
                               : null,
+                            filterCriteria.subRiskId !== "all"
+                              ? filterCriteria.subRiskId
+                              : null,
                           ].filter(Boolean).length
                         }{" "}
                         active
@@ -765,11 +816,11 @@ export default function GroupLifeQuotation() {
                           <SelectValue placeholder="Select field" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="companyName">
+                          <SelectItem value="CompanyName">
                             Company Name
                           </SelectItem>
-                          <SelectItem value="quotationNumber">
-                            Quotation Number
+                          <SelectItem value="SchemesNumber">
+                            Schemes Number
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -855,6 +906,35 @@ export default function GroupLifeQuotation() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* ✅ Product / subRiskId filter — now dynamic */}
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">
+                        Product
+                      </label>
+                      <Select
+                        value={filterCriteria.subRiskId}
+                        onValueChange={(value) =>
+                          setFilterCriteria((prev) => ({
+                            ...prev,
+                            subRiskId: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All products" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Products</SelectItem>
+                          {productOptions.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="flex items-end">
                       <Button
                         variant="outline"
@@ -876,7 +956,7 @@ export default function GroupLifeQuotation() {
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
                 <p className="text-gray-600 font-medium">
-                  Loading group life quotations...
+                  Loading group life schemes...
                 </p>
                 <p className="text-gray-400 text-sm mt-2">
                   Please wait while we fetch your data
@@ -887,13 +967,13 @@ export default function GroupLifeQuotation() {
                 <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p className="text-sm font-medium mb-2">
                   {hasActiveFilters
-                    ? "No quotations match your filters"
-                    : "No quotations found"}
+                    ? "No schemes match your filters"
+                    : "No schemes found"}
                 </p>
                 <p className="text-xs">
                   {hasActiveFilters
-                    ? "Try adjusting your search criteria or clear filters to see all quotations."
-                    : "Create a new quotation to get started."}
+                    ? "Try adjusting your search criteria or clear filters to see all schemes."
+                    : "Create a new group life scheme to get started."}
                 </p>
                 {hasActiveFilters && (
                   <Button
@@ -913,14 +993,14 @@ export default function GroupLifeQuotation() {
                   <div>
                     {paginatedQuotations.map((quote: any) => (
                       <GroupLifeQuotationCard
-                        key={quote.quoteID}
+                        key={getQuotationId(quote)}
                         quote={quote}
                         onEdit={handleEditQuotation}
                         onApprove={handleApproveQuotation}
                         onDelete={handleDeleteQuotation}
                         onSelect={handleSelectQuotation}
-                        isSelected={selectedQuotations.has(quote.quoteID)}
-                        isApproving={approvingQuotations.has(quote.quoteID)}
+                        isSelected={selectedQuotations.has(getQuotationId(quote))}
+                        isApproving={approvingQuotations.has(getQuotationId(quote))}
                       />
                     ))}
                   </div>
@@ -937,7 +1017,7 @@ export default function GroupLifeQuotation() {
                               className="h-4 w-4"
                             />
                           </TableHead>
-                          <TableHead>Quotation No.</TableHead>
+                          <TableHead>Scheme No.</TableHead>
                           <TableHead>Company Name</TableHead>
                           <TableHead className="text-right">
                             Sum Assured
@@ -950,27 +1030,24 @@ export default function GroupLifeQuotation() {
                       </TableHeader>
                       <TableBody>
                         {paginatedQuotations.map((quote: any) => {
-                          const isSelected = selectedQuotations.has(
-                            quote.quoteID
-                          );
-                          const isApproving = approvingQuotations.has(
-                            quote.quoteID
-                          );
+                          const quoteId = getQuotationId(quote);
+                          const isSelected = selectedQuotations.has(quoteId);
+                          const isApproving = approvingQuotations.has(quoteId);
 
                           return (
                             <TableRow
-                              key={quote.quoteID}
+                              key={quoteId}
                               className={`${isSelected ? "bg-blue-50" : ""} ${
                                 isApproving ? "opacity-60" : ""
                               } cursor-pointer hover:bg-blue-50/50 border-blue-100 transition-colors`}
-                              onClick={() => handleEditQuotation(quote)}
+
                             >
                               <TableCell>
                                 <div onClick={(e) => e.stopPropagation()}>
                                   <Checkbox
                                     checked={isSelected}
                                     onCheckedChange={() =>
-                                      handleSelectQuotation(quote.quoteID)
+                                      handleSelectQuotation(quoteId)
                                     }
                                     className="h-4 w-4"
                                     disabled={isApproving}
@@ -980,10 +1057,10 @@ export default function GroupLifeQuotation() {
                               <TableCell className="font-medium">
                                 <div className="space-y-1">
                                   <div className="text-sm font-medium">
-                                    {quote.quotationNumber || quote.quoteNo}
+                                    {getQuotationNumber(quote)}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
-                                    {quote.quoteID}
+                                    {quoteId}
                                   </div>
                                 </div>
                               </TableCell>
@@ -991,21 +1068,21 @@ export default function GroupLifeQuotation() {
                                 <div className="space-y-1">
                                   <div className="font-medium text-gray-900 flex items-center gap-2">
                                     <Building2 className="h-4 w-4 text-muted-foreground" />
-                                    {quote.companyName || quote.surName}
+                                    {getCompanyName(quote)}
                                   </div>
                                 </div>
                               </TableCell>
                               <TableCell className="text-right font-medium text-blue-900">
                                 {formatCurrency(
-                                  quote.totalSumInsured || quote.sumAssured
+                                  quote.totalSumInsured || quote.sumInsured || quote.sumAssured
                                 )}
                               </TableCell>
                               <TableCell className="text-right font-medium text-blue-900">
-                                {formatCurrency(quote.totalPremium)}
+                                {formatCurrency(quote.totalPremium || quote.grossPremium)}
                               </TableCell>
                               <TableCell className="text-gray-700">
                                 {formatDate(
-                                  quote.effectiveDate || quote.startDate
+                                  quote.effectiveDate || quote.startDate || quote.entryDate
                                 )}
                               </TableCell>
                               <TableCell>
@@ -1027,17 +1104,18 @@ export default function GroupLifeQuotation() {
                                     <Pencil className="w-3 h-3" />
                                   </Button>
 
-                                  {/* Delete Button */}
+                                  {/* Print Button */}
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-8 w-8 p-0 bg-transparent border-red-300 text-red-700 hover:bg-red-50"
-                                    onClick={(e) =>
-                                      handleDeleteQuotation(quote, e)
-                                    }
+                                    className="h-8 w-8 p-0 bg-transparent border-blue-300 text-blue-700 hover:bg-blue-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePrintQuotation(quote, e);
+                                    }}
                                     disabled={isApproving}
                                   >
-                                    <Trash2 className="w-3 h-3" />
+                                    <Printer className="w-3 h-3" />
                                   </Button>
                                 </div>
                               </TableCell>
@@ -1214,11 +1292,11 @@ export default function GroupLifeQuotation() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Group Life Quotation</AlertDialogTitle>
+            <AlertDialogTitle>Delete Group Life Scheme</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this quotation for{" "}
+              Are you sure you want to delete this scheme for{" "}
               <strong>
-                {deletingQuotation?.companyName || deletingQuotation?.surName}
+                {deletingQuotation ? getCompanyName(deletingQuotation) : ""}
               </strong>
               ? This action cannot be undone.
             </AlertDialogDescription>
@@ -1256,8 +1334,23 @@ const GroupLifeQuotationCard = ({
   isSelected: boolean;
   isApproving: boolean;
 }) => {
+  const getQuotationId = (quote: any) => {
+    if (!quote) return "";
+    return quote.id || quote.quoteID || quote.policyNo || "";
+  };
+
+  const getQuotationNumber = (quote: any) => {
+    if (!quote) return "";
+    return quote.quotationNumber || quote.quoteNo || quote.policyNo || "";
+  };
+
+  const getCompanyName = (quote: any) => {
+    if (!quote) return "";
+    return quote.companyName || quote.surName || quote.insuredName || "";
+  };
+
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status?.toUpperCase()) {
       case "PROSPECT":
         return <Badge variant="outline">Prospect</Badge>;
       case "ACTIVE":
@@ -1283,19 +1376,19 @@ const GroupLifeQuotationCard = ({
             <div onClick={(e) => e.stopPropagation()}>
               <Checkbox
                 checked={isSelected}
-                onCheckedChange={() => onSelect(quote.quoteID)}
+                onCheckedChange={() => onSelect(getQuotationId(quote))}
                 className="h-4 w-4"
                 disabled={isApproving}
               />
             </div>
             <CardTitle className="text-base font-medium">
-              {quote.companyName || quote.surName}
+              {getCompanyName(quote)}
             </CardTitle>
           </div>
           {getStatusBadge(quote.status)}
         </div>
         <div className="text-sm text-muted-foreground ml-7">
-          {quote.quotationNumber || quote.quoteNo}
+          {getQuotationNumber(quote)}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -1305,20 +1398,20 @@ const GroupLifeQuotationCard = ({
               Sum Assured:
             </span>
             <div className="font-medium">
-              {formatCurrency(quote.totalSumInsured || quote.sumAssured)}
+              {formatCurrency(quote.totalSumInsured || quote.sumInsured || quote.sumAssured)}
             </div>
           </div>
           <div>
             <span className="font-medium text-muted-foreground">Premium:</span>
             <div className="font-medium">
-              {formatCurrency(quote.totalPremium)}
+              {formatCurrency(quote.totalPremium || quote.grossPremium)}
             </div>
           </div>
           <div>
             <span className="font-medium text-muted-foreground">
               Effective Date:
             </span>
-            <div>{formatDate(quote.effectiveDate || quote.startDate)}</div>
+            <div>{formatDate(quote.effectiveDate || quote.startDate || quote.entryDate)}</div>
           </div>
           <div>
             <span className="font-medium text-muted-foreground">

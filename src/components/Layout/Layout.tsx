@@ -5,16 +5,12 @@ import { Outlet } from "react-router-dom";
 import CustomerLayout from "../../pages/customer/CustomerLayout";
 
 // Add getUserRole function
-const getUserRole = () => {
+const getUserRole = (user: any) => {
   // First try from localStorage
   const storedRole = localStorage.getItem("userRole");
   if (storedRole) {
     return storedRole.toLowerCase();
   }
-  
-  // Then try from Redux store
-  const authState = useSelector((state: any) => state.auth);
-  const user = authState?.user || null;
   
   if (user) {
     if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
@@ -32,7 +28,9 @@ const getUserRole = () => {
 };
 
 const Layout: React.FC = () => {
-  const userRole = getUserRole();
+  const authState = useSelector((state: any) => state.auth);
+  const user = authState?.user || null;
+  const userRole = getUserRole(user);
   
   // If user is customer, show the full CustomerLayout
   if (userRole === 'customer') {

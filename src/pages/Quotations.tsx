@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import QuotationsSidebar from "@/components/quotations/quotations.sidebar";
+import QuotationsSidebar from "../components/quotations/quotations.sidebar";
 
 const Quotations = () => {
   const location = useLocation();
@@ -13,9 +13,9 @@ const Quotations = () => {
   }, [location.pathname, navigate]);
 
   return (
-    <div className="w-full flex h-[calc(100vh-64px)]">
+    <div className="w-full flex h-full">
       <QuotationsSidebar />
-      <div className="flex-1 overflow-x-hidden p-4 md:ml-52 overflow-y-auto"> {/* Remove pl-50 and max-md:ml-15 */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:ml-52 max-md:ml-15">
         <Outlet />
       </div>
     </div>

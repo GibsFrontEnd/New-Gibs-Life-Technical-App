@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/UI/tabs";
-import CompanySettings from "@/components/admin/company-page/company.settings";
-import CompanyBranches from "@/components/admin/company-page/company.branches";
-import CompanyRegions from "@/components/admin/company-page/company.regions";
-import CompanyAutoNumbers from "@/components/admin/company-page/company.auto-numbers";
-import CompanyDepartments from "@/components/admin/company-page/company.departments";
-import CompanyApprovals from "@/components/admin/company-page/company.approvals";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/UI/tabs";
+import CompanySettings from "../../components/admin/company-page/company.settings";
+import CompanyBranches from "../../components/admin/company-page/company.branches";
+import CompanyRegions from "../../components/admin/company-page/company.regions";
+import CompanyAutoNumbers from "../../components/admin/company-page/company.auto-numbers";
+import CompanyDepartments from "../../components/admin/company-page/company.departments";
+import CompanyApprovals from "../../components/admin/company-page/company.approvals";
 
 
 const tabs = [

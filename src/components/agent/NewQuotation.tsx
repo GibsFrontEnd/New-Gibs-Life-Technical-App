@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
 import { Input } from "../UI/new-input";
 import { Button } from "../UI/new-button";
 import { cn } from "../../utils/class-names";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -69,6 +70,11 @@ import {
   getProducts,
   getBranches,
   deleteQuotation,
+  getPremiumRate,
+  previewInvestmentQuotation,
+  calculateInvestmentQuotation,
+  previewTradQuotationNew,
+  calculateTradQuotationNew,
   type FilteredQuotationData,
   type Product,
   type Branch,
@@ -78,6 +84,14 @@ import {
 import { SERVER_URL } from "../../utils/constants";
 
 const NewQuotation = () => {
+  console.log("🚀 NewQuotation component mounting...");
+  const { pathname } = useLocation();
+  console.log("📍 Pathname:", pathname);
+  const navigate = useNavigate();
+  const isInvestment = pathname.includes("investment");
+  const tag = isInvestment ? "B" : "A";
+  const title = isInvestment ? "Investment Link Quote" : "Traditional Quote";
+
   const { toast } = useToast();
   const [quotationDate, setQuotationDate] = useState<Date>(new Date());
   const [dateOfBirth, setDateOfBirth] = useState<Date>();
@@ -97,12 +111,13 @@ const NewQuotation = () => {
   const [currentQuoteNo, setCurrentQuoteNo] = useState<string>("");
   const [viewingQuotation, setViewingQuotation] =
     useState<FilteredQuotationData | null>(null);
-  const [deletingQuotation, setDeletingQuotation] =
-    useState<FilteredQuotationData | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingQuotation, setDeletingQuotation] = useState<FilteredQuotationData | null>(null);
   const [calculationResult, setCalculationResult] =
     useState<QuotationCalculateResponse | null>(null);
+  const [premiumRate, setPremiumRate] = useState<any>(null);
+  const [isLoadingPremiumRate, setIsLoadingPremiumRate] = useState(false);
 
   const [formData, setFormData] = useState({
     quotationNumber: "",
@@ -115,7 +130,9 @@ const NewQuotation = () => {
     age: "",
     frequencyOfPayment: "",
     duration: "",
-    contributions: "",
+    firstPremium: "",
+    sumAssured: "",
+    remark: "PREMIUM",
     extraRate: "",
     loadingRate: "",
     assuredCode: "",
@@ -377,15 +394,36 @@ const NewQuotation = () => {
       email: formData.emailAddress,
       duration: Number.parseFloat(formData.duration) || 0,
       frequency: formData.frequencyOfPayment,
-      regularSaving: Number.parseFloat(formData.contributions) || 0,
+      remark: (tag === "A" && (formData.planType === "FFP" || formData.planType === "TAS")) ? (formData.remark || "PREMIUM") : "PREMIUM",
+      regularSaving: Number.parseFloat(formData.firstPremium) || 0,
+      sumAssured: Number.parseFloat(formData.sumAssured) || 0,
       productCode: formData.planType,
       product: formData.planType,
       extraRate: Number.parseFloat(formData.extraRate) || 0,
       loadingRate: Number.parseFloat(formData.loadingRate) || 0,
       agentCode,
+      tag: tag,
       status: "draft",
     };
   };
+
+  // ─── Auto-fetch premium rate for quotes when inputs change ──
+  useEffect(() => {
+    // Both tag A and B use this now
+    const productCode = formData.planType;
+    const duration = Number(formData.duration);
+    const age = Number(formData.age);
+    if (!productCode || !duration || !age) return;
+
+    let cancelled = false;
+    setIsLoadingPremiumRate(true);
+    getPremiumRate({ productCode, duration, age })
+      .then((data) => { if (!cancelled) setPremiumRate(data); })
+      .catch((err) => console.error("Premium rate fetch failed:", err))
+      .finally(() => { if (!cancelled) setIsLoadingPremiumRate(false); });
+
+    return () => { cancelled = true; };
+  }, [formData.planType, formData.duration, formData.age]);
 
   const handleCalculate = async () => {
     // Validate required fields before calculation
@@ -418,11 +456,16 @@ const NewQuotation = () => {
 
     try {
       const payload = createCalculationPayload();
+      console.log("Calculate payload:", payload);
 
-      console.log("Previewing quotation with payload:", payload);
-
-      const response: QuotationCalculateResponse =
-        await previewQuotation(payload);
+      let response: QuotationCalculateResponse;
+      if (tag === "B") {
+        // Investment Link Quote — Calculate uses POST /api/lifequotes/calculate
+        response = await calculateInvestmentQuotation(payload);
+      } else {
+        // Traditional Quote — Calculate uses POST /api/lifequotes/tradcalculate
+        response = await calculateTradQuotationNew(payload);
+      }
 
       // Store the calculation result for the summary
       setCalculationResult(response);
@@ -472,7 +515,7 @@ const NewQuotation = () => {
     try {
       const data = await getProducts();
       setProducts(data);
-      // console.log("Products fetched (riskID B only):", data);
+      // console.log("Products fetched:", data);
     } catch (error: any) {
       console.error("Products Fetch Error:", error);
     } finally {
@@ -561,15 +604,22 @@ const NewQuotation = () => {
       const payload = createCalculationPayload();
       console.log("Saving quotation with payload:", payload);
 
-      const response = await calculateQuotation(payload);
+      let response: QuotationCalculateResponse;
+      if (tag === "B") {
+        // Investment Link Quote — Save uses POST /api/lifequotes/calculate/preview
+        response = await previewInvestmentQuotation(payload);
+      } else {
+        // Traditional Quote — Save uses POST /api/lifequotes/tradcalculate/preview
+        response = await previewTradQuotationNew(payload);
+      }
 
       toast({
-        title: "Success",
-        description: "Quotation saved successfully",
+        title: "Quotation Saved",
+        description: `Quote No: ${response.quoteNo || ""} saved successfully`,
       });
 
-      // Navigate to quotations
-      window.location.href = "/quotations/investment-link";
+      // Navigate back to the list
+      navigate(isInvestment ? "/quotations/investment-link-quotes" : "/quotations/traditional-quotes");
     } catch (error: any) {
       console.error("Save Error:", error);
       toast({
@@ -585,7 +635,7 @@ const NewQuotation = () => {
   useEffect(() => {
     fetchProducts();
     fetchBranches();
-  }, []);
+  }, [tag]);
 
   useEffect(() => {
     const query = customerSearchQuery.trim();
@@ -678,9 +728,9 @@ const NewQuotation = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                New Quotation
+                New {title}
               </h1>
-              <p className="text-gray-600">Create a new insurance quotation</p>
+              <p className="text-gray-600">Create a new {title.toLowerCase()}</p>
             </div>
           </div>
         </div>
@@ -734,7 +784,7 @@ const NewQuotation = () => {
                           {formData.locationBranch
                             ? branches.find(
                                 (branch) =>
-                                  branch.description ===
+                                  branch.branchID ===
                                   formData.locationBranch,
                               )?.description
                             : isLoadingBranches
@@ -753,12 +803,10 @@ const NewQuotation = () => {
                                 <CommandItem
                                   key={branch.branchID}
                                   value={branch.description}
-                                  onSelect={(currentValue) => {
+                                  onSelect={() => {
                                     handleInputChange(
                                       "locationBranch",
-                                      currentValue === formData.locationBranch
-                                        ? ""
-                                        : branch.description,
+                                      branch.branchID,
                                     );
                                     setShowBranchCombobox(false);
                                   }}
@@ -767,7 +815,7 @@ const NewQuotation = () => {
                                     className={cn(
                                       "mr-2 h-4 w-4",
                                       formData.locationBranch ===
-                                        branch.description
+                                        branch.branchID
                                         ? "opacity-100"
                                         : "opacity-0",
                                     )}
@@ -859,7 +907,7 @@ const NewQuotation = () => {
                         }}
                         placeholder="Enter first name"
                       />
-                      {/* {showCustomerSuggestions && (
+                      {showCustomerSuggestions && (
                         <div className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
                           {isSearchingCustomers && (
                             <div className="flex items-center px-3 py-2 text-sm text-gray-500">
@@ -903,7 +951,7 @@ const NewQuotation = () => {
                             );
                           })}
                         </div>
-                      )} */}
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -982,7 +1030,7 @@ const NewQuotation = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {products
-                          .filter((product) => product.riskID === "B")
+                          .filter((product) => product.riskID === tag)
                           .map((product) => (
                             <SelectItem
                               key={product.productID}
@@ -995,6 +1043,38 @@ const NewQuotation = () => {
                     </Select>
                   </div>
                 </div>
+
+                {tag === "A" && (formData.planType === "FFP" || formData.planType === "TAS") && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Payment Variant *
+                      </label>
+                      <Select
+                        value={formData.remark === "PREMIUM" ? "" : formData.remark}
+                        onValueChange={(value) => handleInputChange("remark", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select variant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {formData.planType === "FFP" ? (
+                            <>
+                              <SelectItem value="25_25_50">25%, 25%, 50% VARIANT</SelectItem>
+                              <SelectItem value="25_25_75">25%, 25%, 75% VARIANT</SelectItem>
+                              <SelectItem value="25_25_100">25%, 25%, 100% VARIANT</SelectItem>
+                            </>
+                          ) : formData.planType === "TAS" ? (
+                            <>
+                              <SelectItem value="CASHBACK_PLAN">Cash Back Plan</SelectItem>
+                              <SelectItem value="NORMAL_PLAN">Normal Plan</SelectItem>
+                            </>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -1101,7 +1181,7 @@ const NewQuotation = () => {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">
-                        Duration
+                        Duration (Years)
                       </label>
                       <Input
                         value={formData.duration}
@@ -1116,18 +1196,51 @@ const NewQuotation = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">
-                        Contributions
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-700">
+                          First Premium
+                        </label>
+                        {formData.sumAssured && (
+                          <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Will be calculated
+                          </span>
+                        )}
+                      </div>
                       <div className="flex space-x-2">
                         <Input
-                          value={formData.contributions}
+                          value={formData.firstPremium}
                           onChange={(e) =>
-                            handleInputChange("contributions", e.target.value)
+                            handleInputChange("firstPremium", e.target.value)
                           }
                           placeholder="0.00"
                           className="flex-1"
                           type="number"
+                          disabled={Boolean(formData.sumAssured)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-700">
+                          Sum Assured
+                        </label>
+                        {formData.firstPremium && (
+                          <span className="text-[10px] font-medium text-[#8c4b8d] bg-[#8c4b8d]/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Will be calculated
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex space-x-2">
+                        <Input
+                          value={formData.sumAssured}
+                          onChange={(e) =>
+                            handleInputChange("sumAssured", e.target.value)
+                          }
+                          placeholder="0.00"
+                          className="flex-1"
+                          type="number"
+                          disabled={Boolean(formData.firstPremium)}
                         />
                       </div>
                     </div>
@@ -1136,7 +1249,7 @@ const NewQuotation = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">
-                        Extra Rate - optional
+                        Extra Rate (%) - optional
                       </label>
                       <Input
                         value={formData.extraRate}
@@ -1149,7 +1262,7 @@ const NewQuotation = () => {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">
-                        Loading Rate - optional
+                        Loading Rate (%) - optional
                       </label>
                       <div className="flex space-x-2">
                         <Input
@@ -1163,7 +1276,7 @@ const NewQuotation = () => {
                         />
                         <Button
                           size="sm"
-                          className="bg-primary hover:bg-primary-blue"
+                          className="bg-[#8c4b8d] hover:bg-opacity-90"
                           onClick={handleCalculate}
                           disabled={isCalculating}
                         >
@@ -1184,7 +1297,7 @@ const NewQuotation = () => {
             <Card className="shadow-lg border-0 bg-white/80">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 text-lg">
                     <TrendingUp className="w-5 h-5 text-primary" />
                     <span>Quotation Multiple Details</span>
                     {currentQuoteNo && (
@@ -1196,7 +1309,7 @@ const NewQuotation = () => {
                   {currentQuoteNo && (
                     <Button
                       size="sm"
-                      className="bg-primary hover:bg-primary-blue"
+                      className="bg-[#8c4b8d] hover:bg-opacity-90"
                       onClick={() => fetchFilteredQuotations(currentQuoteNo)}
                       disabled={isLoadingQuotations}
                     >
@@ -1231,7 +1344,7 @@ const NewQuotation = () => {
                           Extra Premium
                         </th>
                         <th className="text-left py-3 px-4 font-medium text-gray-700">
-                          loading
+                          Loading
                         </th>
                         <th className="text-left py-3 px-4 font-medium text-gray-700">
                           Total Premium
@@ -1277,9 +1390,9 @@ const NewQuotation = () => {
                         quotations.map((quotation, index) => (
                           <tr
                             key={quotation.quoteID || index}
-                            className="border-b border-gray-100 hover:bg-gray-50"
+                            className="border-b border-gray-100 hover:bg-gray-50 text-sm"
                           >
-                            <td className="py-3 px-4">{quotation.quoteNo}</td>
+                            <td className="py-3 px-4 font-medium">{quotation.quoteNo}</td>
                             <td className="py-3 px-4">{quotation.duration}</td>
                             <td className="py-3 px-4">
                               {formatCurrency(
@@ -1293,17 +1406,17 @@ const NewQuotation = () => {
                             <td className="py-3 px-4">
                               {formatCurrency(Number(quotation.loading ?? 0))}
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 font-semibold text-primary">
                               {formatCurrency(
                                 Number(quotation.totalPremium ?? 0),
                               )}
                             </td>
                             <td className="py-3 px-4">
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                className={`px-2 py-1 rounded-full text-[10px] font-medium uppercase ${
                                   quotation.status === "active"
                                     ? "bg-green-100 text-green-800"
-                                    : "bg-yellow-100 text-yellow-800"
+                                    : "bg-blue-100 text-blue-800"
                                 }`}
                               >
                                 {quotation.status}
@@ -1313,23 +1426,21 @@ const NewQuotation = () => {
                               <div className="flex items-center space-x-2">
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant="ghost"
                                   onClick={() => handleViewQuotation(quotation)}
-                                  className="flex items-center space-x-1"
+                                  className="h-8 w-8 p-0"
                                 >
-                                  <Eye className="w-3 h-3" />
-                                  <span>View</span>
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant="ghost"
                                   onClick={() =>
                                     handleDeleteQuotation(quotation)
                                   }
-                                  className="flex items-center space-x-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                                 >
-                                  <Trash2 className="w-3 h-3" />
-                                  <span>Delete</span>
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </td>
@@ -1341,243 +1452,10 @@ const NewQuotation = () => {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Mobile Quotation Summary - Show on mobile only */}
-            <Card className="lg:hidden shadow-lg border-0 bg-white/90 backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center space-x-2 text-lg">
-                  <span>Quotation Summary</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {!calculationResult ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calculator className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-sm">
-                      Calculate quotation to see summary
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Client Information */}
-                    <div className="border-b pb-4">
-                      <h4 className="font-semibold text-gray-800 mb-3">
-                        Client Information
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Name:</span>
-                          <span className="font-medium">
-                            {`${formData.firstName} ${formData.lastName}`.trim() ||
-                              "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Age:</span>
-                          <span className="font-medium">
-                            {formData.age || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <Phone className="w-3 h-3 mr-1" />
-                            Phone:
-                          </span>
-                          <span className="font-medium text-xs">
-                            {formData.mobilePhone || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <Mail className="w-3 h-3 mr-1" />
-                            Email:
-                          </span>
-                          <span className="font-medium text-xs truncate max-w-32">
-                            {formData.emailAddress || "N/A"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Policy Information */}
-                    <div className="border-b pb-4">
-                      <h4 className="font-semibold text-gray-800 mb-3">
-                        Policy Information
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Quote No:</span>
-                          <span className="font-medium">
-                            {calculationResult.quoteNo || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Product:</span>
-                          <span className="font-medium text-xs">
-                            {getSelectedProduct()?.productName || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            Branch:
-                          </span>
-                          <span className="font-medium text-xs">
-                            {formData.locationBranch || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <Clock className="w-3 h-3 mr-1" />
-                            Duration:
-                          </span>
-                          <span className="font-medium">
-                            {formData.duration
-                              ? `${formData.duration} years`
-                              : "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Frequency:</span>
-                          <span className="font-medium text-xs">
-                            {formData.frequencyOfPayment || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            Quote Date:
-                          </span>
-                          <span className="font-medium text-xs">
-                            {format(quotationDate, "dd MMM, yyyy")}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Financial Summary */}
-                    <div className="border-b pb-4">
-                      <h4 className="font-semibold text-gray-800 mb-3">
-                        Financial Summary
-                      </h4>
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Contributions:</span>
-                          <span className="font-medium">
-                            {formData.contributions
-                              ? formatCurrency(Number(formData.contributions))
-                              : "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Sum Assured:</span>
-                          <span className="font-bold text-primary">
-                            {formatCurrency(calculationResult.sumAssured)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Life Cover:</span>
-                          <span className="font-medium">
-                            {formatCurrency(calculationResult.lifeCover)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Annual Premium:</span>
-                          <span className="font-medium">
-                            {formatCurrency(calculationResult.annualPremium)}
-                          </span>
-                        </div>
-                        {calculationResult.extraPremium > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Extra Premium:
-                            </span>
-                            <span className="font-medium">
-                              {formatCurrency(calculationResult.extraPremium)}
-                            </span>
-                          </div>
-                        )}
-                        {calculationResult.loading > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Loading:</span>
-                            <span className="font-medium">
-                              {formatCurrency(calculationResult.loading)}
-                            </span>
-                          </div>
-                        )}
-                        <div className="border-t pt-2 mt-3">
-                          <div className="flex justify-between">
-                            <span className="font-semibold text-gray-800">
-                              Total Premium:
-                            </span>
-                            <span className="font-bold text-lg text-green-600">
-                              {formatCurrency(calculationResult.totalPremium)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Additional Information */}
-                    <div>
-                      <h4 className="font-semibold text-gray-800 mb-3">
-                        Additional Details
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        {formData.extraRate &&
-                          Number(formData.extraRate) > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Extra Rate:</span>
-                              <span className="font-medium">
-                                {formData.extraRate}%
-                              </span>
-                            </div>
-                          )}
-                        {formData.loadingRate &&
-                          Number(formData.loadingRate) > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">
-                                Loading Rate:
-                              </span>
-                              <span className="font-medium">
-                                {formData.loadingRate}%
-                              </span>
-                            </div>
-                          )}
-                        {dateOfBirth && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Date of Birth:
-                            </span>
-                            <span className="font-medium text-xs">
-                              {format(dateOfBirth, "dd MMM, yyyy")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="pt-4 space-y-2">
-                      <Button
-                        className="w-full bg-primary hover:bg-primary-blue"
-                        onClick={handleDone}
-                        disabled={isCalculating}
-                      >
-                        {isCalculating ? (
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        ) : null}
-                        {isCalculating ? "Saving..." : "Done (Save & Exit)"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
 
-          {/* Right Column - Quotation Summary - Desktop only */}
-          <div className="hidden lg:block lg:col-span-1 space-y-6">
+          {/* Right Column - Quotation Summary - Desktop and Tablet */}
+          <div className="lg:col-span-1 space-y-6">
             <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm sticky top-6">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center space-x-2 text-lg">
@@ -1586,228 +1464,170 @@ const NewQuotation = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {!calculationResult ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calculator className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <div className="text-center py-12 text-gray-500">
+                    <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Calculator className="w-8 h-8 text-gray-300" />
+                    </div>
                     <p className="text-sm">
-                      Calculate quotation to see summary
+                      Complete form and click calculate to see summary
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {/* Client Information */}
-                    <div className="border-b pb-4">
-                      <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                        {/* <User className="w-4 h-4 mr-2" /> */}
-                        Client Information
+                    <div className="border-b border-gray-100 pb-4">
+                      <h4 className="font-semibold text-gray-800 mb-3 text-sm uppercase tracking-wider">
+                        Client Details
                       </h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Name:</span>
-                          <span className="font-medium">
-                            {`${formData.firstName} ${formData.lastName}`.trim() ||
-                              "N/A"}
+                          <span className="text-gray-500">Name:</span>
+                          <span className="font-medium text-gray-900">
+                            {`${formData.firstName} ${formData.lastName}`.trim() || "N/A"}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Age:</span>
-                          <span className="font-medium">
+                          <span className="text-gray-500">Age:</span>
+                          <span className="font-medium text-gray-900">
                             {formData.age || "N/A"}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <Phone className="w-3 h-3 mr-1" />
-                            Phone:
-                          </span>
-                          <span className="font-medium text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Phone:</span>
+                          <span className="font-medium text-gray-900 truncate ml-2">
                             {formData.mobilePhone || "N/A"}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <Mail className="w-3 h-3 mr-1" />
-                            Email:
-                          </span>
-                          <span className="font-medium text-xs truncate max-w-32">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Email:</span>
+                          <span className="font-medium text-gray-900 truncate ml-2 max-w-[160px] text-right">
                             {formData.emailAddress || "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Quote Date:</span>
+                          <span className="font-medium text-gray-900">
+                            {format(quotationDate, "dd MMM yyyy")}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Branch:</span>
+                          <span className="font-medium text-gray-900 truncate ml-2 max-w-[140px] text-right">
+                            {branches.find(b => b.branchID === formData.locationBranch)?.description || formData.locationBranch || "N/A"}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Policy Information */}
-                    <div className="border-b pb-4">
-                      <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                        {/* <FileText className="w-4 h-4 mr-2" /> */}
-                        Policy Information
+                    <div className="border-b border-gray-100 pb-4">
+                      <h4 className="font-semibold text-gray-800 mb-3 text-sm uppercase tracking-wider">
+                        Plan Details
                       </h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Quote No:</span>
-                          <span className="font-medium">
+                          <span className="text-gray-500">Quote No:</span>
+                          <span className="font-bold text-[#8c4b8d]">
                             {calculationResult.quoteNo || "N/A"}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Product:</span>
-                          <span className="font-medium text-xs">
+                          <span className="text-gray-500">Product:</span>
+                          <span className="font-medium text-gray-900 truncate ml-2">
                             {getSelectedProduct()?.productName || "N/A"}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            Branch:
-                          </span>
-                          <span className="font-medium text-xs">
-                            {formData.locationBranch || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <Clock className="w-3 h-3 mr-1" />
-                            Duration:
-                          </span>
-                          <span className="font-medium">
-                            {formData.duration
-                              ? `${formData.duration} years`
-                              : "N/A"}
-                          </span>
-                        </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Frequency:</span>
-                          <span className="font-medium text-xs">
+                          <span className="text-gray-500">Frequency:</span>
+                          <span className="font-medium text-gray-900">
                             {formData.frequencyOfPayment || "N/A"}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 flex items-center">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            Quote Date:
-                          </span>
-                          <span className="font-medium text-xs">
-                            {format(quotationDate, "dd MMM, yyyy")}
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Duration:</span>
+                          <span className="font-medium text-gray-900">
+                            {formData.duration
+                              ? `${formData.duration} Years`
+                              : "N/A"}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Financial Summary */}
-                    <div className="border-b pb-4">
-                      <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                        {/* <DollarSign className="w-4 h-4 mr-2" /> */}
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-gray-800 mb-3 text-sm uppercase tracking-wider">
                         Financial Summary
                       </h4>
-                      <div className="space-y-3 text-sm">
+                      <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Contributions:</span>
-                          <span className="font-medium">
-                            {formData.contributions
-                              ? formatCurrency(Number(formData.contributions))
+                          <span className="text-gray-500">First Premium:</span>
+                          <span className="font-medium text-gray-900">
+                            {formData.firstPremium
+                              ? formatCurrency(Number(formData.firstPremium))
                               : "N/A"}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Sum Assured:</span>
-                          <span className="font-bold text-primary">
+                          <span className="text-gray-500">Sum Assured:</span>
+                          <span className="font-bold text-[#8c4b8d]">
                             {formatCurrency(calculationResult.sumAssured)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Life Cover:</span>
-                          <span className="font-medium">
-                            {formatCurrency(calculationResult.lifeCover)}
+                          <span className="text-gray-500">Annual Premium:</span>
+                          <span className="font-medium text-gray-900">
+                            {formatCurrency(calculationResult.annualPremium)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Annual Premium:</span>
-                          <span className="font-medium">
-                            {formatCurrency(calculationResult.annualPremium)}
+                          <span className="text-gray-500">Life Cover:</span>
+                          <span className="font-medium text-gray-900">
+                            {formatCurrency(calculationResult.lifeCover)}
                           </span>
                         </div>
                         {calculationResult.extraPremium > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Extra Premium:
-                            </span>
-                            <span className="font-medium">
+                            <span className="text-gray-500">Extra Premium:</span>
+                            <span className="font-medium text-gray-900">
                               {formatCurrency(calculationResult.extraPremium)}
                             </span>
                           </div>
                         )}
                         {calculationResult.loading > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Loading:</span>
-                            <span className="font-medium">
+                            <span className="text-gray-500">Loading:</span>
+                            <span className="font-medium text-gray-900">
                               {formatCurrency(calculationResult.loading)}
                             </span>
                           </div>
                         )}
-                        <div className="border-t pt-2 mt-3">
-                          <div className="flex justify-between">
-                            <span className="font-semibold text-gray-800">
-                              Total Premium:
-                            </span>
-                            <span className="font-bold text-lg text-green-600">
-                              {formatCurrency(calculationResult.totalPremium)}
-                            </span>
-                          </div>
+                        <div className="flex justify-between py-2 border-y border-dashed border-gray-100 my-2">
+                          <span className="font-semibold text-gray-900">Total Premium:</span>
+                          <span className="font-bold text-lg text-[#8c4b8d]">
+                            {formatCurrency(calculationResult.totalPremium)}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Additional Information */}
-                    <div>
-                      <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                        {/* <Target className="w-4 h-4 mr-2" /> */}
-                        Additional Details
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        {formData.extraRate &&
-                          Number(formData.extraRate) > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Extra Rate:</span>
-                              <span className="font-medium">
-                                {formData.extraRate}%
-                              </span>
-                            </div>
-                          )}
-                        {formData.loadingRate &&
-                          Number(formData.loadingRate) > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">
-                                Loading Rate:
-                              </span>
-                              <span className="font-medium">
-                                {formData.loadingRate}%
-                              </span>
-                            </div>
-                          )}
-                        {dateOfBirth && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Date of Birth:
-                            </span>
-                            <span className="font-medium text-xs">
-                              {format(dateOfBirth, "dd MMM, yyyy")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
                     {/* Action Buttons */}
-                    <div className="pt-4 space-y-2">
+                    <div className="pt-4">
                       <Button
-                        className="w-full bg-primary hover:bg-primary-blue"
+                        className="w-full bg-[#8c4b8d] hover:bg-opacity-90 py-6"
                         onClick={handleDone}
                         disabled={isCalculating}
                       >
                         {isCalculating ? (
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        ) : null}
-                        {isCalculating ? "Saving..." : "Done (Save & Exit)"}
+                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        ) : (
+                          <CheckCircle className="w-5 h-5 mr-2" />
+                        )}
+                        {isCalculating ? "Processing..." : "Save Quotation"}
                       </Button>
+                      <p className="text-[10px] text-gray-400 text-center mt-3">
+                        By clicking Save, this quotation will be registered in the system as a draft.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1822,286 +1642,109 @@ const NewQuotation = () => {
         open={showViewDialog}
         onOpenChange={setShowViewDialog}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogHeader className="p-6 border-b border-gray-100 flex-row items-center justify-between">
             <DialogTitle className="flex items-center space-x-2">
-              <Eye className="w-5 h-5" />
-              <span>View Quotation Details</span>
+              <Eye className="w-5 h-5 text-[#8c4b8d]" />
+              <span>Quotation Details</span>
             </DialogTitle>
           </DialogHeader>
           {viewingQuotation && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
-                      <User className="w-4 h-4 mr-2" />
-                      Personal Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Quote Number
-                      </label>
-                      <Input
-                        value={viewingQuotation.quoteNo}
-                        readOnly
-                        className="bg-gray-50"
-                      />
+            <div className="p-8 space-y-8 bg-gray-50/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Personal Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center">
+                    <User className="h-3 w-3 mr-1" /> Client Information
+                  </h3>
+                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase">First Name</p>
+                        <p className="font-medium text-gray-900 mt-1">{viewingQuotation.otherNames}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase">Last Name</p>
+                        <p className="font-medium text-gray-900 mt-1">{viewingQuotation.surName}</p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        First Name
-                      </label>
-                      <Input
-                        value={viewingQuotation.otherNames}
-                        readOnly
-                        className="bg-gray-50"
-                      />
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase">Mobile Phone</p>
+                      <p className="font-medium text-gray-900 mt-1">{viewingQuotation.mobilePhone}</p>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Last Name
-                      </label>
-                      <Input
-                        value={viewingQuotation.surName}
-                        readOnly
-                        className="bg-gray-50"
-                      />
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase">Email Address</p>
+                      <p className="font-medium text-gray-900 mt-1 truncate">{viewingQuotation.email}</p>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Mobile Phone
-                      </label>
-                      <Input
-                        value={viewingQuotation.mobilePhone}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Email
-                      </label>
-                      <Input
-                        value={viewingQuotation.email}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Policy Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Duration (Years)
-                      </label>
-                      <Input
-                        value={
-                          viewingQuotation.duration
-                            ? viewingQuotation.duration.toString()
-                            : "N/A"
-                        }
-                        readOnly
-                        className="bg-gray-50"
-                      />
+                {/* Policy Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center">
+                    <FileText className="h-3 w-3 mr-1" /> Plan Information
+                  </h3>
+                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase">Quote Number</p>
+                        <p className="font-medium text-[#8c4b8d] mt-1">{viewingQuotation.quoteNo}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase">Duration</p>
+                        <p className="font-medium text-gray-900 mt-1">{viewingQuotation.duration} Years</p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Frequency
-                      </label>
-                      <Input
-                        value={viewingQuotation.cardNo}
-                        readOnly
-                        className="bg-gray-50"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase">Status</p>
+                        <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md mt-1 uppercase">
+                          {viewingQuotation.status}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase">Frequency</p>
+                        <p className="font-medium text-gray-900 mt-1">{viewingQuotation.cardNo}</p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Status
-                      </label>
-                      <Input
-                        value={viewingQuotation.status}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Quote Date
-                      </label>
-                      <Input
-                        value={
-                          viewingQuotation.quotationDate
-                            ? format(
-                                new Date(viewingQuotation.quotationDate),
-                                "dd MMM, yyyy",
-                              )
-                            : "N/A"
-                        }
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Date of Birth
-                      </label>
-                      <Input
-                        value={
-                          viewingQuotation.dateOfBirth
-                            ? format(
-                                new Date(viewingQuotation.dateOfBirth),
-                                "dd MMM, yyyy",
-                              )
-                            : "N/A"
-                        }
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
 
               {/* Financial Information */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Financial Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Sum Assured
-                      </label>
-                      <Input
-                        value={formatCurrency(viewingQuotation.sumAssured)}
-                        readOnly
-                        className="bg-gray-50 font-medium text-primary"
-                      />
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center">
+                  <DollarSign className="h-3 w-3 mr-1" /> Financial Details
+                </h3>
+                <div className="bg-white p-8 rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase mb-1">Sum Assured</p>
+                      <p className="text-xl font-bold text-primary">{formatCurrency(viewingQuotation.sumAssured)}</p>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Premium 1
-                      </label>
-                      <Input
-                        value={formatCurrency(viewingQuotation.premium1)}
-                        readOnly
-                        className="bg-gray-50"
-                      />
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase mb-1">Total Premium</p>
+                      <p className="text-xl font-bold text-[#8c4b8d]">{formatCurrency(viewingQuotation.totalPremium)}</p>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Premium 2
-                      </label>
-                      <Input
-                        value={formatCurrency(viewingQuotation.premium2)}
-                        readOnly
-                        className="bg-gray-50"
-                      />
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase mb-1">Extra Premium</p>
+                      <p className="font-medium text-gray-900">{formatCurrency(viewingQuotation.premium2)}</p>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Premium 3
-                      </label>
-                      <Input
-                        value={formatCurrency(viewingQuotation.premium3)}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Loading
-                      </label>
-                      <Input
-                        value={formatCurrency(viewingQuotation.loading)}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Total Premium
-                      </label>
-                      <Input
-                        value={formatCurrency(viewingQuotation.totalPremium)}
-                        readOnly
-                        className="bg-gray-50 font-bold text-green-600"
-                      />
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase mb-1">Loading</p>
+                      <p className="font-medium text-gray-900">{formatCurrency(viewingQuotation.loading)}</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              {/* Additional Information */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
-                    <Target className="w-4 h-4 mr-2" />
-                    Additional Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Quote ID
-                      </label>
-                      <Input
-                        value={viewingQuotation.quoteID}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">
-                        Created Date
-                      </label>
-                      <Input
-                        value={
-                          viewingQuotation.createdAt
-                            ? format(
-                                new Date(viewingQuotation.createdAt),
-                                "dd MMM, yyyy HH:mm",
-                              )
-                            : "N/A"
-                        }
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowViewDialog(false)}
-                >
+              <div className="flex justify-end space-x-3 pt-4 pb-8">
+                <Button variant="outline" onClick={() => setShowViewDialog(false)} className="px-8">
                   Close
                 </Button>
-                <Button
-                  onClick={() => window.print()}
-                  className="bg-primary hover:bg-primary-blue"
-                >
+                <Button onClick={() => window.print()} className="bg-[#8c4b8d] hover:bg-opacity-90 px-8">
                   <FileText className="w-4 h-4 mr-2" />
-                  Print Details
+                  Print Receipt
                 </Button>
               </div>
             </div>
@@ -2121,7 +1764,7 @@ const NewQuotation = () => {
                   ? `${deletingQuotation.otherNames} ${deletingQuotation.surName}`
                   : ""}
               </strong>
-              ? This action cannot be undone.
+              ? This action cannot be undone and will remove the draft from our records.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2135,8 +1778,10 @@ const NewQuotation = () => {
             >
               {isDeleting ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : null}
-              Delete
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
