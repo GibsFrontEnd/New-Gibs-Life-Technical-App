@@ -93,7 +93,7 @@ const ProductSubRisk = () => {
     if (selectedRisk?.riskID) {
       dispatch(clearProducts());
       dispatch(
-        getAllProducts({
+        fetchProducts({
           riskId: selectedRisk.riskID,
           pageNumber: currentPage,
           pageSize,
@@ -128,7 +128,7 @@ const ProductSubRisk = () => {
     if (success.createProduct || success.updateProduct) {
       if (selectedRisk?.riskID) {
         dispatch(
-          getAllProducts({
+          fetchProducts({
             riskId: selectedRisk.riskID,
             pageNumber: currentPage,
             pageSize,
@@ -235,7 +235,7 @@ const ProductSubRisk = () => {
           Add New Product
         </Button>
       </div>
-      {error.getAllProducts ? (
+      {error.fetchProducts ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>Error loading proposals</AlertDescription>
@@ -245,7 +245,7 @@ const ProductSubRisk = () => {
           <CardContent className="p-0">
             {/* Mobile Card View */}
             <div className="block lg:hidden">
-              {loading.getAllProducts ? (
+              {loading.fetchProducts ? (
                 Array.from({ length: 5 }).map((_, index) => (
                   <div
                     key={index}
@@ -336,7 +336,7 @@ const ProductSubRisk = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading.getAllProducts ? (
+                  {loading.fetchProducts ? (
                     Array.from({ length: pageSize }).map((_, index) => (
                       <TableRow key={index} className="border-blue-100">
                         <TableCell>
@@ -526,7 +526,7 @@ const ProductSubRisk = () => {
                       size="sm"
                       onClick={() => goToPage(currentPage + 1)} // @ts-ignore
                       disabled={
-                        currentPage === totalPages || loading.getAllProducts
+                        currentPage === totalPages || loading.fetchProducts
                       }
                       className="h-8 w-8 p-0 border-blue-300 text-blue-900 hover:bg-blue-50"
                     >
@@ -538,7 +538,7 @@ const ProductSubRisk = () => {
                       size="sm"
                       onClick={() => goToPage(totalPages)} // @ts-ignore
                       disabled={
-                        currentPage === totalPages || loading.getAllProducts
+                        currentPage === totalPages || loading.fetchProducts
                       }
                       className="hidden sm:flex h-8 w-8 p-0 border-blue-300 text-blue-900 hover:bg-blue-50"
                     >

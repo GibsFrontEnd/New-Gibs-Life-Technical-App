@@ -69,6 +69,8 @@ import CreditLifeDeathClaims from "./pages/claims/CreditLife/CreditLifeDeathClai
 import CreditLifeClaimFormPage from "./components/claims/CreditLife/CreditLifeFormPage";
 
 import PlaceholderPage from "./pages/underwriting/PlaceHolderPage";
+import ProductLine from "./pages/admin/configuration/ProductLine"; 
+import ProductForm from "./components/admin/configuration/ProductLineForm"; 
 
 const App: React.FC = () => {
   useAuth();
@@ -253,7 +255,12 @@ const App: React.FC = () => {
   
   {/* Individual configuration sub-items */}
   <Route path="configurations/product-main-class" element={<PlaceholderPage title="Product Main Class" />} />
-  <Route path="configurations/product-lines" element={<PlaceholderPage title="Product Lines" />} />
+ <Route path="configurations/product-lines" element={<ProductLine />} />
+  {/* Product Form Routes - New, Edit, View */}
+  <Route path="configurations/product-lines/new" element={<ProductForm mode="new" />} />
+  <Route path="configurations/product-lines/edit/:id" element={<ProductForm mode="edit" />} />
+  <Route path="configurations/product-lines/view/:id" element={<ProductForm mode="view" />} />
+
   <Route path="configurations/product-settings" element={<PlaceholderPage title="Product Settings" />} />
   <Route path="configurations/product-sections" element={<PlaceholderPage title="Product Sections" />} />
   <Route path="configurations/product-covers" element={<PlaceholderPage title="Product Covers" />} />

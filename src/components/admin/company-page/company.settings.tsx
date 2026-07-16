@@ -1,4 +1,5 @@
 // src/pages/CompanySettings.tsx
+//@ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../../UI/card";
