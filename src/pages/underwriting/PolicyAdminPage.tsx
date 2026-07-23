@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom"; // Add useLocation
 import { useDispatch, useSelector } from "react-redux";
 import { fetchInvestmentProposals } from "../../features/reducers/proposalReducers/proposalsSlice";
 import type { Proposal } from "../../features/reducers/proposalReducers/proposalsSlice";
@@ -36,10 +36,24 @@ const StatusBadge = ({ status }: { status: string | null }) => {
 const PolicyAdminPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation(); // Add this
+
   const { items, loading, error, totalCount } = useSelector((s: any) => s.investmentProposals);
 
+  // Determine active tag from URL path
+  const getActiveTagFromPath = () => {
+    const path = location.pathname;
+    if (path.includes("/investment-policies")) {
+      return "B"; // Investment Policies
+    } else if (path.includes("/traditional-policies")) {
+      return "A"; // Traditional Policies
+    }
+    // Default to "B" if no match (or you can use localStorage/sessionStorage)
+    return "B";
+  };
+
   // active tag (B = Investment, A = Traditional)
-  const [activeTag, setActiveTag] = useState<"A" | "B">("B");
+  const [activeTag, setActiveTag] = useState<"A" | "B">(getActiveTagFromPath);
 
   // filters
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -53,6 +67,15 @@ const PolicyAdminPage = () => {
   // pagination
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
+
+  // Update activeTag when URL changes
+  useEffect(() => {
+    const newTag = getActiveTagFromPath();
+    if (newTag !== activeTag) {
+      setActiveTag(newTag);
+      setPage(1);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     dispatch(fetchInvestmentProposals(activeTag));
@@ -114,7 +137,19 @@ const PolicyAdminPage = () => {
     }
   };
 
-  
+  // Handle tab change with navigation
+  const handleTabChange = (tag: "A" | "B") => {
+    setActiveTag(tag);
+    setPage(1);
+    
+    // Navigate to the appropriate route
+    if (tag === "B") {
+      navigate("/underwriting/individual/policy-admin/investment-policies");
+    } else {
+      navigate("/underwriting/individual/policy-admin/traditional-policies");
+    }
+  };
+
   // ─── loading skeleton ─────────────────────────────────────
   if (loading) {
     return (
@@ -161,7 +196,7 @@ const PolicyAdminPage = () => {
       {/* Policy Type Tabs - Modern Version */}
       <div className="flex items-center gap-0 border-b-2 border-gray-200 bg-white rounded-t-xl overflow-hidden">
         <button
-          onClick={() => { setActiveTag("B"); setPage(1); }}
+          onClick={() => handleTabChange("B")}
           className={`
             px-8 py-3.5 text-sm font-semibold transition-all duration-200 relative
             ${activeTag === "B" 
@@ -179,7 +214,7 @@ const PolicyAdminPage = () => {
           )}
         </button>
         <button
-          onClick={() => { setActiveTag("A"); setPage(1); }}
+          onClick={() => handleTabChange("A")}
           className={`
             px-8 py-3.5 text-sm font-semibold transition-all duration-200 relative
             ${activeTag === "A" 
@@ -198,6 +233,7 @@ const PolicyAdminPage = () => {
         </button>
       </div>
 
+      {/* Rest of your component remains the same... */}
       {/* Search & Filters */}
       <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <button

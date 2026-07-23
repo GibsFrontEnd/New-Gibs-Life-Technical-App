@@ -132,6 +132,43 @@ export interface AggregateTotals {
   [key: string]: any;
 }
 
+// ==================== ENDORSEMENT TYPES ====================
+
+export type EndorsementType = "Renewal" | "Reversal" | "Additional";
+
+/**
+ * Interface for creating an endorsement
+ * POST /api/grouplife/policies/{policyNo}/details/{sourceEndorsementNo}/endorsement
+ */
+export interface CreateEndorsementRequest {
+  /** The policy number to create endorsement for */
+  policyNo: string;
+  /** The source endorsement number to base the endorsement on */
+  sourceEndorsementNo: string;
+  /** The type of endorsement: Renewal, Reversal, or Additional */
+  type: EndorsementType;
+}
+
+/**
+ * Interface for the endorsement response
+ */
+export interface CreateEndorsementResponse {
+  /** The detail ID of the new endorsement */
+  detailID: number;
+  /** The policy number */
+  policyNo: string;
+  /** The new endorsement number */
+  endorsementNo: string;
+  /** Certificate or document number */
+  certOrDocNo: string;
+  /** Name of the insured */
+  insuredName: string;
+  /** Indicates if a new record was created */
+  created: boolean;
+}
+
+// ==================== SLICE STATE ====================
+
 export interface GroupLifeQuotationState {
   quotations: GroupLifePolicy[];
   currentQuotation: GroupLifePolicy | null;
@@ -143,6 +180,8 @@ export interface GroupLifeQuotationState {
   policies: GroupLifePolicyListItem[];
   policiesTotalCount: number;
   policiesTotalPages: number;
+  // NEW: Endorsement tracking
+  createdEndorsement: CreateEndorsementResponse | null;
   loading: {
     list: boolean;
     detail: boolean;
@@ -157,6 +196,7 @@ export interface GroupLifeQuotationState {
     anb: boolean;
     duration: boolean;
     policies: boolean; // NEW: Loading state for policies
+    endorsement: boolean; // NEW: Loading state for endorsement
   };
   error: {
     list: string | null;
@@ -172,6 +212,7 @@ export interface GroupLifeQuotationState {
     anb: string | null;
     duration: string | null;
     policies: string | null; // NEW: Error state for policies
+    endorsement: string | null; // NEW: Error state for endorsement
   };
 }
 
@@ -209,6 +250,8 @@ const initialState: GroupLifeQuotationState = {
   policies: [],
   policiesTotalCount: 0,
   policiesTotalPages: 0,
+  // NEW: Endorsement tracking
+  createdEndorsement: null,
   loading: {
     list: false,
     detail: false,
@@ -223,6 +266,7 @@ const initialState: GroupLifeQuotationState = {
     anb: false,
     duration: false,
     policies: false, // NEW
+    endorsement: false, // NEW
   },
   error: {
     list: null,
@@ -238,6 +282,7 @@ const initialState: GroupLifeQuotationState = {
     anb: null,
     duration: null,
     policies: null, // NEW
+    endorsement: null, // NEW
   },
 };
 
@@ -273,8 +318,6 @@ export const createGroupLifePolicy = createAsyncThunk(
   }
 );
 
-// In groupLifeQuotationSlice.ts - update the fetchGroupLifePolicy thunk
-
 // GET /api/grouplife/policies/policyNo - Get policy by number
 export const fetchGroupLifePolicy = createAsyncThunk(
   "groupLifeQuotations/fetchPolicy",
@@ -284,7 +327,6 @@ export const fetchGroupLifePolicy = createAsyncThunk(
         throw new Error("Policy number is required");
       }
 
-      // ✅ CORRECT ENDPOINT: Use /policyNo with query parameter
       const response = await fetch(
         `${SERVER_URL}/grouplife/policies/policyNo?policyNo=${encodeURIComponent(policyNo)}`,
         {
@@ -469,8 +511,6 @@ export const fetchPolicyDetail = createAsyncThunk(
     }
   }
 );
-
-
 
 // GET /api/grouplife/policies/policie/members - List members for a policy
 export const fetchPolicyMembers = createAsyncThunk(
@@ -906,6 +946,67 @@ export const computeDuration = createAsyncThunk(
   }
 );
 
+// ================================================================
+// 🆕 NEW ENDPOINT: POST /api/grouplife/policies/{policyNo}/details/{sourceEndorsementNo}/endorsement
+// ================================================================
+
+// In groupLifeQuotationSlice.ts
+
+export const createEndorsement = createAsyncThunk(
+  "groupLifeQuotations/createEndorsement",
+  async (request: CreateEndorsementRequest, { rejectWithValue }) => {
+    try {
+      // Validate required fields
+      if (!request.policyNo) {
+        throw new Error("Policy number is required");
+      }
+      if (!request.sourceEndorsementNo) {
+        throw new Error("Source endorsement number is required");
+      }
+      if (!request.type) {
+        throw new Error("Endorsement type is required (Renewal, Reversal, or Additional)");
+      }
+
+      // ✅ CORRECT: Use the endpoint with path placeholders and query parameters
+      const url = new URL(`${SERVER_URL}/grouplife/policies/policyNo/details/sourceEndorsementNo/endorsement`);
+      url.searchParams.append('policyNo', request.policyNo);
+      url.searchParams.append('sourceEndorsementNo', request.sourceEndorsementNo);
+      url.searchParams.append('type', request.type);
+
+      console.log(`📡 Creating ${request.type} endorsement for policy ${request.policyNo} from source endorsement ${request.sourceEndorsementNo}`);
+      console.log(`🔗 URL: ${url.toString()}`); // Log the full URL for debugging
+
+      const response = await fetch(url.toString(), {
+        method: "POST",
+        headers: getHeaders(),
+        // No body required - all data is in the URL
+      });
+
+      // Handle non-OK responses
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Parse the response
+      const result: CreateEndorsementResponse = await response.json();
+      
+      console.log(`✅ ${request.type} endorsement created successfully:`, result);
+      
+      return result;
+    } catch (error: any) {
+      console.error(`❌ Error creating ${request.type} endorsement:`, error);
+      return rejectWithValue(error.message || "Failed to create endorsement");
+    }
+  }
+);
+
 // ==================== SLICE ====================
 
 const groupLifeQuotationSlice = createSlice({
@@ -928,6 +1029,7 @@ const groupLifeQuotationSlice = createSlice({
       state.currentMembers = [];
       state.policyDetail = null;
       state.aggregateTotals = null;
+      state.createdEndorsement = null; // Clear endorsement when clearing quotation
     },
     setCurrentMembers: (
       state,
@@ -1013,6 +1115,11 @@ const groupLifeQuotationSlice = createSlice({
     },
     setPolicyDetail: (state, action: PayloadAction<PolicyDetail | null>) => {
       state.policyDetail = action.payload;
+    },
+    // NEW: Clear endorsement state
+    clearEndorsement: (state) => {
+      state.createdEndorsement = null;
+      state.error.endorsement = null;
     },
   },
   extraReducers: (builder) => {
@@ -1116,27 +1223,25 @@ const groupLifeQuotationSlice = createSlice({
         state.error.detail = action.payload as string;
       })
 
-    // Fetch Members - REPLACE THIS ENTIRE BLOCK
-.addCase(fetchPolicyMembers.pending, (state) => {
-  state.loading.detail = true;
-  state.error.detail = null;
-})
-.addCase(fetchPolicyMembers.fulfilled, (state, action) => {
-  state.loading.detail = false;
-  // ✅ Store the mapped members in currentMembers
-  state.currentMembers = action.payload || [];
-  // Also update the currentQuotation if it exists
-  if (state.currentQuotation) {
-    state.currentQuotation.members = action.payload || [];
-    state.currentQuotation.totalMembers = action.payload?.length || 0;
-  }
-  console.log("✅ Redux state updated with members:", state.currentMembers);
-})
-.addCase(fetchPolicyMembers.rejected, (state, action) => {
-  state.loading.detail = false;
-  state.error.detail = action.payload as string;
-  console.error("❌ Redux error fetching members:", action.payload);
-})
+      // Fetch Members
+      .addCase(fetchPolicyMembers.pending, (state) => {
+        state.loading.detail = true;
+        state.error.detail = null;
+      })
+      .addCase(fetchPolicyMembers.fulfilled, (state, action) => {
+        state.loading.detail = false;
+        state.currentMembers = action.payload || [];
+        if (state.currentQuotation) {
+          state.currentQuotation.members = action.payload || [];
+          state.currentQuotation.totalMembers = action.payload?.length || 0;
+        }
+        console.log("✅ Redux state updated with members:", state.currentMembers);
+      })
+      .addCase(fetchPolicyMembers.rejected, (state, action) => {
+        state.loading.detail = false;
+        state.error.detail = action.payload as string;
+        console.error("❌ Redux error fetching members:", action.payload);
+      })
 
       // Compute Member Premium
       .addCase(computeMemberPremium.pending, (state) => {
@@ -1145,10 +1250,9 @@ const groupLifeQuotationSlice = createSlice({
       })
       .addCase(computeMemberPremium.fulfilled, (state, action) => {
         state.loading.compute = false;
-        // Handle the computed premium result
         const result = action.payload;
         if (result && state.currentQuotation) {
-          // Update the current member's premium if needed
+          // Handle the computed premium result
         }
       })
       .addCase(computeMemberPremium.rejected, (state, action) => {
@@ -1156,25 +1260,23 @@ const groupLifeQuotationSlice = createSlice({
         state.error.compute = action.payload as string;
       })
 
-     // Save Member - UPDATE THIS BLOCK
-.addCase(savePolicyMember.pending, (state) => {
-  state.loading.update = true;
-  state.error.update = null;
-})
-.addCase(savePolicyMember.fulfilled, (state, action) => {
-  state.loading.update = false;
-  // The save returns the saved member with memberID
-  const member = action.payload;
-  console.log("✅ Member saved:", member);
-  
-  // The member is saved on the server, so we should refetch
-  // The component will call fetchMembers after save
-})
-.addCase(savePolicyMember.rejected, (state, action) => {
-  state.loading.update = false;
-  state.error.update = action.payload as string;
-  console.error("❌ Error saving member:", action.payload);
-})
+      // Save Member
+      .addCase(savePolicyMember.pending, (state) => {
+        state.loading.update = true;
+        state.error.update = null;
+      })
+      .addCase(savePolicyMember.fulfilled, (state, action) => {
+        state.loading.update = false;
+        const member = action.payload;
+        console.log("✅ Member saved:", member);
+        // The member is saved on the server, so we should refetch
+        // The component will call fetchMembers after save
+      })
+      .addCase(savePolicyMember.rejected, (state, action) => {
+        state.loading.update = false;
+        state.error.update = action.payload as string;
+        console.error("❌ Error saving member:", action.payload);
+      })
 
       // Remove Member
       .addCase(removePolicyMember.pending, (state) => {
@@ -1219,7 +1321,6 @@ const groupLifeQuotationSlice = createSlice({
       .addCase(bulkUploadMembers.fulfilled, (state, action) => {
         state.loading.bulk = false;
         const result = action.payload;
-        // Update the members list with the uploaded members
         if (result && result.totalMembers && state.currentQuotation) {
           // The bulk upload endpoint should return the updated members or count
           // We might need to refetch members after upload
@@ -1237,7 +1338,6 @@ const groupLifeQuotationSlice = createSlice({
       })
       .addCase(parseExcelMembers.fulfilled, (state, action) => {
         state.loading.parse = false;
-        // Store parsed data for preview
         state.currentMembers = action.payload.members || [];
       })
       .addCase(parseExcelMembers.rejected, (state, action) => {
@@ -1290,6 +1390,26 @@ const groupLifeQuotationSlice = createSlice({
       .addCase(computeDuration.rejected, (state, action) => {
         state.loading.duration = false;
         state.error.duration = action.payload as string;
+      })
+
+      // ================================================================
+      // 🆕 NEW: Create Endorsement (Renewal, Reversal, Additional)
+      // ================================================================
+      .addCase(createEndorsement.pending, (state) => {
+        state.loading.endorsement = true;
+        state.error.endorsement = null;
+        state.createdEndorsement = null;
+      })
+      .addCase(createEndorsement.fulfilled, (state, action) => {
+        state.loading.endorsement = false;
+        state.createdEndorsement = action.payload;
+        console.log("✅ Endorsement created and stored in state:", action.payload);
+      })
+      .addCase(createEndorsement.rejected, (state, action) => {
+        state.loading.endorsement = false;
+        state.error.endorsement = action.payload as string;
+        state.createdEndorsement = null;
+        console.error("❌ Endorsement creation failed:", action.payload);
       });
   },
 });
@@ -1308,6 +1428,7 @@ export const {
   setMembersForCurrentQuotation,
   clearAggregateTotals,
   setPolicyDetail,
+  clearEndorsement, // NEW
 } = groupLifeQuotationSlice.actions;
 
 export const selectGroupLifeQuotations = (state: {
@@ -1323,6 +1444,15 @@ export const selectGroupLifePolicies = (state: {
   totalPages: state.groupLifeQuotations.policiesTotalPages,
   loading: state.groupLifeQuotations.loading.policies,
   error: state.groupLifeQuotations.error.policies,
+});
+
+// NEW: Selector for endorsement state
+export const selectEndorsement = (state: {
+  groupLifeQuotations: GroupLifeQuotationState;
+}) => ({
+  createdEndorsement: state.groupLifeQuotations.createdEndorsement,
+  loading: state.groupLifeQuotations.loading.endorsement,
+  error: state.groupLifeQuotations.error.endorsement,
 });
 
 export default groupLifeQuotationSlice.reducer;

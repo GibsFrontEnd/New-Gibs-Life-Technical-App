@@ -149,6 +149,23 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+ // Add this useEffect near the other useEffects
+useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const tab = params.get('tab');
+  const policyFromUrl = params.get('policy');
+  
+  if (tab === 'group-life') {
+    setActiveTab('group-life');
+    // Clean up URL after setting the tab
+    const newSearch = new URLSearchParams(location.search);
+    newSearch.delete('tab');
+    newSearch.delete('policy');
+    const newPath = location.pathname + (newSearch.toString() ? `?${newSearch.toString()}` : '');
+    window.history.replaceState({}, document.title, newPath);
+  }
+}, [location.search]);
+
   const handleSelect = (option: ApiDropdownOption) => {
     onChange(option.id);
     setIsOpen(false);
@@ -380,6 +397,17 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const getSourceFromUrl = () => {
+
+  const params = new URLSearchParams(location.search);
+  return params.get('source') || 'scheme-admin';
+
+  console.log('📍 Source from URL:', sourceFromUrl);
+};
+ 
+
+const sourcePage = getSourceFromUrl();
 
   // ==================== FETCH DROPDOWN OPTIONS FROM API ====================
 
@@ -1144,7 +1172,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate("/underwriting/group-life-quotations");
+     navigate(-1); 
   };
 
   // Show loading state while data loads
@@ -1733,7 +1761,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                     <span className="flex items-center gap-1.5 sm:gap-2">
                       <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       <span className="hidden xs:inline">Group Life Detail</span>
-                      <span className="xs:hidden">GroupLife Detail</span>
+                      <span className="xs:hidden">Group Life Detail</span>
                     </span>
                   </TabsTrigger>
                   
@@ -1803,13 +1831,26 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
                 </TabsContent>
 
                 <TabsContent value="group-life" className="mt-0">
-                  <GroupLifeDetailsTab 
-                    policyNo={policyNo} 
-                    formData={formData} 
-                    members={members}
-                    setMembers={setMembers}
-                  />
-                </TabsContent>
+  <GroupLifeDetailsTab 
+    policyNo={policyNo} 
+    formData={formData} 
+    members={members}
+    setMembers={setMembers}
+    sourcePage={sourcePage as "scheme-admin" | "renewals" | "endorsements" | "convert-to-policy" | "convert-to-scheme"}
+    onRenew={(item) => {
+      // Handle renew action - navigate to renew page or open dialog
+      console.log('Renew policy:', item);
+      // You can navigate to a renew page or open a modal
+      navigate(`/underwriting/group-life-quotations/renew/${encodeURIComponent(item.policyNo)}`);
+    }}
+    onEndorse={(item) => {
+      // Handle endorse action - navigate to endorse page or open dialog
+      console.log('Endorse policy:', item);
+      // You can navigate to an endorse page or open a modal
+      navigate(`/underwriting/group-life-quotations/endorse/${encodeURIComponent(item.policyNo)}`);
+    }}
+  />
+</TabsContent>
 
                 <TabsContent value="credit-note" className="mt-0">
                   <CreditNotesTab policyNo={policyNo} />
