@@ -56,12 +56,41 @@ export interface ProductListResponse {
   totalPages: number;
 }
 
+// ==================== RISKS TYPES ====================
+
+export interface Risk {
+  riskID: string;
+  riskName: string;
+  description: string;
+}
+
+export interface RisksListResponse {
+  items: Risk[];
+  page: number;
+  pageSize: number;
+  pageNumber: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export interface RisksFilters {
+  search?: string;
+  pageNumber?: number;
+  pageSize?: number;
+}
+
+// ==================== PRODUCTS STATE ====================
+
 export interface ProductsState {
   products: Product[];
   currentProduct: Product | null;
   currentProductDetail: ProductDetail | null;
   totalCount: number;
   totalPages: number;
+  // Risks state
+  risks: Risk[];
+  risksTotalCount: number;
+  risksTotalPages: number;
   loading: {
     list: boolean;
     detail: boolean;
@@ -69,6 +98,7 @@ export interface ProductsState {
     update: boolean;
     delete: boolean;
     updateType: boolean;
+    risks: boolean;
   };
   error: {
     list: string | null;
@@ -77,6 +107,7 @@ export interface ProductsState {
     update: string | null;
     delete: string | null;
     updateType: string | null;
+    risks: string | null;
   };
 }
 
@@ -102,6 +133,10 @@ const initialState: ProductsState = {
   currentProductDetail: null,
   totalCount: 0,
   totalPages: 0,
+  // Risks state
+  risks: [],
+  risksTotalCount: 0,
+  risksTotalPages: 0,
   loading: {
     list: false,
     detail: false,
@@ -109,6 +144,7 @@ const initialState: ProductsState = {
     update: false,
     delete: false,
     updateType: false,
+    risks: false,
   },
   error: {
     list: null,
@@ -117,6 +153,7 @@ const initialState: ProductsState = {
     update: null,
     delete: null,
     updateType: null,
+    risks: null,
   },
 };
 
@@ -388,6 +425,90 @@ export const updateProductType = createAsyncThunk(
   }
 );
 
+// ==================== RISKS API CALLS ====================
+
+// GET /api/v1/Risks/List - Fetch all risks
+export const fetchRisks = createAsyncThunk(
+  "products/fetchRisks",
+  async (filters: RisksFilters = {}, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (filters.search) queryParams.append('Search', filters.search);
+      if (filters.pageNumber) queryParams.append('PageNumber', String(filters.pageNumber));
+      if (filters.pageSize) queryParams.append('PageSize', String(filters.pageSize));
+
+      const queryString = queryParams.toString();
+      const url = `${SERVER_URL}/v1/Risks/List${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      
+      return {
+        items: data.items || [],
+        page: data.page || 0,
+        pageSize: data.pageSize || 20,
+        pageNumber: data.pageNumber || 1,
+        totalCount: data.totalCount || 0,
+        totalPages: data.totalPages || 0,
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to fetch risks");
+    }
+  }
+);
+
+// GET /api/v1/Risks/{riskId} - Fetch a single risk
+export const fetchRiskById = createAsyncThunk(
+  "products/fetchRiskById",
+  async (riskId: string, { rejectWithValue }) => {
+    try {
+      if (!riskId) {
+        throw new Error("Risk ID is required");
+      }
+
+      const response = await fetch(
+        `${SERVER_URL}/v1/Risks/${encodeURIComponent(riskId)}`,
+        {
+          method: "GET",
+          headers: getHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      return data as Risk;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to fetch risk");
+    }
+  }
+);
+
 // ==================== SLICE ====================
 
 const productSlice = createSlice({
@@ -407,13 +528,18 @@ const productSlice = createSlice({
     clearErrors: (state) => {
       state.error = initialState.error;
     },
-     clearMessages: (state) => {
-  state.error = initialState.error;
-},
+    clearMessages: (state) => {
+      state.error = initialState.error;
+    },
     clearProducts: (state) => {
       state.products = [];
       state.totalCount = 0;
       state.totalPages = 0;
+    },
+    clearRisks: (state) => {
+      state.risks = [];
+      state.risksTotalCount = 0;
+      state.risksTotalPages = 0;
     },
   },
   extraReducers: (builder) => {
@@ -549,6 +675,45 @@ const productSlice = createSlice({
       .addCase(updateProductType.rejected, (state, action) => {
         state.loading.updateType = false;
         state.error.updateType = action.payload as string;
+      })
+
+      // ==================== RISKS REDUCERS ====================
+      
+      // Fetch Risks List
+      .addCase(fetchRisks.pending, (state) => {
+        state.loading.risks = true;
+        state.error.risks = null;
+      })
+      .addCase(fetchRisks.fulfilled, (state, action) => {
+        state.loading.risks = false;
+        state.risks = action.payload.items || [];
+        state.risksTotalCount = action.payload.totalCount || 0;
+        state.risksTotalPages = action.payload.totalPages || 0;
+      })
+      .addCase(fetchRisks.rejected, (state, action) => {
+        state.loading.risks = false;
+        state.error.risks = action.payload as string;
+      })
+      
+      // Fetch Risk by ID
+      .addCase(fetchRiskById.pending, (state) => {
+        state.loading.risks = true;
+        state.error.risks = null;
+      })
+      .addCase(fetchRiskById.fulfilled, (state, action) => {
+        state.loading.risks = false;
+        // Add or update the risk in the list
+        const risk = action.payload;
+        const index = state.risks.findIndex(r => r.riskID === risk.riskID);
+        if (index !== -1) {
+          state.risks[index] = risk;
+        } else {
+          state.risks.push(risk);
+        }
+      })
+      .addCase(fetchRiskById.rejected, (state, action) => {
+        state.loading.risks = false;
+        state.error.risks = action.payload as string;
       });
   },
 });
@@ -561,10 +726,13 @@ export const {
   clearCurrentProduct,
   clearErrors,
   clearProducts,
-   clearMessages,
+  clearMessages,
+  clearRisks,
 } = productSlice.actions;
 
-// Selectors
+// ==================== SELECTORS ====================
+
+// Products selectors
 export const selectProducts = (state: { products: ProductsState }) => state.products;
 
 export const selectProductsList = (state: { products: ProductsState }) => ({
@@ -580,6 +748,23 @@ export const selectCurrentProduct = (state: { products: ProductsState }) => ({
   currentProductDetail: state.products.currentProductDetail,
   loading: state.products.loading.detail,
   error: state.products.error.detail,
+});
+
+// Risks selectors
+export const selectRisks = (state: { products: ProductsState }) => ({
+  risks: state.products.risks,
+  totalCount: state.products.risksTotalCount,
+  totalPages: state.products.risksTotalPages,
+  loading: state.products.loading.risks,
+  error: state.products.error.risks,
+});
+
+export const selectRisksList = (state: { products: ProductsState }) => ({
+  risks: state.products.risks,
+  totalCount: state.products.risksTotalCount,
+  totalPages: state.products.risksTotalPages,
+  loading: state.products.loading.risks,
+  error: state.products.error.risks,
 });
 
 export default productSlice.reducer;

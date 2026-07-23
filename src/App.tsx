@@ -49,6 +49,7 @@ import PaymentSuccess from "./components/PaymentSuccess"
 import PaymentFailed from "./components/PaymentFailed"
 import TransactionHistory from "./pages/customer/TransactionHistory";
 import SchemeRenewals from "./components/groupLife/SchemeRenewals";
+import Endorsement from "./pages/underwriting/GroupLife/Endorsement"
 import CreditLifeSchemeAdmin from "./components/CreditLife/CreditLifeSchemeAdmin";
 import CreditLifeSchemeRenewals from "./components/CreditLife/CreditLifeSchemeRenewals";
 
@@ -70,6 +71,11 @@ import CreditLifeClaimFormPage from "./components/claims/CreditLife/CreditLifeFo
 
 import PlaceholderPage from "./pages/underwriting/PlaceHolderPage";
 import ProductLine from "./pages/admin/configuration/ProductLine"; 
+import ProductCovers from "./pages/admin/configuration/ProductCovers";
+import ProductSetting from "./pages/admin/configuration/ProductSettings";
+import ProductSections from "./pages/admin/configuration/ProductSections";
+import ProductSMI from "./pages/admin/configuration/ProductSMI";
+import ProductMainClass from "./pages/admin/configuration/ProductMainClass";
 import ProductForm from "./components/admin/configuration/ProductLineForm"; 
 
 const App: React.FC = () => {
@@ -161,6 +167,7 @@ const App: React.FC = () => {
             <Route path="convert-to-scheme/group-life-policies" element={<UnderwritingSubPage />} />
             <Route path="convert-to-scheme/credit-life-policies" element={<UnderwritingSubPage />} />
             <Route path="group-life/scheme-renewals" element={<SchemeRenewals />} />
+            <Route path="group-life/endorsement" element={<Endorsement />} />
 
             {/* All other underwriting routes - just use UnderwritingSubPage */}
             <Route path="individual/endorsements" element={<UnderwritingSubPage />} />
@@ -168,7 +175,6 @@ const App: React.FC = () => {
             <Route path="individual/processing" element={<UnderwritingSubPage />} />
             <Route path="individual/processing/*" element={<UnderwritingSubPage />} />
             <Route path="individual/maintenance" element={<UnderwritingSubPage />} />
-            <Route path="group-life/endorsements" element={<UnderwritingSubPage />} />
             <Route path="group-life/maintenance" element={<UnderwritingSubPage />} />
             <Route path="credit-life/scheme-admin" element={<UnderwritingSubPage />} />
             <Route path="credit-life/scheme-renewals" element={<UnderwritingSubPage />} />
@@ -254,17 +260,41 @@ const App: React.FC = () => {
   <Route path="configurations" element={<PlaceholderPage title="Configurations" />} />
   
   {/* Individual configuration sub-items */}
-  <Route path="configurations/product-main-class" element={<PlaceholderPage title="Product Main Class" />} />
- <Route path="configurations/product-lines" element={<ProductLine />} />
-  {/* Product Form Routes - New, Edit, View */}
-  <Route path="configurations/product-lines/new" element={<ProductForm mode="new" />} />
-  <Route path="configurations/product-lines/edit/:id" element={<ProductForm mode="edit" />} />
-  <Route path="configurations/product-lines/view/:id" element={<ProductForm mode="view" />} />
+ {/* Product Lines */}
+  <Route path="configurations/product-lines" element={<ProductLine />} />
+  <Route path="configurations/product-lines/new" element={<ProductForm mode="new" configType="product-lines" />} />
+  <Route path="configurations/product-lines/edit/:id" element={<ProductForm mode="edit" configType="product-lines" />} />
+  <Route path="configurations/product-lines/view/:id" element={<ProductForm mode="view" configType="product-lines" />} />
 
-  <Route path="configurations/product-settings" element={<PlaceholderPage title="Product Settings" />} />
-  <Route path="configurations/product-sections" element={<PlaceholderPage title="Product Sections" />} />
-  <Route path="configurations/product-covers" element={<PlaceholderPage title="Product Covers" />} />
-  <Route path="configurations/product-smi" element={<PlaceholderPage title="Product SMI" />} />
+  {/* Product Main Class */}
+  <Route path="configurations/product-main-class" element={<ProductMainClass />} />
+  <Route path="configurations/product-main-class/new" element={<ProductForm mode="new" configType="product-main-class" />} />
+  <Route path="configurations/product-main-class/edit/:id" element={<ProductForm mode="edit" configType="product-main-class" />} />
+  <Route path="configurations/product-main-class/view/:id" element={<ProductForm mode="view" configType="product-main-class" />} />
+
+  {/* Product Settings */}
+  <Route path="configurations/product-settings" element={<ProductSetting />} />
+  <Route path="configurations/product-settings/new" element={<ProductForm mode="new" configType="product-settings" />} />
+  <Route path="configurations/product-settings/edit/:id" element={<ProductForm mode="edit" configType="product-settings" />} />
+  <Route path="configurations/product-settings/view/:id" element={<ProductForm mode="view" configType="product-settings" />} />
+
+  {/* Product Sections */}
+  <Route path="configurations/product-sections" element={<ProductSections />} />
+  <Route path="configurations/product-sections/new" element={<ProductForm mode="new" configType="product-sections" />} />
+  <Route path="configurations/product-sections/edit/:id" element={<ProductForm mode="edit" configType="product-sections" />} />
+  <Route path="configurations/product-sections/view/:id" element={<ProductForm mode="view" configType="product-sections" />} />
+
+  {/* Product Covers */}
+  <Route path="configurations/product-covers" element={<ProductCovers />} />
+  <Route path="configurations/product-covers/new" element={<ProductForm mode="new" configType="product-covers" />} />
+  <Route path="configurations/product-covers/edit/:id" element={<ProductForm mode="edit" configType="product-covers" />} />
+  <Route path="configurations/product-covers/view/:id" element={<ProductForm mode="view" configType="product-covers" />} />
+
+  {/* Product SMI */}
+  <Route path="configurations/product-smi" element={<ProductSMI />} />
+  <Route path="configurations/product-smi/new" element={<ProductForm mode="new" configType="product-smi" />} />
+  <Route path="configurations/product-smi/edit/:id" element={<ProductForm mode="edit" configType="product-smi" />} />
+  <Route path="configurations/product-smi/view/:id" element={<ProductForm mode="view" configType="product-smi" />} />
   <Route path="configurations/bus-channel" element={<PlaceholderPage title="Bus Channel" />} />
   <Route path="configurations/sub-channel" element={<PlaceholderPage title="Sub Channel" />} />
   <Route path="configurations/commission-rates" element={<PlaceholderPage title="Commission Rates" />} />
