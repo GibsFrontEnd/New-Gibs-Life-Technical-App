@@ -19,6 +19,24 @@ import {
 import Button from "../UI/Button";
 import logoImage from "../../assets/logo.jpg";
 
+// Helper function to get config value - no fallback
+const getConfigValue = (key: string): string | undefined => {
+  try {
+    if (typeof window !== 'undefined' && window.APP_CONFIG) {
+      return window.APP_CONFIG[key];
+    }
+    return undefined;
+  } catch (error) {
+    console.warn(`Failed to get config value for ${key}:`, error);
+    return undefined;
+  }
+};
+
+// Get the quotations URL from config - no hardcoded fallback
+const getQuotationsUrl = (): string | undefined => {
+  return getConfigValue('QUOTATIONS_URL');
+};
+
 const Header: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
@@ -26,6 +44,16 @@ const Header: React.FC = () => {
   const [time, setTime] = useState(0);
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
   const navigate = useNavigate();
+
+  // Get quotations URL from config
+  const quotationsUrl = getQuotationsUrl();
+
+  // Log a warning if quotations URL is not configured
+  useEffect(() => {
+    if (!quotationsUrl) {
+      console.warn('⚠️ QUOTATIONS_URL is not configured in APP_CONFIG. Please fix');
+    }
+  }, [quotationsUrl]);
 
   // Animated background effects
   useEffect(() => {
@@ -89,13 +117,14 @@ const Header: React.FC = () => {
     { path: "/csu/partners", label: "Partners", icon: Handshake },
   ];
 
-  // Quotations - External Link
+  // Quotations - Dynamic URL from config
   const quotationsItems = [
     { 
-      path: "https://fortislifetest.newgibsonline.com", 
+      path: quotationsUrl, 
       label: "Go to Quotations", 
       icon: TrendingUp,
-      external: true 
+      external: true,
+      disabled: !quotationsUrl
     },
   ];
 
@@ -194,13 +223,14 @@ const Header: React.FC = () => {
     },
     {
       title: "Quotations",
-      link: "https://fortislifetest.newgibsonline.com",
+      link: quotationsUrl, // Use dynamic URL or '#' as fallback
       hidden: false,
       roles: ["admin", "agent", "user"],
       hasDropdown: true,
       dropdownItems: quotationsItems,
       icon: PenTool,
       external: true,
+      disabled: !quotationsUrl, // Disable if no URL configured
     },
     {
       title: "Underwriting",
@@ -264,6 +294,10 @@ const Header: React.FC = () => {
 
   // Handle external link click
   const handleExternalLink = (url: string) => {
+    if (!url || url === '#') {
+      console.warn('⚠️ Quotations URL is not configured');
+      return;
+    }
     window.open(url, '_blank', 'noopener,noreferrer');
     setMenuOpen(false);
     setOpenDropdown(null);
@@ -295,7 +329,13 @@ const Header: React.FC = () => {
                 <button
                   key={index}
                   onClick={() => handleExternalLink(item.link)}
-                  className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-white/80 text-sm font-medium transition-all duration-200 hover:bg-white/10 hover:text-white"
+                  disabled={item.disabled}
+                  className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-white/80 text-sm font-medium transition-all duration-200 ${
+                    item.disabled 
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : 'hover:bg-white/10 hover:text-white'
+                  }`}
+                  title={item.disabled ? 'Quotations URL not configured' : ''}
                 >
                   {item.icon && <item.icon size={18} />}
                   <span>{item.title}</span>
@@ -458,11 +498,15 @@ const Header: React.FC = () => {
                 <div className="mb-1">
                   <button
                     onClick={() => toggleDropdown(item.title)}
+                    disabled={item.disabled}
                     className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                      openDropdown === item.title
-                        ? 'bg-blue-500/20 text-blue-300'
-                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                      item.disabled
+                        ? 'opacity-50 cursor-not-allowed text-white/40'
+                        : openDropdown === item.title
+                          ? 'bg-blue-500/20 text-blue-300'
+                          : 'text-white/80 hover:text-white hover:bg-white/10'
                     }`}
+                    title={item.disabled ? 'Quotations URL not configured' : ''}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {item.icon && <item.icon size={18} className="flex-shrink-0" />}
@@ -475,7 +519,7 @@ const Header: React.FC = () => {
                     />
                   </button>
 
-                  {openDropdown === item.title && (
+                  {openDropdown === item.title && !item.disabled && (
                     <div className="ml-6 border-l-2 border-blue-400/30 pl-3 mt-1 space-y-1 max-h-[400px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
                       {item.dropdownItems.map((dropdownItem, idx) => {
                         const IconComponent = dropdownItem.icon;
@@ -483,7 +527,12 @@ const Header: React.FC = () => {
                           <button
                             key={idx}
                             onClick={() => handleExternalLink(dropdownItem.path)}
-                            className="relative flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all duration-200 w-full text-white/60 hover:text-white hover:bg-white/5"
+                            disabled={dropdownItem.disabled}
+                            className={`relative flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all duration-200 w-full ${
+                              dropdownItem.disabled
+                                ? 'opacity-50 cursor-not-allowed text-white/30'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                            }`}
                           >
                             {IconComponent && <IconComponent size={16} className="flex-shrink-0" />}
                             <span className="truncate">{dropdownItem.label}</span>
@@ -524,7 +573,13 @@ const Header: React.FC = () => {
                 item.external ? (
                   <button
                     onClick={() => handleExternalLink(item.link)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-white/80 hover:text-white hover:bg-white/10"
+                    disabled={item.disabled}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                      item.disabled
+                        ? 'opacity-50 cursor-not-allowed text-white/40'
+                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                    }`}
+                    title={item.disabled ? 'Quotations URL not configured' : ''}
                   >
                     {item.icon && <item.icon size={18} className="flex-shrink-0" />}
                     <span className="text-sm truncate">{item.title}</span>

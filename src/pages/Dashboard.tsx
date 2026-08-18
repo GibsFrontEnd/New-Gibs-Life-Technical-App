@@ -1,5 +1,4 @@
 // @ts-nocheck
-
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import CustomerDashboard from "./customer/CustomerDashboard";
@@ -12,7 +11,6 @@ import {
   AlertCircle,
   RefreshCw,
   Settings,
-  DollarSign,
   Calendar,
   CheckCircle,
   Building2,
@@ -29,6 +27,11 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 
+// ========== NAIRA ICON using Unicode ==========
+const NairaIcon = ({ className }: { className?: string }) => (
+  <span className={className}>₦</span>
+);
+
 // ========== STAT CARD ==========
 const StatCard = ({ title, value, icon: Icon, iconBg, iconColor, trend, trendLabel }) => {
   return (
@@ -43,7 +46,11 @@ const StatCard = ({ title, value, icon: Icon, iconBg, iconColor, trend, trendLab
             <p className="text-2xl font-bold text-gray-900 mt-1.5 group-hover:scale-105 transition-transform duration-300 origin-left">{value}</p>
           </div>
           <div className={`${iconBg} p-3 rounded-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
-            <Icon className={`w-5 h-5 ${iconColor}`} />
+            {typeof Icon === 'string' ? (
+              <span className={`w-5 h-5 text-xl font-bold ${iconColor}`}>₦</span>
+            ) : (
+              <Icon className={`w-5 h-5 ${iconColor}`} />
+            )}
           </div>
         </div>
         {trend && (
@@ -203,7 +210,7 @@ const Dashboard = () => {
           <StatCard
             title="Total Premium"
             value="₦45.2M"
-            icon={DollarSign}
+            icon={NairaIcon}
             iconBg="bg-emerald-50"
             iconColor="text-emerald-600"
             trend={12.5}
@@ -275,8 +282,6 @@ const Dashboard = () => {
             />
           </div>
         </div>
-
-       
 
         {/* ===== SECTION CARDS ===== */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
