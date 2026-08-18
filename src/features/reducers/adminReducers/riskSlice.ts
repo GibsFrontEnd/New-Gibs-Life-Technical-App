@@ -14,7 +14,7 @@ import { decryptData } from "../../../utils/encrypt-utils";
 
 const encryptedToken = localStorage.getItem("token");
 
-const API_BASE_URL = "https://core-api.newgibsonline.com/api";
+const API_BASE_URL = "https://lifetechnicalapi.newgibsonline.com/api";
 
 // You'll need to get this token from your auth system
 const getAuthToken = () => {

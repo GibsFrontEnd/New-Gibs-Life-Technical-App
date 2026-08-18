@@ -51,10 +51,21 @@ import {
   DialogTitle,
   DialogSubTitle,
 } from "../../components/UI/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../components/UI/alert-dialog";
 import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
 import {
-  selectGroupLifeQuotations,
+  selectGroupLifePolicies,
   setCurrentQuotation,
+  fetchGroupLifePolicies,
   fetchGroupLifePolicy,
 } from "../../features/reducers/groupLifeReducers/groupLifeQuotationSlice";
 import { formatDate, formatCurrency } from "../../utils/ui-utilities";
@@ -84,10 +95,10 @@ export default function SchemeRenewals() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { toast } = useToast();
-  const { quotations, loading, totalCount } = useAppSelector(
-    selectGroupLifeQuotations
-  );
-  const isLoading = Boolean(loading?.list);
+  
+  // ✅ Use selectGroupLifePolicies instead of selectGroupLifeQuotations
+  const { policies, totalCount, totalPages, loading, error } = useAppSelector(selectGroupLifePolicies);
+  const isLoading = loading || false;
 
   const [isMobile, setIsMobile] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -98,6 +109,8 @@ export default function SchemeRenewals() {
     endDate: "",
     status: "all",
     renewalStatus: "all",
+    subRiskId: "all",
+    tag: "GL",
   });
 
   const [selectedQuotations, setSelectedQuotations] = useState<Set<string>>(
@@ -119,29 +132,28 @@ export default function SchemeRenewals() {
   const [renewalDate, setRenewalDate] = useState("");
   const [isProcessingRenewal, setIsProcessingRenewal] = useState(false);
 
+  // ✅ Fetch policies when component mounts or when page/filters change
+  useEffect(() => {
+    console.log("📊 Fetching group life policies for renewals...");
+
+    dispatch(fetchGroupLifePolicies({
+      page: currentPage,
+      pageSize: pageSize,
+      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+    }));
+  }, [dispatch, currentPage, pageSize, filterCriteria.subRiskId]);
+
   const getQuotationId = (quote: any) => {
-    return quote.id || quote.quoteID || quote.policyNo;
+    return quote.id || quote.quoteID || quote.policyNo || quote.transGUID;
   };
 
   const getQuotationNumber = (quote: any) => {
-    return quote.quotationNumber || quote.quoteNo || quote.policyNo;
+    return quote.quotationNumber || quote.quoteNo || quote.policyNo || quote.transGUID;
   };
 
   const getCompanyName = (quote: any) => {
-    return quote.companyName || quote.surName;
+    return quote.companyName || quote.surName || quote.insuredName || quote.fullName || "";
   };
-
-  const refreshQuotations = () => {
-    // Since we don't have a fetch all endpoint, we'll use the existing data
-    // and just re-filter
-    setCurrentPage(1);
-  };
-
-  // Load quotations from the slice state
-  useEffect(() => {
-    // The quotations are already loaded from the slice
-    // We just need to filter them for renewals
-  }, [quotations]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -181,17 +193,9 @@ export default function SchemeRenewals() {
   };
 
   const handleProcessRenewal = async (quote: any) => {
-    setSelectedForRenewal(quote);
-    // Set default renewal date to 1 year from effective date
-    const effectiveDate = quote.effectiveDate || quote.startDate;
-    if (effectiveDate) {
-      const date = new Date(effectiveDate);
-      date.setFullYear(date.getFullYear() + 1);
-      setRenewalDate(date.toISOString().split('T')[0]);
-    } else {
-      setRenewalDate(new Date().toISOString().split('T')[0]);
-    }
-    setShowRenewalDialog(true);
+    dispatch(setCurrentQuotation(quote));
+    const quoteNumber = getQuotationNumber(quote);
+    navigate(`/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`);
   };
 
   const confirmRenewal = async () => {
@@ -238,10 +242,13 @@ export default function SchemeRenewals() {
       setShowRenewalDialog(false);
       setSelectedForRenewal(null);
       
-      // Refresh the quotations by fetching the updated data
-      // Since we don't have a fetch all endpoint, we'll just reload the page data
-      // by calling the fetchGroupLifePolicy for each quote or using the existing data
-      refreshQuotations();
+      // ✅ Refresh the policies list
+      dispatch(fetchGroupLifePolicies({
+        page: currentPage,
+        pageSize: pageSize,
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+      }));
+      
     } catch (error: any) {
       toast({
         title: "Error",
@@ -300,7 +307,13 @@ export default function SchemeRenewals() {
         }, 5000);
       }
 
-      refreshQuotations();
+      // ✅ Refresh the policies list
+      dispatch(fetchGroupLifePolicies({
+        page: currentPage,
+        pageSize: pageSize,
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+      }));
+      
       setSelectedQuotations(new Set());
       setIsAllSelected(false);
     } catch (err) {
@@ -315,6 +328,17 @@ export default function SchemeRenewals() {
     setCurrentPage(1);
     setSelectedQuotations(new Set());
     setIsAllSelected(false);
+
+    // ✅ Fetch with filters
+    dispatch(fetchGroupLifePolicies({
+      page: 1,
+      pageSize: pageSize,
+      search: filterCriteria.searchValue || undefined,
+      status: filterCriteria.status !== 'all' ? filterCriteria.status.toUpperCase() : undefined,
+      fromDate: filterCriteria.startDate || undefined,
+      toDate: filterCriteria.endDate || undefined,
+      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+    }));
   };
 
   const clearAllFilters = () => {
@@ -325,30 +349,27 @@ export default function SchemeRenewals() {
       endDate: "",
       status: "all",
       renewalStatus: "all",
+      subRiskId: "all",
+      tag: "GL",
     });
     setCurrentPage(1);
     setSelectedQuotations(new Set());
     setIsAllSelected(false);
+
+    // ✅ Reset to default fetch
+    dispatch(fetchGroupLifePolicies({
+      page: 1,
+      pageSize: pageSize,
+    }));
   };
 
-  // Get quotations from the slice state
-  const raw = quotations ?? {};
-  let itemsArray: any[] = [];
-
-  if (Array.isArray(raw)) {
-    itemsArray = raw;
-  } else if (Array.isArray(raw.items)) {
-    itemsArray = raw.items;
-  } else if (Array.isArray(raw.data?.items)) {
-    itemsArray = raw.data.items;
-  } else {
-    itemsArray = [];
-  }
+  // ✅ Get policies from the slice state
+  const itemsArray = policies || [];
 
   const getDisplayQuotations = () => {
     // Filter for schemes that are eligible for renewal (active or expiring soon)
     let filtered = itemsArray.filter((quote: any) => {
-      const status = quote.status?.toUpperCase();
+      const status = quote.status?.toUpperCase() || quote.transSTATUS?.toUpperCase();
       // Show schemes that are ACTIVE, PENDING, or PROSPECT for renewal
       return status === "ACTIVE" || status === "PENDING" || status === "PROSPECT";
     });
@@ -358,7 +379,8 @@ export default function SchemeRenewals() {
       const searchLower = filterCriteria.searchValue.toLowerCase();
       filtered = filtered.filter((quote: any) => {
         if (filterCriteria.searchField === "companyName") {
-          return getCompanyName(quote)?.toLowerCase().includes(searchLower);
+          const name = getCompanyName(quote)?.toLowerCase() || "";
+          return name.includes(searchLower);
         } else {
           return getQuotationNumber(quote)?.toLowerCase().includes(searchLower);
         }
@@ -366,21 +388,22 @@ export default function SchemeRenewals() {
     }
 
     if (filterCriteria.status !== "all") {
-      filtered = filtered.filter((quote: any) => 
-        quote.status?.toUpperCase() === filterCriteria.status.toUpperCase()
-      );
+      filtered = filtered.filter((quote: any) => {
+        const status = quote.status?.toUpperCase() || quote.transSTATUS?.toUpperCase();
+        return status === filterCriteria.status.toUpperCase();
+      });
     }
 
     if (filterCriteria.startDate) {
       filtered = filtered.filter((quote: any) => {
-        const date = quote.effectiveDate || quote.startDate;
+        const date = quote.effectiveDate || quote.startDate || quote.transactionDate;
         return date && date >= filterCriteria.startDate;
       });
     }
 
     if (filterCriteria.endDate) {
       filtered = filtered.filter((quote: any) => {
-        const date = quote.effectiveDate || quote.startDate;
+        const date = quote.effectiveDate || quote.startDate || quote.transactionDate;
         return date && date <= filterCriteria.endDate;
       });
     }
@@ -396,22 +419,30 @@ export default function SchemeRenewals() {
     filterCriteria.renewalStatus !== "all";
 
   const itemsForDisplay = getDisplayQuotations();
-  const effectiveTotalCount = itemsForDisplay.length;
-  const totalPages = Math.max(1, Math.ceil(effectiveTotalCount / pageSize));
+  const effectiveTotalCount = totalCount || itemsForDisplay.length;
+  const totalPagesCount = totalPages || Math.max(1, Math.ceil(effectiveTotalCount / pageSize));
   const startItem = (currentPage - 1) * pageSize;
   const endItem = Math.min(currentPage * pageSize, effectiveTotalCount);
-  const paginatedQuotations = itemsForDisplay.slice(startItem, endItem);
+  const paginatedQuotations = itemsForDisplay;
 
   const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
+    if (page >= 1 && page <= totalPagesCount) {
       setCurrentPage(page);
       setSelectedQuotations(new Set());
       setIsAllSelected(false);
+
+      // ✅ Fetch the new page
+      dispatch(fetchGroupLifePolicies({
+        page: page,
+        pageSize: pageSize,
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+      }));
     }
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status?.toUpperCase()) {
+    const statusUpper = status?.toUpperCase();
+    switch (statusUpper) {
       case "PROSPECT":
         return <Badge variant="outline">Prospect</Badge>;
       case "ACTIVE":
@@ -421,7 +452,7 @@ export default function SchemeRenewals() {
       case "CANCELLED":
         return <Badge variant="destructive">Cancelled</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{status || "Unknown"}</Badge>;
     }
   };
 
@@ -443,11 +474,15 @@ export default function SchemeRenewals() {
     }
   };
 
-  const handleViewScheme = (quote: any) => {
-    dispatch(setCurrentQuotation(quote));
-    const quoteNumber = getQuotationNumber(quote);
-    navigate(`/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`);
-  };
+
+const handleViewScheme = (quote: any) => {
+  dispatch(setCurrentQuotation(quote));
+  const quoteNumber = getQuotationNumber(quote);
+  // ✅ Make sure this is correct
+  const url = `/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}?source=renewals`;
+  console.log('🔗 Navigating to:', url); // Add this to debug
+  navigate(url);
+};
 
   return (
     <div className="min-h-screen">
@@ -495,7 +530,7 @@ export default function SchemeRenewals() {
           )}
 
           {/* Header Card */}
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 mb-6">
+          <Card className="bg-gradient-to-r from-gray-200 to-gray-200 border-white-200 mb-6">
             <div className="p-4 pb-0">
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <RefreshCw className="w-5 h-5 text-blue-600" />
@@ -720,6 +755,16 @@ export default function SchemeRenewals() {
                     ? "Try adjusting your search criteria or clear filters."
                     : "All schemes are either cancelled or already renewed."}
                 </p>
+                {hasActiveFilters && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearAllFilters}
+                    className="mt-3 text-xs border-blue-300 text-blue-700 hover:bg-blue-50 bg-transparent"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="p-4">
@@ -767,7 +812,7 @@ export default function SchemeRenewals() {
                           const quoteId = getQuotationId(quote);
                           const isSelected = selectedQuotations.has(quoteId);
                           const isProcessing = processingRenewals.has(quoteId);
-                          const effectiveDate = quote.effectiveDate || quote.startDate;
+                          const effectiveDate = quote.effectiveDate || quote.startDate || quote.transactionDate;
                           const expiryDate = effectiveDate ? new Date(effectiveDate) : null;
                           if (expiryDate) {
                             expiryDate.setFullYear(expiryDate.getFullYear() + 1);
@@ -806,32 +851,25 @@ export default function SchemeRenewals() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-right font-medium text-blue-900">
-                                {formatCurrency(quote.totalSumInsured || quote.sumAssured)}
+                                {formatCurrency(quote.totalSumInsured || quote.sumAssured || quote.sumInsured)}
                               </TableCell>
                               <TableCell className="text-right font-medium text-blue-900">
-                                {formatCurrency(quote.totalPremium)}
+                                {formatCurrency(quote.totalPremium || quote.grossPremium)}
                               </TableCell>
                               <TableCell>{formatDate(effectiveDate)}</TableCell>
                               <TableCell>
                                 {expiryDate ? formatDate(expiryDate.toISOString()) : "N/A"}
                               </TableCell>
-                              <TableCell>{getStatusBadge(quote.status)}</TableCell>
+                              <TableCell>{getStatusBadge(quote.status || quote.transSTATUS)}</TableCell>
                               <TableCell>{getRenewalStatusBadge(effectiveDate)}</TableCell>
                               <TableCell>
                                 <div className="flex justify-end gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 bg-transparent border-blue-300 text-blue-700 hover:bg-blue-50"
-                                    onClick={() => handleViewScheme(quote)}
-                                  >
-                                    <FileText className="w-3 h-3" />
-                                  </Button>
+                                  
                                   <Button
                                     variant="default"
                                     size="sm"
                                     className="h-8 bg-green-600 hover:bg-green-700 text-white"
-                                    onClick={() => handleProcessRenewal(quote)}
+                                    onClick={() => handleViewScheme(quote)}
                                     disabled={isProcessing}
                                   >
                                     {isProcessing ? (
@@ -854,12 +892,12 @@ export default function SchemeRenewals() {
                 )}
 
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {totalPagesCount > 1 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
                     <div className="text-sm text-muted-foreground order-2 sm:order-1">
                       Showing {startItem + 1} to {endItem} of{" "}
                       {effectiveTotalCount} entries | Page {currentPage} of{" "}
-                      {totalPages}
+                      {totalPagesCount}
                       {selectedQuotations.size > 0 &&
                         ` | ${selectedQuotations.size} selected`}
                     </div>
@@ -886,21 +924,21 @@ export default function SchemeRenewals() {
                       <div className="flex items-center space-x-1">
                         {Array.from(
                           {
-                            length: Math.min(isMobile ? 3 : 5, totalPages),
+                            length: Math.min(isMobile ? 3 : 5, totalPagesCount),
                           },
                           (_, i) => {
                             let pageNum: number;
                             const maxPages = isMobile ? 3 : 5;
-                            if (totalPages <= maxPages) {
+                            if (totalPagesCount <= maxPages) {
                               pageNum = i + 1;
                             } else if (
                               currentPage <= Math.floor(maxPages / 2) + 1
                             ) {
                               pageNum = i + 1;
                             } else if (
-                              currentPage >= totalPages - Math.floor(maxPages / 2)
+                              currentPage >= totalPagesCount - Math.floor(maxPages / 2)
                             ) {
-                              pageNum = totalPages - maxPages + 1 + i;
+                              pageNum = totalPagesCount - maxPages + 1 + i;
                             } else {
                               pageNum = currentPage - Math.floor(maxPages / 2) + i;
                             }
@@ -924,15 +962,15 @@ export default function SchemeRenewals() {
                         variant="outline"
                         size="sm"
                         onClick={() => goToPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
+                        disabled={currentPage === totalPagesCount}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => goToPage(totalPages)}
-                        disabled={currentPage === totalPages}
+                        onClick={() => goToPage(totalPagesCount)}
+                        disabled={currentPage === totalPagesCount}
                         className="hidden sm:flex"
                       >
                         <ChevronsRight className="h-4 w-4" />
@@ -965,7 +1003,7 @@ export default function SchemeRenewals() {
               </p>
               <p className="text-sm text-blue-800 mt-1">
                 <strong>Current Effective Date:</strong>{" "}
-                {selectedForRenewal ? formatDate(selectedForRenewal.effectiveDate || selectedForRenewal.startDate) : ""}
+                {selectedForRenewal ? formatDate(selectedForRenewal.effectiveDate || selectedForRenewal.startDate || selectedForRenewal.transactionDate) : ""}
               </p>
             </div>
 
@@ -1041,21 +1079,22 @@ const SchemeRenewalCard = ({
 }) => {
   const getQuotationId = (quote: any) => {
     if (!quote) return "";
-    return quote.id || quote.quoteID || quote.policyNo || "";
+    return quote.id || quote.quoteID || quote.policyNo || quote.transGUID || "";
   };
 
   const getQuotationNumber = (quote: any) => {
     if (!quote) return "";
-    return quote.quotationNumber || quote.quoteNo || quote.policyNo || "";
+    return quote.quotationNumber || quote.quoteNo || quote.policyNo || quote.transGUID || "";
   };
 
   const getCompanyName = (quote: any) => {
     if (!quote) return "";
-    return quote.companyName || quote.surName || "";
+    return quote.companyName || quote.surName || quote.insuredName || quote.fullName || "";
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status?.toUpperCase()) {
+    const statusUpper = status?.toUpperCase();
+    switch (statusUpper) {
       case "PROSPECT":
         return <Badge variant="outline">Prospect</Badge>;
       case "ACTIVE":
@@ -1065,7 +1104,7 @@ const SchemeRenewalCard = ({
       case "CANCELLED":
         return <Badge variant="destructive">Cancelled</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{status || "Unknown"}</Badge>;
     }
   };
 
@@ -1087,7 +1126,7 @@ const SchemeRenewalCard = ({
     }
   };
 
-  const effectiveDate = quote.effectiveDate || quote.startDate;
+  const effectiveDate = quote.effectiveDate || quote.startDate || quote.transactionDate;
   const expiryDate = effectiveDate ? new Date(effectiveDate) : null;
   if (expiryDate) {
     expiryDate.setFullYear(expiryDate.getFullYear() + 1);
@@ -1114,7 +1153,7 @@ const SchemeRenewalCard = ({
               {getCompanyName(quote)}
             </CardTitle>
           </div>
-          {getStatusBadge(quote.status)}
+          {getStatusBadge(quote.status || quote.transSTATUS)}
         </div>
         <div className="text-sm text-muted-foreground ml-7">
           {getQuotationNumber(quote)}
@@ -1125,13 +1164,13 @@ const SchemeRenewalCard = ({
           <div>
             <span className="font-medium text-muted-foreground">Sum Assured:</span>
             <div className="font-medium">
-              {formatCurrency(quote.totalSumInsured || quote.sumAssured)}
+              {formatCurrency(quote.totalSumInsured || quote.sumAssured || quote.sumInsured)}
             </div>
           </div>
           <div>
             <span className="font-medium text-muted-foreground">Premium:</span>
             <div className="font-medium">
-              {formatCurrency(quote.totalPremium)}
+              {formatCurrency(quote.totalPremium || quote.grossPremium)}
             </div>
           </div>
           <div>

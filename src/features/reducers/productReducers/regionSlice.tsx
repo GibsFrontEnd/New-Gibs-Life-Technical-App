@@ -137,7 +137,7 @@ export const getAllRegions = createAsyncThunk(
   'regions/getAllRegions',
   async (_, { rejectWithValue }) => {
     try {
-      const data = await makeApiCall(`https://core-api.newgibsonline.com/api/regions`)
+      const data = await makeApiCall(`https://lifetechnicalapi.newgibsonline.com/api/regions`)
       return data
     } catch (error) {
        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch regions')
@@ -149,7 +149,7 @@ export const createRegion = createAsyncThunk(
   'regions/createRegion',
   async (regionData: CreateRegionRequest, { rejectWithValue }) => {
     try {
-      const data = await makeApiCall(`https://core-api.newgibsonline.com/api/regions`, {
+      const data = await makeApiCall(`https://lifetechnicalapi.newgibsonline.com/api/regions`, {
         method: 'POST',
         body: JSON.stringify({
           ...regionData,
@@ -169,7 +169,7 @@ export const updateRegion = createAsyncThunk(
   'regions/updateRegion',
   async (regionData: UpdateRegionRequest, { rejectWithValue }) => {
     try {
-      const data = await makeApiCall(`https://core-api.newgibsonline.com/api/regions/${regionData.regionID}`, {
+      const data = await makeApiCall(`https://lifetechnicalapi.newgibsonline.com/api/regions/${regionData.regionID}`, {
         method: 'PUT',
         body: JSON.stringify({
           ...regionData,
@@ -187,7 +187,7 @@ export const deleteRegion = createAsyncThunk(
   'regions/deleteRegion',
   async (regionId: number, { rejectWithValue }) => {
     try {
-      await makeApiCall(`https://core-api.newgibsonline.com/api/regions/${regionId}`, {
+      await makeApiCall(`https://lifetechnicalapi.newgibsonline.com/api/regions/${regionId}`, {
         method: 'DELETE',
       })
       return regionId
@@ -201,7 +201,7 @@ export const checkRegionExists = createAsyncThunk(
   'regions/checkRegionExists',
   async (regionId: number, { rejectWithValue }) => {
     try {
-      const data = await makeApiCall(`https://core-api.newgibsonline.com/api/regions/exists/${regionId}`)
+      const data = await makeApiCall(`https://lifetechnicalapi.newgibsonline.com/api/regions/exists/${regionId}`)
       return data.exists || false
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to check region existence')

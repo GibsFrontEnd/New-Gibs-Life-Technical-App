@@ -49,14 +49,14 @@ export interface ProductState {
   products: Product[];
 
   loading: {
-    getAllProducts: boolean;
+    fetchProducts: boolean;
     getProductDetails: boolean;
     createProduct: boolean;
     updateProduct: boolean;
     deleteProduct: boolean;
   };
   error: {
-    getAllProducts: unknown;
+    fetchProducts: unknown;
     getProductDetails: unknown;
     createProduct: unknown;
     updateProduct: unknown;

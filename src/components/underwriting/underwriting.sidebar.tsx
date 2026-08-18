@@ -77,17 +77,18 @@ const sections = [
       { path: "/underwriting/individual/maintenance", label: "Maintenance", icon: Settings },
     ],
   },
-  {
-    label: "Group Life",
-    key: "group-life",
-    icon: Users,
-    items: [
-      { path: "/underwriting/group-life-quotations", label: "Scheme Admin", icon: Shield }, 
-      { path: "/underwriting/group-life/scheme-renewals", label: "Scheme Renewals", icon: RefreshCw },
-      { path: "/underwriting/group-life/endorsements", label: "Endorsements", icon: FilePen },
-      { path: "/underwriting/group-life/maintenance", label: "Maintenance", icon: Settings },
-    ],
-  },
+ {
+  label: "Group Life",
+  key: "group-life",
+  icon: Users,
+  items: [
+    { path: "/underwriting/group-life-quotations", label: "Scheme Admin", icon: Shield }, 
+    { path: "/underwriting/group-life/scheme-renewals", label: "Scheme Renewals", icon: RefreshCw }, 
+      { path: "/underwriting/group-life/endorsement", label: "Endorsements", icon: FilePen },
+    
+    { path: "/underwriting/group-life/maintenance", label: "Maintenance", icon: Settings },
+  ],
+},
   {
     label: "Credit Life",
     key: "credit-life",

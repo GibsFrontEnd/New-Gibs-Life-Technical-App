@@ -181,25 +181,146 @@ export default function Endorsement() {
   };
 
   const handleEndorsement = (policy: any) => {
-  dispatch(setCurrentQuotation(policy));
-  const policyNumber = getPolicyNumber(policy);
-  // ✅ Pass sourcePage as a query parameter
-  navigate(`/underwriting/group-life-quotations/${encodeURIComponent(policyNumber)}?source=endorsements`);
-};
+    setSelectedForEndorsement(policy);
+    setEndorsementType("ADDITIONAL");
+    setEndorsementReason("");
+    setShowEndorsementDialog(true);
+  };
 
-  const confirmEndorsement = (policy: any) => {
-  dispatch(setCurrentQuotation(policy));
-  const policyNumber = getPolicyNumber(policy);
-  // ✅ Pass sourcePage as a query parameter
-  navigate(`/underwriting/group-life-quotations/${encodeURIComponent(policyNumber)}?source=endorsements`);
-};
+  const confirmEndorsement = async () => {
+    if (!selectedForEndorsement || !endorsementReason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason for the endorsement",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const handleBulkEndorsement = (policy: any) => {
-  dispatch(setCurrentQuotation(policy));
-  const policyNumber = getPolicyNumber(policy);
-  // ✅ Pass sourcePage as a query parameter
-  navigate(`/underwriting/group-life-quotations/${encodeURIComponent(policyNumber)}?source=endorsements`);
-};
+    try {
+      setIsProcessingEndorsement(true);
+      const policyId = getPolicyId(selectedForEndorsement);
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+      const response = await fetch(
+        `${SERVER_URL}/api/v1/lifepolicyAdmin/endorsement`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            policyId: policyId,
+            endorsementType: endorsementType,
+            reason: endorsementReason,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to process endorsement");
+      }
+
+      toast({
+        title: "Success",
+        description: `${endorsementType === "REVERSAL" ? "Reversal" : "Additional"} endorsement processed for ${getCompanyName(selectedForEndorsement)}`,
+        variant: "default",
+      });
+
+      setShowEndorsementDialog(false);
+      setSelectedForEndorsement(null);
+      setEndorsementReason("");
+
+      dispatch(fetchGroupLifePolicies({
+        page: currentPage,
+        pageSize: pageSize,
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+      }));
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process endorsement",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingEndorsement(false);
+    }
+  };
+
+  const handleBulkEndorsement = async () => {
+    if (selectedPolicies.size === 0) return;
+
+    if (!bulkEndorsementReason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason for the bulk endorsement",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setProcessError("");
+      const policiesToEndorse = Array.from(selectedPolicies);
+      setProcessingEndorsements(new Set(policiesToEndorse));
+
+      let successCount = 0;
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+      for (const policyId of policiesToEndorse) {
+        try {
+          const response = await fetch(
+            `${SERVER_URL}/api/v1/lifepolicyAdmin/endorsement`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({
+                policyId: policyId,
+                endorsementType: bulkEndorsementType,
+                reason: bulkEndorsementReason,
+              }),
+            }
+          );
+
+          if (response.ok) {
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Failed to endorse ${policyId}:`, err);
+        }
+      }
+
+      if (successCount > 0) {
+        setSuccessMessage(
+          `Successfully processed ${successCount} out of ${policiesToEndorse.length} endorsements!`
+        );
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 5000);
+      }
+
+      dispatch(fetchGroupLifePolicies({
+        page: currentPage,
+        pageSize: pageSize,
+        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
+      }));
+
+      setSelectedPolicies(new Set());
+      setIsAllSelected(false);
+      setShowBulkEndorsementDialog(false);
+      setBulkEndorsementReason("");
+      
+    } catch (err) {
+      setProcessError("Error during bulk endorsement: " + (err?.message || "Unknown error"));
+    } finally {
+      setProcessingEndorsements(new Set());
+    }
+  };
 
   const applyFilters = () => {
     setCurrentPage(1);
@@ -789,9 +910,200 @@ export default function Endorsement() {
         </div>
       </div>
 
-     
+      {/* Single Endorsement Dialog */}
+      <Dialog open={showEndorsementDialog} onOpenChange={setShowEndorsementDialog}>
+        <DialogContent className="p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle>Process Endorsement</DialogTitle>
+            <DialogSubTitle>
+              {endorsementType === "REVERSAL" ? "Reversal" : "Additional"} endorsement for{" "}
+              <strong>{selectedForEndorsement ? getCompanyName(selectedForEndorsement) : ""}</strong>
+            </DialogSubTitle>
+          </DialogHeader>
 
-     
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-3 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>Policy Number:</strong> {selectedForEndorsement ? getPolicyNumber(selectedForEndorsement) : ""}
+              </p>
+              <p className="text-sm text-blue-800 mt-1">
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="endorsement-type" className="text-sm font-medium text-gray-700">
+                Endorsement Type
+              </Label>
+              <Select
+                value={endorsementType}
+                onValueChange={(value) => setEndorsementType(value as EndorsementType)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select endorsement type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADDITIONAL">
+                    <span className="flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-green-600" />
+                      Additional Endorsement
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="REVERSAL">
+                    <span className="flex items-center gap-2">
+                      <RotateCcw className="w-4 h-4 text-orange-600" />
+                      Reversal Endorsement
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="endorsement-reason" className="text-sm font-medium text-gray-700">
+                Reason for Endorsement
+              </Label>
+              <Input
+                id="endorsement-reason"
+                value={endorsementReason}
+                onChange={(e) => setEndorsementReason(e.target.value)}
+                placeholder="Enter reason for endorsement"
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500">
+                Please provide a clear reason for this endorsement action.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowEndorsementDialog(false);
+                setSelectedForEndorsement(null);
+                setEndorsementReason("");
+              }}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={confirmEndorsement}
+              disabled={isProcessingEndorsement || !endorsementReason.trim()}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isProcessingEndorsement ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <FilePen className="w-4 h-4 mr-2" />
+                  Process Endorsement
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Endorsement Dialog */}
+      <Dialog open={showBulkEndorsementDialog} onOpenChange={setShowBulkEndorsementDialog}>
+        <DialogContent className="p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle>Bulk Endorsement</DialogTitle>
+            <DialogSubTitle>
+              Process endorsements for <strong>{selectedPolicies.size}</strong> selected policies
+            </DialogSubTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-3 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>Selected Policies:</strong> {selectedPolicies.size}
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                All selected policies will receive the same endorsement type and reason.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bulk-endorsement-type" className="text-sm font-medium text-gray-700">
+                Endorsement Type
+              </Label>
+              <Select
+                value={bulkEndorsementType}
+                onValueChange={(value) => setBulkEndorsementType(value as EndorsementType)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select endorsement type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADDITIONAL">
+                    <span className="flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-green-600" />
+                      Additional Endorsement
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="REVERSAL">
+                    <span className="flex items-center gap-2">
+                      <RotateCcw className="w-4 h-4 text-orange-600" />
+                      Reversal Endorsement
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bulk-endorsement-reason" className="text-sm font-medium text-gray-700">
+                Reason for Endorsement
+              </Label>
+              <Input
+                id="bulk-endorsement-reason"
+                value={bulkEndorsementReason}
+                onChange={(e) => setBulkEndorsementReason(e.target.value)}
+                placeholder="Enter reason for bulk endorsement"
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowBulkEndorsementDialog(false);
+                setBulkEndorsementReason("");
+              }}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleBulkEndorsement}
+              disabled={processingEndorsements.size > 0 || !bulkEndorsementReason.trim()}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {processingEndorsements.size > 0 ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <FilePen className="w-4 h-4 mr-2" />
+                  Process All Endorsements
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -813,7 +1125,6 @@ const EndorsementCard = ({
   isProcessing: boolean;
 }) => {
   const getPolicyId = (policy: any) => {
-    if (!policy) return "";
     return policy.id || policy.quoteID || policy.policyNo || policy.transGUID || "";
   };
 

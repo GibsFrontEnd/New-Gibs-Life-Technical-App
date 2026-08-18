@@ -1,3 +1,4 @@
+// src/components/UI/dialog.tsx
 // @ts-nocheck
 // import PropTypes from "prop-types";
 import { cloneElement, useEffect, useRef } from "react";
@@ -7,20 +8,19 @@ import React, { ReactNode } from "react";
 
 type DialogProps = {
   open: boolean;
-  // callers in your code pass `handleClose` (no args) or sometimes action creators; accept either
   onOpenChange: (open?: boolean) => void;
   children: ReactNode;
   maxWidth?: string;
   height?: string;
 };
 
+// ==================== MAIN DIALOG ====================
 export const Dialog = ({ open, onOpenChange, children, maxWidth = "640px", height = "max-content" }: DialogProps) => {
   if (!open) return null;
 
   return ReactDOM.createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
-      // clicking backdrop will close the dialog
       onClick={() => {
         try {
           onOpenChange(false);
@@ -32,13 +32,9 @@ export const Dialog = ({ open, onOpenChange, children, maxWidth = "640px", heigh
       <div
         className="bg-white rounded-lg shadow-lg w-full relative"
         style={{ maxWidth, height }}
-        // prevent clicks inside modal from closing it
         onClick={(e) => e.stopPropagation()}
       >
-        {/* content area */}
         {children}
-
-        {/* optional close button — adjust styling as needed */}
         <button
           aria-label="Close dialog"
           onClick={() => {
@@ -48,20 +44,31 @@ export const Dialog = ({ open, onOpenChange, children, maxWidth = "640px", heigh
               onOpenChange();
             }
           }}
-          className="absolute top-4 right-4 text-2xl leading-none"
+          className="absolute top-4 right-4 text-2xl leading-none text-gray-500 hover:text-gray-800"
         >
           ×
         </button>
       </div>
     </div>,
-    // ensure document exists (Next.js client components will have document)
     typeof document !== "undefined" ? document.body : null
   );
 };
 
+// ==================== DIALOG DESCRIPTION (NEW) ====================
+export const DialogDescription = ({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) => (
+  <p className={`text-sm text-gray-500 ${className}`}>
+    {children}
+  </p>
+);
 
+// ==================== BUTTON DISMISS DIALOG ====================
 export const ButtonDismissDialog = ({
-  // @ts-ignore
   open,
   onOpenChange,
   maxWidth = "448px",
@@ -91,19 +98,11 @@ export const ButtonDismissDialog = ({
   );
 };
 
-// ButtonDismissDialog.propTypes = {
-//   open: PropTypes.bool.isRequired,
-//   onOpenChange: PropTypes.func.isRequired,
-//   children: PropTypes.node.isRequired,
-//   maxWidth: PropTypes.string,
-//   height: PropTypes.string,
-// };
-
+// ==================== OUTSIDE DISMISS DIALOG ====================
 export const OutsideDismissDialog = ({
-  // @ts-ignore
   open,
   onOpenChange,
-  maxWidth = "448px",
+  maxWidth = "480px",
   height = "max-content",
   children,
 }) => {
@@ -111,8 +110,7 @@ export const OutsideDismissDialog = ({
   const ref = useRef(null);
 
   useEffect(() => {
-    function handleClickOutside(event) { // @ts-ignore
-      // @ts-ignore
+    function handleClickOutside(event) {
       if (ref.current && !ref.current.contains(event.target)) {
         // dispatch(onOpenChange(false));
       }
@@ -142,16 +140,8 @@ export const OutsideDismissDialog = ({
   );
 };
 
-// OutsideDismissDialog.propTypes = {
-//   open: PropTypes.bool.isRequired,
-//   onOpenChange: PropTypes.func.isRequired,
-//   children: PropTypes.node.isRequired,
-//   maxWidth: PropTypes.string,
-//   height: PropTypes.string,
-// };
-
+// ==================== DIALOG TRIGGER ====================
 export const DialogTrigger = ({
-  // @ts-ignore
   children,
   onClick,
 }) => {
@@ -162,49 +152,71 @@ export const DialogTrigger = ({
   });
 };
 
-// DialogTrigger.propTypes = {
-//   children: PropTypes.element.isRequired,
-//   onClick: PropTypes.func.isRequired,
-// };
-
+// ==================== DIALOG CONTENT ====================
 export const DialogContent = ({
-  // @ts-ignore
   children,
-  className,
+  className = "",
 }) => <div className={`dialog-content ${className}`}>{children}</div>;
 
-// DialogContent.propTypes = {
-//   children: PropTypes.node.isRequired,
-//   className: PropTypes.string.isRequired,
-// };
-
+// ==================== DIALOG HEADER ====================
 export const DialogHeader = ({
-  // @ts-ignore
   children,
+  className = "",
 }) => (
-  <div className="dialog-header mb-4 p-6 pb-0 flex flex-col gap-2">
+  <div className={`dialog-header mb-4 p-6 pb-0 flex flex-col gap-2 ${className}`}>
     {children}
   </div>
 );
 
-// DialogHeader.propTypes = {
-//   children: PropTypes.node,
-// };
-
+// ==================== DIALOG TITLE ====================
 export const DialogTitle = ({
-  // @ts-ignore
   children,
+}: {
+  children: ReactNode;
 }) => <h2 className="text-xl font-medium">{children}</h2>;
 
-// DialogTitle.propTypes = {
-//   children: PropTypes.string.isRequired,
-// };
-
+// ==================== DIALOG SUBTITLE ====================
 export const DialogSubTitle = ({
-  // @ts-ignore
   children,
+}: {
+  children: ReactNode;
 }) => <p className="text-sm text-text-placeholder">{children}</p>;
 
-// DialogSubTitle.propTypes = {
-//   children: PropTypes.string.isRequired,
-// };
+// ==================== DIALOG SUBHEADER ====================
+export const DialogSubHeader = ({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) => (
+  <div className={`text-sm text-gray-500 ${className}`}>
+    {children}
+  </div>
+);
+
+// ==================== DIALOG FOOTER ====================
+export const DialogFooter = ({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) => (
+  <div className={`flex flex-col sm:flex-row justify-end gap-3 p-6 pt-0 ${className}`}>
+    {children}
+  </div>
+);
+
+// ==================== DIALOG ACTIONS ====================
+export const DialogActions = ({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) => (
+  <div className={`flex flex-col sm:flex-row justify-end gap-2 p-6 pt-0 ${className}`}>
+    {children}
+  </div>
+);

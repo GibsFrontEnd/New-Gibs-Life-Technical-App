@@ -5,7 +5,7 @@ import type {
   SubRiskSectionState,
 } from "../../../types/subRiskSection"
 
-const API_BASE_URL = "https://core-api.newgibsonline.com/api"
+const API_BASE_URL = "https://lifetechnicalapi.newgibsonline.com/api"
 
 // Async thunks
 export const getAllSubRiskSections = createAsyncThunk(
