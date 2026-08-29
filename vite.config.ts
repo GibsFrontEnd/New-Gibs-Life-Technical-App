@@ -8,11 +8,18 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+
+  cacheDir: path.resolve(
+    process.env.LOCALAPPDATA || '.',
+    'Gibslife-vite-cache'
+  ),
+
   server: {
     port: 5173,
   },

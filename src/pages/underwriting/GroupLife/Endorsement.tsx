@@ -910,104 +910,103 @@ export default function Endorsement() {
         </div>
       </div>
 
-      {/* Single Endorsement Dialog */}
-      <Dialog open={showEndorsementDialog} onOpenChange={setShowEndorsementDialog}>
-        <DialogContent className="p-6 space-y-4">
-          <DialogHeader>
-            <DialogTitle>Process Endorsement</DialogTitle>
-            <DialogSubTitle>
-              {endorsementType === "REVERSAL" ? "Reversal" : "Additional"} endorsement for{" "}
-              <strong>{selectedForEndorsement ? getCompanyName(selectedForEndorsement) : ""}</strong>
-            </DialogSubTitle>
-          </DialogHeader>
+     {/* Single Endorsement Dialog */}
+<Dialog open={showEndorsementDialog} onOpenChange={setShowEndorsementDialog}>
+  <DialogContent className="p-6 space-y-4">
+    <DialogHeader>
+      <DialogTitle>Process Endorsement</DialogTitle>
+      <DialogSubTitle>
+        {endorsementType === "REVERSAL" ? "Reversal" : "Additional"} endorsement for{" "}
+        <strong>{selectedForEndorsement ? getCompanyName(selectedForEndorsement) : ""}</strong>
+      </DialogSubTitle>
+    </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="bg-blue-50 p-3 rounded-md">
-              <p className="text-sm text-blue-800">
-                <strong>Policy Number:</strong> {selectedForEndorsement ? getPolicyNumber(selectedForEndorsement) : ""}
-              </p>
-              <p className="text-sm text-blue-800 mt-1">
-            </div>
+    <div className="space-y-4">
+      <div className="bg-blue-50 p-3 rounded-md">
+        <p className="text-sm text-blue-800">
+          <strong>Policy Number:</strong> {selectedForEndorsement ? getPolicyNumber(selectedForEndorsement) : ""}
+        </p>
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="endorsement-type" className="text-sm font-medium text-gray-700">
-                Endorsement Type
-              </Label>
-              <Select
-                value={endorsementType}
-                onValueChange={(value) => setEndorsementType(value as EndorsementType)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select endorsement type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ADDITIONAL">
-                    <span className="flex items-center gap-2">
-                      <Plus className="w-4 h-4 text-green-600" />
-                      Additional Endorsement
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="REVERSAL">
-                    <span className="flex items-center gap-2">
-                      <RotateCcw className="w-4 h-4 text-orange-600" />
-                      Reversal Endorsement
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <div className="space-y-2">
+        <Label htmlFor="endorsement-type" className="text-sm font-medium text-gray-700">
+          Endorsement Type
+        </Label>
+        <Select
+          value={endorsementType}
+          onValueChange={(value) => setEndorsementType(value as EndorsementType)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select endorsement type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ADDITIONAL">
+              <span className="flex items-center gap-2">
+                <Plus className="w-4 h-4 text-green-600" />
+                Additional Endorsement
+              </span>
+            </SelectItem>
+            <SelectItem value="REVERSAL">
+              <span className="flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-orange-600" />
+                Reversal Endorsement
+              </span>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="endorsement-reason" className="text-sm font-medium text-gray-700">
-                Reason for Endorsement
-              </Label>
-              <Input
-                id="endorsement-reason"
-                value={endorsementReason}
-                onChange={(e) => setEndorsementReason(e.target.value)}
-                placeholder="Enter reason for endorsement"
-                className="w-full"
-              />
-              <p className="text-xs text-gray-500">
-                Please provide a clear reason for this endorsement action.
-              </p>
-            </div>
-          </div>
+      <div className="space-y-2">
+        <Label htmlFor="endorsement-reason" className="text-sm font-medium text-gray-700">
+          Reason for Endorsement
+        </Label>
+        <Input
+          id="endorsement-reason"
+          value={endorsementReason}
+          onChange={(e) => setEndorsementReason(e.target.value)}
+          placeholder="Enter reason for endorsement"
+          className="w-full"
+        />
+        <p className="text-xs text-gray-500">
+          Please provide a clear reason for this endorsement action.
+        </p>
+      </div>
+    </div>
 
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setShowEndorsementDialog(false);
-                setSelectedForEndorsement(null);
-                setEndorsementReason("");
-              }}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={confirmEndorsement}
-              disabled={isProcessingEndorsement || !endorsementReason.trim()}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isProcessingEndorsement ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <FilePen className="w-4 h-4 mr-2" />
-                  Process Endorsement
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+    <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          setShowEndorsementDialog(false);
+          setSelectedForEndorsement(null);
+          setEndorsementReason("");
+        }}
+        className="w-full sm:w-auto"
+      >
+        Cancel
+      </Button>
+      <Button
+        type="button"
+        onClick={confirmEndorsement}
+        disabled={isProcessingEndorsement || !endorsementReason.trim()}
+        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+      >
+        {isProcessingEndorsement ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          <>
+            <FilePen className="w-4 h-4 mr-2" />
+            Process Endorsement
+          </>
+        )}
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
 
       {/* Bulk Endorsement Dialog */}
       <Dialog open={showBulkEndorsementDialog} onOpenChange={setShowBulkEndorsementDialog}>

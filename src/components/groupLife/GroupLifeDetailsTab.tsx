@@ -359,14 +359,31 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
 
   // ==================== ACTION HANDLERS ====================
 
-  // Handle Debit Note for a specific detail
-  const handleDebitNote = (item: PolicyDetailItem) => {
-    toast({
-      title: "Debit Note",
-      description: `Processing debit note for policy ${item.policyNo}, endorsement ${item.endorsementNo}`,
-      variant: "default",
+  /**
+   * ✅ UPDATED: Handle Debit Note navigation
+   * Navigates to the DebitNote component with the policy number
+   */
+ const handleDebitNote = (item: PolicyDetailItem) => {
+    console.log('🔴 Navigate to DebitNote with:', {
+        policyNo: item.policyNo,
+        detailID: item.detailID,
+        endorsementNo: item.endorsementNo,
+        insuredName: item.insuredName,
+        sourcePage: "group-life-details"
     });
-  };
+    
+    const encodedPolicyNo = encodeURIComponent(item.policyNo);
+    navigate(`/underwriting/group-life-quotations/debit-note/${encodedPolicyNo}`, {
+        state: {
+            detailID: item.detailID,
+            detailId: item.detailID, // ← Add this for compatibility
+            endorsementNo: item.endorsementNo,
+            insuredName: item.insuredName,
+            sourcePage: "group-life-details",
+            policyNo: item.policyNo // ← Also pass policyNo in state
+        }
+    });
+};
 
   /**
    * Handle Renew using the Redux thunk
@@ -524,11 +541,7 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600" />
             Policy Details
-            {sourcePage && (
-              <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
-                From: {sourcePage.replace('-', ' ').toUpperCase()}
-              </Badge>
-            )}
+           
           </h2>
           <p className="text-sm text-gray-500">
             Policy: {policyNo} 
@@ -637,7 +650,7 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
                               </Button>
                             )}
 
-                            {/* ✅ UPDATED Endorse Button - Opens dialog for type selection */}
+                            {/* Endorse Button - Opens dialog for type selection */}
                             {showEndorseButton && (
                               <Button
                                 variant="outline"
@@ -663,13 +676,13 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
                               </Button>
                             )}
 
-                            {/* Debit Note - Always shown */}
+                            {/* ✅ UPDATED: Debit Note Button - Navigates to DebitNote component */}
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleDebitNote(item)}
                               className="h-7 px-2 border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800 text-xs"
-                              title="Do Debit Note"
+                              title="Create Debit Note"
                             >
                               <FileCheck className="w-3 h-3 mr-1" />
                               Do Debit Note
@@ -709,131 +722,131 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
       
       {/* ==================== ENDORSEMENT TYPE SELECTION DIALOG ==================== */}
       <Dialog 
-  open={endorsementDialogOpen} 
-  onOpenChange={setEndorsementDialogOpen}
->
-  <DialogContent className="p-0 gap-0 max-w-[95vw] sm:max-w-[640px] w-full max-h-[90vh] overflow-y-auto">
-    <DialogHeader className="border-b px-4 sm:px-6 py-3 sm:py-4 sticky top-0 bg-white z-10">
-      <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-        <FilePen className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 flex-shrink-0" />
-        <span className="truncate">Select Endorsement Type</span>
-      </DialogTitle>
-      <DialogDescription className="text-xs sm:text-sm text-gray-600 space-y-1 pt-1">
-        <p className="break-words">
-          Choose the type of endorsement to create for policy{' '}
-          <strong className="break-all">{selectedItemForEndorsement?.policyNo}</strong>
-        </p>
-        <p className="text-xs text-gray-500 flex flex-wrap items-center gap-1">
-          Source Endorsement: <span className="font-mono break-all">{selectedItemForEndorsement?.endorsementNo}</span>
-        </p>
-      </DialogDescription>
-    </DialogHeader>
-
-    <div className="px-4 sm:px-6 py-4 sm:py-5">
-      <RadioGroup
-        value={selectedEndorsementType}
-        onValueChange={(value) => setSelectedEndorsementType(value as EndorsementType)}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3"
+        open={endorsementDialogOpen} 
+        onOpenChange={setEndorsementDialogOpen}
       >
-        {endorsementTypes.map((type) => (
-          <div 
-            key={type.value}
-            className={`flex flex-col rounded-lg border-2 p-3 sm:p-4 transition-all cursor-pointer touch-manipulation ${
-              selectedEndorsementType === type.value 
-                ? `${type.borderColor} ${type.bgColor} shadow-sm` 
-                : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
-            }`}
-            onClick={() => setSelectedEndorsementType(type.value)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setSelectedEndorsementType(type.value);
-              }
-            }}
-          >
-            <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-              <div className={`flex items-center gap-1.5 sm:gap-2 ${type.color} min-w-0`}>
-                <span className="flex-shrink-0">{type.icon}</span>
-                <span className="font-semibold text-gray-800 text-xs sm:text-sm truncate">
-                  {type.label}
-                </span>
-              </div>
-              <RadioGroupItem value={type.value} id={type.value} className="flex-shrink-0" />
-            </div>
-            <Label htmlFor={type.value} className="cursor-pointer flex-1">
-              <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
-                {type.description}
+        <DialogContent className="p-0 gap-0 max-w-[95vw] sm:max-w-[640px] w-full max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b px-4 sm:px-6 py-3 sm:py-4 sticky top-0 bg-white z-10">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <FilePen className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 flex-shrink-0" />
+              <span className="truncate">Select Endorsement Type</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm text-gray-600 space-y-1 pt-1">
+              <p className="break-words">
+                Choose the type of endorsement to create for policy{' '}
+                <strong className="break-all">{selectedItemForEndorsement?.policyNo}</strong>
               </p>
-            </Label>
+              <p className="text-xs text-gray-500 flex flex-wrap items-center gap-1">
+                Source Endorsement: <span className="font-mono break-all">{selectedItemForEndorsement?.endorsementNo}</span>
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="px-4 sm:px-6 py-4 sm:py-5">
+            <RadioGroup
+              value={selectedEndorsementType}
+              onValueChange={(value) => setSelectedEndorsementType(value as EndorsementType)}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3"
+            >
+              {endorsementTypes.map((type) => (
+                <div 
+                  key={type.value}
+                  className={`flex flex-col rounded-lg border-2 p-3 sm:p-4 transition-all cursor-pointer touch-manipulation ${
+                    selectedEndorsementType === type.value 
+                      ? `${type.borderColor} ${type.bgColor} shadow-sm` 
+                      : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setSelectedEndorsementType(type.value)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedEndorsementType(type.value);
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                    <div className={`flex items-center gap-1.5 sm:gap-2 ${type.color} min-w-0`}>
+                      <span className="flex-shrink-0">{type.icon}</span>
+                      <span className="font-semibold text-gray-800 text-xs sm:text-sm truncate">
+                        {type.label}
+                      </span>
+                    </div>
+                    <RadioGroupItem value={type.value} id={type.value} className="flex-shrink-0" />
+                  </div>
+                  <Label htmlFor={type.value} className="cursor-pointer flex-1">
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
+                      {type.description}
+                    </p>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+
+            {/* Info Box - Dynamic based on selected type */}
+            <div className="mt-3 sm:mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 sm:gap-3">
+              <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-[11px] sm:text-xs text-amber-700">
+                <p className="font-medium">What happens next:</p>
+                <p className="mt-0.5 sm:mt-1 leading-relaxed">
+                  {selectedEndorsementType === "Reversal" && 
+                    "A new endorsement will be created with all members and figures from the source. The source endorsement will be marked as EXPIRED."}
+                  {selectedEndorsementType === "Additional" && 
+                    "A blank endorsement envelope will be created. You'll need to add members and figures manually."}
+                  {selectedEndorsementType === "Return" && 
+                    "A return endorsement will be processed. This will reverse the policy and return to the previous state."}
+                  {selectedEndorsementType === "Cancellation" && 
+                    "A cancellation endorsement will be processed. This will terminate the policy coverage."}
+                  {selectedEndorsementType === "Reduction" && 
+                    "A reduction endorsement will be processed. This will reduce the coverage amount or benefits."}
+                  {selectedEndorsementType === "Extension" && 
+                    "An extension endorsement will be processed. This will extend the policy duration or coverage period."}
+                </p>
+              </div>
+            </div>
           </div>
-        ))}
-      </RadioGroup>
 
-      {/* Info Box - Dynamic based on selected type */}
-      <div className="mt-3 sm:mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 sm:gap-3">
-        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-        <div className="text-[11px] sm:text-xs text-amber-700">
-          <p className="font-medium">What happens next:</p>
-          <p className="mt-0.5 sm:mt-1 leading-relaxed">
-            {selectedEndorsementType === "Reversal" && 
-              "A new endorsement will be created with all members and figures from the source. The source endorsement will be marked as EXPIRED."}
-            {selectedEndorsementType === "Additional" && 
-              "A blank endorsement envelope will be created. You'll need to add members and figures manually."}
-            {selectedEndorsementType === "Return" && 
-              "A return endorsement will be processed. This will reverse the policy and return to the previous state."}
-            {selectedEndorsementType === "Cancellation" && 
-              "A cancellation endorsement will be processed. This will terminate the policy coverage."}
-            {selectedEndorsementType === "Reduction" && 
-              "A reduction endorsement will be processed. This will reduce the coverage amount or benefits."}
-            {selectedEndorsementType === "Extension" && 
-              "An extension endorsement will be processed. This will extend the policy duration or coverage period."}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <DialogFooter className="border-t px-4 sm:px-6 py-3 sm:py-4 flex flex-col-reverse sm:flex-row gap-2 sticky bottom-0 bg-white">
-      <Button
-        variant="outline"
-        onClick={() => {
-          setEndorsementDialogOpen(false);
-          setSelectedItemForEndorsement(null);
-        }}
-        className="w-full sm:w-auto order-2 sm:order-1 text-sm sm:text-base"
-      >
-        Cancel
-      </Button>
-      <Button
-        onClick={handleEndorseConfirm}
-        disabled={processingEndorsement === selectedItemForEndorsement?.endorsementNo || endorsementLoading}
-        className={`w-full sm:w-auto text-white order-1 sm:order-2 text-sm sm:text-base ${
-          selectedEndorsementType === "Reversal" ? "bg-blue-600 hover:bg-blue-700" :
-          selectedEndorsementType === "Additional" ? "bg-green-600 hover:bg-green-700" :
-          selectedEndorsementType === "Return" ? "bg-orange-600 hover:bg-orange-700" :
-          selectedEndorsementType === "Cancellation" ? "bg-red-600 hover:bg-red-700" :
-          selectedEndorsementType === "Reduction" ? "bg-yellow-600 hover:bg-yellow-700" :
-          "bg-purple-600 hover:bg-purple-700"
-        }`}
-      >
-        {processingEndorsement === selectedItemForEndorsement?.endorsementNo ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" />
-            <span className="truncate">Creating...</span>
-          </>
-        ) : (
-          <>
-            <span className="flex-shrink-0">{getSelectedTypeInfo()?.icon}</span>
-            <span className="ml-1.5 sm:ml-2 truncate">
-              Create {selectedEndorsementType} Endorsement
-            </span>
-          </>
-        )}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+          <DialogFooter className="border-t px-4 sm:px-6 py-3 sm:py-4 flex flex-col-reverse sm:flex-row gap-2 sticky bottom-0 bg-white">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEndorsementDialogOpen(false);
+                setSelectedItemForEndorsement(null);
+              }}
+              className="w-full sm:w-auto order-2 sm:order-1 text-sm sm:text-base"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEndorseConfirm}
+              disabled={processingEndorsement === selectedItemForEndorsement?.endorsementNo || endorsementLoading}
+              className={`w-full sm:w-auto text-white order-1 sm:order-2 text-sm sm:text-base ${
+                selectedEndorsementType === "Reversal" ? "bg-blue-600 hover:bg-blue-700" :
+                selectedEndorsementType === "Additional" ? "bg-green-600 hover:bg-green-700" :
+                selectedEndorsementType === "Return" ? "bg-orange-600 hover:bg-orange-700" :
+                selectedEndorsementType === "Cancellation" ? "bg-red-600 hover:bg-red-700" :
+                selectedEndorsementType === "Reduction" ? "bg-yellow-600 hover:bg-yellow-700" :
+                "bg-purple-600 hover:bg-purple-700"
+              }`}
+            >
+              {processingEndorsement === selectedItemForEndorsement?.endorsementNo ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" />
+                  <span className="truncate">Creating...</span>
+                </>
+              ) : (
+                <>
+                  <span className="flex-shrink-0">{getSelectedTypeInfo()?.icon}</span>
+                  <span className="ml-1.5 sm:ml-2 truncate">
+                    Create {selectedEndorsementType} Endorsement
+                  </span>
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Success banner when endorsement is created */}
       {createdEndorsement && (

@@ -317,7 +317,7 @@ const Header: React.FC = () => {
         {/* Logo Section */}
         <Link to="/dashboard" className="flex items-center gap-3 no-underline">
           <span className="text-white font-bold text-xl tracking-wider cursor-pointer hover:text-gray-300 transition-colors">
-            MICRO-LIFE TECHNICAL
+            GIBS-LIFE TECHNICAL
           </span>
         </Link>
 
@@ -479,7 +479,7 @@ const Header: React.FC = () => {
           <div className="flex items-center gap-3">
             <Link to="/dashboard" className="no-underline" onClick={() => setMenuOpen(false)}>
               <span className="font-extrabold text-lg text-white tracking-wider ring-2 ring-white/30 px-4 py-2 rounded-lg hover:ring-white/50 transition-all cursor-pointer">
-                MICRO-LIFE <span className="text-blue-400">TECHNICAL</span>
+                GIBS-LIFE <span className="text-blue-400">TECHNICAL</span>
               </span>
             </Link>
           </div>

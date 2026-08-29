@@ -6,7 +6,7 @@ export const getAllBranches = createAsyncThunk(
   "branches/getAllBranches",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await apiCall.get(`/branches`);
+      const response = await apiCall.get(`/lookups/branches`);
       return response.data;
     } catch (error) {
       return rejectWithValue(error);

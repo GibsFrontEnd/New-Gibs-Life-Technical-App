@@ -9,7 +9,7 @@ const HomePage = () => {
         <div className="mx-auto grid grid-cols-12 items-center gap-2 md:gap-16 md:px-10 xl:w-[1280px] xl:px-2">
           <div className="col-span-12 px-4 md:col-span-7 md:px-0">
             <h1 className="mb-8 break-words text-5xl font-bold tracking-[-0.02em] lg:leading-20 lg:text-7xl bg-gradient-to-r from-blue-400 to-blue-800 bg-clip-text text-transparent animate-fadeInUp">
-              MICROLIFE Enterprise-Ready Solutions for Modern Businesses
+              GIBSLIFE Enterprise-Ready Solutions for Modern Businesses
             </h1>
             <div className="mb-10 text-lg font-light text-gray-700 lg:text-3xl animate-fadeInUp" style={{ animationDelay: '200ms' }}>
               <p><strong>

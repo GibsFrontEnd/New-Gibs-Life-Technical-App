@@ -1,4 +1,4 @@
-//@ts-nocheck
+// @ts-nocheck
 
 import {
   createAsyncThunk,
@@ -49,7 +49,6 @@ export interface GroupLifePolicy {
   id?: string;
 }
 
-// NEW: Interface for the policy list response from GET /api/grouplife/policies
 export interface GroupLifePolicyListResponse {
   items: GroupLifePolicyListItem[];
   page: number;
@@ -58,7 +57,6 @@ export interface GroupLifePolicyListResponse {
   totalPages: number;
 }
 
-// NEW: Interface for each policy item in the list
 export interface GroupLifePolicyListItem {
   policyNo: string;
   isProposal: boolean;
@@ -75,7 +73,6 @@ export interface GroupLifePolicyListItem {
   status: string;
 }
 
-// NEW: Interface for filter parameters
 export interface GroupLifePolicyFilters {
   subRiskId?: string;
   branchId?: string;
@@ -136,35 +133,503 @@ export interface AggregateTotals {
 
 export type EndorsementType = "Renewal" | "Reversal" | "Additional";
 
-/**
- * Interface for creating an endorsement
- * POST /api/grouplife/policies/{policyNo}/details/{sourceEndorsementNo}/endorsement
- */
 export interface CreateEndorsementRequest {
-  /** The policy number to create endorsement for */
   policyNo: string;
-  /** The source endorsement number to base the endorsement on */
   sourceEndorsementNo: string;
-  /** The type of endorsement: Renewal, Reversal, or Additional */
   type: EndorsementType;
 }
 
-/**
- * Interface for the endorsement response
- */
 export interface CreateEndorsementResponse {
-  /** The detail ID of the new endorsement */
   detailID: number;
-  /** The policy number */
   policyNo: string;
-  /** The new endorsement number */
   endorsementNo: string;
-  /** Certificate or document number */
   certOrDocNo: string;
-  /** Name of the insured */
   insuredName: string;
-  /** Indicates if a new record was created */
   created: boolean;
+}
+
+// ==================== DEBIT NOTE TYPES ====================
+
+export interface DebitNotePremium {
+  grossPremium: number;
+  commissionRate: number;
+  commissionAmount: number;
+  whtRate: number;
+  whtAmount: number;
+  orcRate: number;
+  orcAmount: number;
+  netPremium: number;
+  ncdfRate: number;
+  ncdfValue: number;
+  ncdfNetValue: number;
+  naicomLevyRate: number;
+  naicomLevyValue: number;
+  naicomLevyNetValue: number;
+  orcDeductedFromNet: boolean;
+}
+
+export interface CoinsuranceLine {
+  sn: number;
+  participantId: string;
+  participantName: string;
+  sharePercent: number;
+  commissionRate: number;
+  orcRate: number;
+  whtRate: number;
+  isLead: boolean;
+  shareSumInsured: number;
+  sharePremium: number;
+  commissionAmount: number;
+  orcAmount: number;
+  whtAmount: number;
+  netPremium: number;
+}
+
+export interface DebitNoteUI {
+  showCommissionSection: boolean;
+  showWhtSection: boolean;
+  showOrcSection: boolean;
+  showDistributionSection: boolean;
+  showComputeButton: boolean;
+  showTrackingCost: boolean;
+  showLevies: boolean;
+  showCurrencyPanel: boolean;
+  showShareTotals: boolean;
+  commissionEditable: boolean;
+  editable: boolean;
+  lockReason: string;
+}
+
+export interface DebitNote {
+  debitNoteNo: string;
+  refDebitNoteNo: string;
+  receiptNo: string;
+  policyNo: string;
+  coPolicyNo: string;
+  branchId: string;
+  bizSource: string;
+  bizOption: string;
+  noteType: string;
+  subRiskId: string;
+  subRisk: string;
+  riskClass: string;
+  billingDate: string;
+  startDate: string;
+  endDate: string;
+  partyId: string;
+  partyName: string;
+  mktStaffId: string;
+  mktStaffName: string;
+  insuredId: string;
+  insuredName: string;
+  totalRiskSumInsured: number;
+  totalRiskPremium: number;
+  totalTrackingCost: number;
+  topMostLocationValue: number;
+  mplValue: number;
+  sumInsured: number;
+  grossPremium: number;
+  ourSharePercent: number;
+  premium: DebitNotePremium;
+  exRate: number;
+  exCurrency: string;
+  sumInsuredFrgn: number;
+  grossPremiumFrgn: number;
+  paymentType: string;
+  creditRefNo: string;
+  narration: string;
+  transGuid: string;
+  approval: number;
+  submittedBy: string;
+  submittedOn: string;
+  ui: DebitNoteUI;
+  coinsuranceLines: CoinsuranceLine[];
+  detailId: number;
+  distributionTemplate: CoinsuranceLine[];
+}
+
+// ==================== DEBIT NOTE LIST TYPES ====================
+
+export interface DebitNoteListItem {
+  debitNoteNo: string;
+  refDebitNoteNo: string;
+  policyNo: string;
+  receiptNo: string;
+  noteType: string;
+  bizSource: string;
+  bizOption: string;
+  paymentType: string;
+  branchId: string;
+  billingDate: string;
+  partyId: string;
+  partyName: string;
+  insuredName: string;
+  sumInsured: number;
+  grossPremium: number;
+  commission: number;
+  netAmount: number;
+  approval: number;
+  approvalStatus: string;
+  isInvoice: boolean;
+  isHeadNote: boolean;
+  submittedBy: string;
+  submittedOn: string;
+}
+
+export interface DebitNoteListResponse {
+  items: DebitNoteListItem[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+export interface DebitNoteFilters {
+  policyNo?: string;
+  branchId?: string;
+  bizSource?: string;
+  paymentType?: string;
+  noteType?: string;
+  approval?: number;
+  pendingOnly?: boolean;
+  headNotesOnly?: boolean;
+  billingFrom?: string;
+  billingTo?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+// ==================== CO-INSURANCE CREDIT NOTE TYPES ====================
+
+export interface CoinsuranceCreditNotePremium {
+  totalSumInsured: number;
+  totalPremium: number;
+  businessPropPercent: number;
+  shareSumInsured: number;
+  sharePremium: number;
+  ourPropPercent: number;
+  ourSumInsured: number;
+  ourPremium: number;
+  commissionRate: number;
+  commissionAmount: number;
+  whtRate: number;
+  whtAmount: number;
+  netPremium: number;
+  orcRate: number;
+  orcAmount: number;
+  whtDeductedFromNet: boolean;
+}
+
+export interface CoinsuranceCreditNote {
+  creditNoteNo: string;
+  refDebitNoteNo: string;
+  receiptNo: string;
+  policyNo: string;
+  branchId: string;
+  bizSource: string;
+  bizOption: string;
+  noteType: string;
+  subRiskId: string;
+  subRisk: string;
+  billingDate: string;
+  startDate: string;
+  endDate: string;
+  participantId: string;
+  participantName: string;
+  leaderId: string;
+  leaderName: string;
+  mktStaffId: string;
+  mktStaffName: string;
+  insuredId: string;
+  insuredName: string;
+  narration: string;
+  premium: CoinsuranceCreditNotePremium;
+  exRate: number;
+  exCurrency: string;
+  sumInsuredFrgn: number;
+  grossPremiumFrgn: number;
+  approval: number;
+  editable: boolean;
+  lockReason: string;
+  showOrcSection: boolean;
+  showCurrencyPanel: boolean;
+  submittedBy: string;
+  submittedOn: string;
+}
+
+// ==================== CO-INSURANCE CREDIT NOTE LIST TYPES ====================
+
+export interface CoinsuranceCreditNoteListItem {
+  creditNoteNo: string;
+  refDebitNoteNo: string;
+  policyNo: string;
+  noteType: string;
+  bizOption: string;
+  billingDate: string;
+  participantId: string;
+  participantName: string;
+  insuredName: string;
+  sharePercent: number;
+  shareSumInsured: number;
+  sharePremium: number;
+  commission: number;
+  netPremium: number;
+  approval: number;
+  approvalStatus: string;
+  isReversal: boolean;
+  submittedBy: string;
+  submittedOn: string;
+}
+
+export interface CoinsuranceCreditNoteListResponse {
+  items: CoinsuranceCreditNoteListItem[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+export interface CoinsuranceCreditNoteFilters {
+  policyNo?: string;
+  refDebitNoteNo?: string;
+  participantId?: string;
+  branchId?: string;
+  approval?: number;
+  reversalsOnly?: boolean;
+  billingFrom?: string;
+  billingTo?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PrefillCoinsuranceCreditNoteRequest {
+  policyNo: string;
+  refDebitNoteNo: string;
+  type: 'CN' | string;
+}
+
+export interface AmendCoinsuranceCreditNoteRequest {
+  billingDate: string;
+  startDate: string;
+  endDate: string;
+  participantId: string;
+  insuredName: string;
+  narration: string;
+  sumInsured: number;
+  grossPremium: number;
+  businessPropPercent: number;
+  commissionRate: number;
+  commissionAmount: number;
+  whtAmount: number;
+  netPremium: number;
+}
+
+export interface CalculateCoinsuranceCreditNoteRequest {
+  totalSumInsured: number;
+  totalPremium: number;
+  businessPropPercent: number;
+  ourPropPercent: number;
+  commissionRate: number;
+  whtRate: number;
+  orcRate: number;
+  deductWhtFromNet: boolean;
+}
+
+export interface CalculateCoinsuranceCreditNoteResponse {
+  totalSumInsured: number;
+  totalPremium: number;
+  businessPropPercent: number;
+  shareSumInsured: number;
+  sharePremium: number;
+  ourPropPercent: number;
+  ourSumInsured: number;
+  ourPremium: number;
+  commissionRate: number;
+  commissionAmount: number;
+  whtRate: number;
+  whtAmount: number;
+  netPremium: number;
+  orcRate: number;
+  orcAmount: number;
+  whtDeductedFromNet: boolean;
+}
+
+export interface RaiseCoinsuranceCreditNoteRequest {
+  policyNo: string;
+  refDebitNoteNo: string;
+  type: string;
+  billingDate: string;
+  startDate: string;
+  endDate: string;
+  participantId: string;
+  insuredName: string;
+  narration: string;
+  bizOption: string;
+  sumInsured: number;
+  grossPremium: number;
+  businessPropPercent: number;
+  commissionRate: number;
+  commissionAmount: number;
+  whtAmount: number;
+  netPremium: number;
+  recordParticipation: boolean;
+  totalSumInsured: number;
+  totalPremium: number;
+}
+
+export interface RaiseCoinsuranceCreditNoteResponse {
+  creditNoteNo: string;
+  refDebitNoteNo: string;
+  policyNo: string;
+  participantId: string;
+  noteType: string;
+  participationRecorded: boolean;
+}
+
+// ==================== PREFILL DEBIT NOTE TYPES ====================
+
+export interface PrefillDebitNoteRequest {
+  policyNo: string;
+  detailId: number;
+  riskClass: string;
+}
+
+export interface AmendDebitNoteRequest {
+  branchId: string;
+  billingDate: string;
+  startDate: string;
+  endDate: string;
+  insuredName: string;
+  narration: string;
+  transGuid: string;
+  partyId: string;
+  partyName: string;
+  mktStaffId: string;
+  totalRiskSumInsured: number;
+  totalRiskPremium: number;
+  sumInsured: number;
+  grossPremium: number;
+  ourSharePercent: number;
+  commissionAmount: number;
+  whtAmount: number;
+  orcRate: number;
+  orcAmount: number;
+  netPremium: number;
+  exRate: number;
+  exCurrency: string;
+  sumInsuredFrgn: number;
+  grossPremiumFrgn: number;
+  paymentType: string;
+  creditRefNo: string;
+}
+
+export interface CalculatePremiumRequest {
+  grossPremium: number;
+  commissionRate: number;
+  whtRate: number;
+  orcRate: number;
+  ncdfRate: number;
+  naicomLevyRate: number;
+  deductOrcFromNet: boolean;
+}
+
+export interface CalculatePremiumResponse {
+  grossPremium: number;
+  commissionRate: number;
+  commissionAmount: number;
+  whtRate: number;
+  whtAmount: number;
+  orcRate: number;
+  orcAmount: number;
+  netPremium: number;
+  ncdfRate: number;
+  ncdfValue: number;
+  ncdfNetValue: number;
+  naicomLevyRate: number;
+  naicomLevyValue: number;
+  naicomLevyNetValue: number;
+  orcDeductedFromNet: boolean;
+}
+
+export interface DistributeRiskRequest {
+  totalRiskSumInsured: number;
+  totalRiskPremium: number;
+  ourSharePercent: number;
+  ourGrossPremium: number;
+  lines: CoinsuranceLine[];
+}
+
+export interface DistributeRiskResponse {
+  lines: CoinsuranceLine[];
+  totalCededPercent: number;
+  totalCededSumInsured: number;
+  totalCededPremium: number;
+  shareProportion: number;
+  isBalanced: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface RaiseDebitNoteRequest {
+  policyNo: string;
+  detailId: number;
+  riskClass: string;
+  branchId: string;
+  bizSource: string;
+  bizOption: string;
+  billingDate: string;
+  startDate: string;
+  endDate: string;
+  insuredName: string;
+  narration: string;
+  transGuid: string;
+  paymentType: string;
+  creditRefNo: string;
+  totalRiskSumInsured: number;
+  totalRiskPremium: number;
+  sumInsured: number;
+  grossPremium: number;
+  ourSharePercent: number;
+  commissionRate: number;
+  commissionAmount: number;
+  whtRate: number;
+  whtAmount: number;
+  orcRate: number;
+  orcAmount: number;
+  netPremium: number;
+  exRate: number;
+  exCurrency: string;
+  sumInsuredFrgn: number;
+  grossPremiumFrgn: number;
+  coinsuranceLines: CoinsuranceLine[];
+  postCommissionCreditNote: boolean;
+  postCoinsuranceCreditNotes: boolean;
+  postCoinsuranceOrcDebitNotes: boolean;
+  postLeadOrcCreditNotes: boolean;
+}
+
+export interface RaiseDebitNoteResponse {
+  debitNoteNo: string;
+  policyNo: string;
+  endorsementNo: string;
+  coinsuranceCreditNotes: string[];
+  coinsuranceOrcDebitNotes: string[];
+  leadOrcCreditNotes: string[];
+  commissionCreditNote: string;
+  participationRowsWritten: number;
+}
+
+export interface ApproveDebitNoteRequest {
+  dncnNo: string;
+  approvalStatus: number;
+}
+
+export interface ApproveDebitNoteResponse {
+  previousDebitNoteNo: string;
+  debitNoteNo: string;
+  renumbered: boolean;
+  approvalStatus: number;
+  approvedBy: string;
 }
 
 // ==================== SLICE STATE ====================
@@ -176,12 +641,27 @@ export interface GroupLifeQuotationState {
   policyDetail: PolicyDetail | null;
   aggregateTotals: AggregateTotals | null;
   totalCount: number;
-  // NEW: Fields for the policies list
   policies: GroupLifePolicyListItem[];
   policiesTotalCount: number;
   policiesTotalPages: number;
-  // NEW: Endorsement tracking
   createdEndorsement: CreateEndorsementResponse | null;
+  // Debit Note fields
+  currentDebitNote: DebitNote | null;
+  debitNoteList: DebitNoteListItem[];
+  debitNoteListTotalCount: number;
+  debitNoteListTotalPages: number;
+  calculatedPremium: CalculatePremiumResponse | null;
+  distributedRisk: DistributeRiskResponse | null;
+  raisedDebitNote: RaiseDebitNoteResponse | null;
+  approvedDebitNote: ApproveDebitNoteResponse | null;
+  // Coinsurance Credit Note fields
+  currentCoinsuranceCreditNote: CoinsuranceCreditNote | null;
+  coinsuranceCreditNoteList: CoinsuranceCreditNoteListItem[];
+  coinsuranceCreditNoteListTotalCount: number;
+  coinsuranceCreditNoteListTotalPages: number;
+  calculatedCoinsuranceCreditNote: CalculateCoinsuranceCreditNoteResponse | null;
+  raisedCoinsuranceCreditNote: RaiseCoinsuranceCreditNoteResponse | null;
+  debitNoteChildren: any[];
   loading: {
     list: boolean;
     detail: boolean;
@@ -195,8 +675,26 @@ export interface GroupLifeQuotationState {
     aggregate: boolean;
     anb: boolean;
     duration: boolean;
-    policies: boolean; // NEW: Loading state for policies
-    endorsement: boolean; // NEW: Loading state for endorsement
+    policies: boolean;
+    endorsement: boolean;
+    // Debit Note loading states
+    debitNoteNew: boolean;
+    debitNoteLoad: boolean;
+    debitNoteAmend: boolean;
+    debitNoteRefresh: boolean;
+    debitNoteCalculate: boolean;
+    debitNoteDistribute: boolean;
+    debitNoteRaise: boolean;
+    debitNoteApprove: boolean;
+    debitNoteList: boolean;
+    // Coinsurance Credit Note loading states
+    coinsuranceCreditNoteNew: boolean;
+    coinsuranceCreditNoteLoad: boolean;
+    coinsuranceCreditNoteAmend: boolean;
+    coinsuranceCreditNoteCalculate: boolean;
+    coinsuranceCreditNoteRaise: boolean;
+    coinsuranceCreditNoteList: boolean;
+     debitNoteChildren: boolean;
   };
   error: {
     list: string | null;
@@ -211,8 +709,26 @@ export interface GroupLifeQuotationState {
     aggregate: string | null;
     anb: string | null;
     duration: string | null;
-    policies: string | null; // NEW: Error state for policies
-    endorsement: string | null; // NEW: Error state for endorsement
+    policies: string | null;
+    endorsement: string | null;
+    // Debit Note error states
+    debitNoteNew: string | null;
+    debitNoteLoad: string | null;
+    debitNoteAmend: string | null;
+    debitNoteRefresh: string | null;
+    debitNoteCalculate: string | null;
+    debitNoteDistribute: string | null;
+    debitNoteRaise: string | null;
+    debitNoteApprove: string | null;
+    debitNoteList: string | null;
+    // Coinsurance Credit Note error states
+    coinsuranceCreditNoteNew: string | null;
+    coinsuranceCreditNoteLoad: string | null;
+    coinsuranceCreditNoteAmend: string | null;
+    coinsuranceCreditNoteCalculate: string | null;
+    coinsuranceCreditNoteRaise: string | null;
+    coinsuranceCreditNoteList: string | null;
+    debitNoteChildren: string | null;
   };
 }
 
@@ -246,12 +762,27 @@ const initialState: GroupLifeQuotationState = {
   policyDetail: null,
   aggregateTotals: null,
   totalCount: 0,
-  // NEW: Initialize policies fields
   policies: [],
   policiesTotalCount: 0,
   policiesTotalPages: 0,
-  // NEW: Endorsement tracking
   createdEndorsement: null,
+  // Debit Note fields
+  currentDebitNote: null,
+  debitNoteList: [],
+  debitNoteListTotalCount: 0,
+  debitNoteListTotalPages: 0,
+  calculatedPremium: null,
+  distributedRisk: null,
+  raisedDebitNote: null,
+  approvedDebitNote: null,
+  // Coinsurance Credit Note fields
+  currentCoinsuranceCreditNote: null,
+  coinsuranceCreditNoteList: [],
+  coinsuranceCreditNoteListTotalCount: 0,
+  coinsuranceCreditNoteListTotalPages: 0,
+  calculatedCoinsuranceCreditNote: null,
+  raisedCoinsuranceCreditNote: null,
+  debitNoteChildren: [],
   loading: {
     list: false,
     detail: false,
@@ -265,8 +796,26 @@ const initialState: GroupLifeQuotationState = {
     aggregate: false,
     anb: false,
     duration: false,
-    policies: false, // NEW
-    endorsement: false, // NEW
+    policies: false,
+    endorsement: false,
+    // Debit Note loading states
+    debitNoteNew: false,
+    debitNoteLoad: false,
+    debitNoteAmend: false,
+    debitNoteRefresh: false,
+    debitNoteCalculate: false,
+    debitNoteDistribute: false,
+    debitNoteRaise: false,
+    debitNoteApprove: false,
+    debitNoteList: false,
+    // Coinsurance Credit Note loading states
+    coinsuranceCreditNoteNew: false,
+    coinsuranceCreditNoteLoad: false,
+    coinsuranceCreditNoteAmend: false,
+    coinsuranceCreditNoteCalculate: false,
+    coinsuranceCreditNoteRaise: false,
+    coinsuranceCreditNoteList: false,
+     debitNoteChildren: false,
   },
   error: {
     list: null,
@@ -281,8 +830,26 @@ const initialState: GroupLifeQuotationState = {
     aggregate: null,
     anb: null,
     duration: null,
-    policies: null, // NEW
-    endorsement: null, // NEW
+    policies: null,
+    endorsement: null,
+    // Debit Note error states
+    debitNoteNew: null,
+    debitNoteLoad: null,
+    debitNoteAmend: null,
+    debitNoteRefresh: null,
+    debitNoteCalculate: null,
+    debitNoteDistribute: null,
+    debitNoteRaise: null,
+    debitNoteApprove: null,
+    debitNoteList: null,
+    // Coinsurance Credit Note error states
+    coinsuranceCreditNoteNew: null,
+    coinsuranceCreditNoteLoad: null,
+    coinsuranceCreditNoteAmend: null,
+    coinsuranceCreditNoteCalculate: null,
+    coinsuranceCreditNoteRaise: null,
+    coinsuranceCreditNoteList: null,
+     debitNoteChildren: null,
   },
 };
 
@@ -354,12 +921,11 @@ export const fetchGroupLifePolicy = createAsyncThunk(
   }
 );
 
-// NEW: GET /api/grouplife/policies - List/search group-life policies
+// GET /api/grouplife/policies - List/search group-life policies
 export const fetchGroupLifePolicies = createAsyncThunk(
   "groupLifeQuotations/fetchPolicies",
   async (filters: GroupLifePolicyFilters = {}, { rejectWithValue }) => {
     try {
-      // Build query string from filters
       const queryParams = new URLSearchParams();
       
       if (filters.subRiskId) queryParams.append('SubRiskId', filters.subRiskId);
@@ -532,8 +1098,6 @@ export const fetchPolicyMembers = createAsyncThunk(
 
       const url = `${SERVER_URL}/grouplife/policies/policie/members?${queryParams.toString()}`;
 
-      console.log("📡 Fetching members from:", url);
-
       const response = await fetch(url, {
         method: "GET",
         headers: getHeaders(),
@@ -551,9 +1115,7 @@ export const fetchPolicyMembers = createAsyncThunk(
       }
 
       const result = await response.json();
-      console.log("✅ Raw API Response:", result);
       
-      // ✅ Map the API response to match the expected format
       const members = Array.isArray(result) ? result.map((item: any) => ({
         id: item.memberID?.toString(),
         memberId: item.memberID?.toString(),
@@ -597,16 +1159,11 @@ export const fetchPolicyMembers = createAsyncThunk(
         submittedOn: item.submittedOn,
         modifiedBy: item.modifiedBy,
         modifiedOn: item.modifiedOn,
-        // Keep original data for debugging
         _raw: item
       })) : [];
       
-      console.log("✅ Mapped Members:", members);
-      console.log("📊 Number of members:", members.length);
-      
       return members;
     } catch (error: any) {
-      console.error("❌ Error fetching members:", error);
       return rejectWithValue(error.message || "Failed to fetch members");
     }
   }
@@ -947,16 +1504,13 @@ export const computeDuration = createAsyncThunk(
 );
 
 // ================================================================
-// 🆕 NEW ENDPOINT: POST /api/grouplife/policies/{policyNo}/details/{sourceEndorsementNo}/endorsement
+// 🆕 ENDORSEMENT ENDPOINT
 // ================================================================
-
-// In groupLifeQuotationSlice.ts
 
 export const createEndorsement = createAsyncThunk(
   "groupLifeQuotations/createEndorsement",
   async (request: CreateEndorsementRequest, { rejectWithValue }) => {
     try {
-      // Validate required fields
       if (!request.policyNo) {
         throw new Error("Policy number is required");
       }
@@ -967,22 +1521,16 @@ export const createEndorsement = createAsyncThunk(
         throw new Error("Endorsement type is required (Renewal, Reversal, or Additional)");
       }
 
-      // ✅ CORRECT: Use the endpoint with path placeholders and query parameters
       const url = new URL(`${SERVER_URL}/grouplife/policies/policyNo/details/sourceEndorsementNo/endorsement`);
       url.searchParams.append('policyNo', request.policyNo);
       url.searchParams.append('sourceEndorsementNo', request.sourceEndorsementNo);
       url.searchParams.append('type', request.type);
 
-      console.log(`📡 Creating ${request.type} endorsement for policy ${request.policyNo} from source endorsement ${request.sourceEndorsementNo}`);
-      console.log(`🔗 URL: ${url.toString()}`); // Log the full URL for debugging
-
       const response = await fetch(url.toString(), {
         method: "POST",
         headers: getHeaders(),
-        // No body required - all data is in the URL
       });
 
-      // Handle non-OK responses
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}`;
         try {
@@ -994,15 +1542,611 @@ export const createEndorsement = createAsyncThunk(
         throw new Error(errorMessage);
       }
 
-      // Parse the response
       const result: CreateEndorsementResponse = await response.json();
-      
-      console.log(`✅ ${request.type} endorsement created successfully:`, result);
-      
       return result;
     } catch (error: any) {
-      console.error(`❌ Error creating ${request.type} endorsement:`, error);
       return rejectWithValue(error.message || "Failed to create endorsement");
+    }
+  }
+);
+
+// ================================================================
+// 🆕 DEBIT NOTE ENDPOINTS
+// ================================================================
+
+// GET /api/grouplife/debit-notes - List debit notes
+export const fetchDebitNotes = createAsyncThunk(
+  "groupLifeQuotations/fetchDebitNotes",
+  async (filters: DebitNoteFilters = {}, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (filters.policyNo) queryParams.append('PolicyNo', filters.policyNo);
+      if (filters.branchId) queryParams.append('BranchId', filters.branchId);
+      if (filters.bizSource) queryParams.append('BizSource', filters.bizSource);
+      if (filters.paymentType) queryParams.append('PaymentType', filters.paymentType);
+      if (filters.noteType) queryParams.append('NoteType', filters.noteType);
+      if (filters.approval !== undefined) queryParams.append('Approval', String(filters.approval));
+      if (filters.pendingOnly !== undefined) queryParams.append('PendingOnly', String(filters.pendingOnly));
+      if (filters.headNotesOnly !== undefined) queryParams.append('HeadNotesOnly', String(filters.headNotesOnly));
+      if (filters.billingFrom) queryParams.append('BillingFrom', filters.billingFrom);
+      if (filters.billingTo) queryParams.append('BillingTo', filters.billingTo);
+      if (filters.search) queryParams.append('Search', filters.search);
+      if (filters.page) queryParams.append('Page', String(filters.page));
+      if (filters.pageSize) queryParams.append('PageSize', String(filters.pageSize));
+
+      const queryString = queryParams.toString();
+      const url = `${SERVER_URL}/grouplife/debit-notes${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: DebitNoteListResponse = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to fetch debit notes");
+    }
+  }
+);
+
+// GET /api/grouplife/debit-notes/new - Prefill for a new debit note
+export const prefillDebitNote = createAsyncThunk(
+  "groupLifeQuotations/prefillDebitNote",
+  async (request: PrefillDebitNoteRequest, { rejectWithValue }) => {
+    try {
+      const url = new URL(`${SERVER_URL}/grouplife/debit-notes/new`);
+      url.searchParams.append('policyNo', request.policyNo);
+      url.searchParams.append('detailId', String(request.detailId));
+      url.searchParams.append('riskClass', request.riskClass);
+
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: DebitNote = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to prefill debit note");
+    }
+  }
+);
+
+// GET /api/grouplife/debit-notes/{dncnNo} - Load an existing debit note
+export const loadDebitNote = createAsyncThunk(
+  "groupLifeQuotations/loadDebitNote",
+  async ({ dncnNo, riskClass }: { dncnNo: string; riskClass?: string }, { rejectWithValue }) => {
+    try {
+      if (!dncnNo) {
+        throw new Error("Debit note number is required");
+      }
+
+      const url = new URL(`${SERVER_URL}/grouplife/debit-notes/${encodeURIComponent(dncnNo)}`);
+      if (riskClass) {
+        url.searchParams.append('riskClass', riskClass);
+      }
+
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: DebitNote = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to load debit note");
+    }
+  }
+);
+
+// PUT /api/grouplife/debit-notes/{dncnNo} - Amend an unposted debit note
+export const amendDebitNote = createAsyncThunk(
+  "groupLifeQuotations/amendDebitNote",
+  async ({ dncnNo, data }: { dncnNo: string; data: AmendDebitNoteRequest }, { rejectWithValue }) => {
+    try {
+      if (!dncnNo) {
+        throw new Error("Debit note number is required");
+      }
+
+      const url = `${SERVER_URL}/grouplife/debit-notes/${encodeURIComponent(dncnNo)}`;
+
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to amend debit note");
+    }
+  }
+);
+
+// GET /api/grouplife/debit-notes/{dncnNo}/refresh - Re-pull sum insured / gross premium from underlying policy detail
+export const refreshDebitNote = createAsyncThunk(
+  "groupLifeQuotations/refreshDebitNote",
+  async ({ dncnNo, riskClass }: { dncnNo: string; riskClass?: string }, { rejectWithValue }) => {
+    try {
+      if (!dncnNo) {
+        throw new Error("Debit note number is required");
+      }
+
+      const url = new URL(`${SERVER_URL}/grouplife/debit-notes/${encodeURIComponent(dncnNo)}/refresh`);
+      if (riskClass) {
+        url.searchParams.append('riskClass', riskClass);
+      }
+
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: DebitNote = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to refresh debit note");
+    }
+  }
+);
+
+// POST /api/grouplife/debit-notes/calculate - Commission, WHT, ORC and net premium for the header figures
+export const calculateDebitNotePremium = createAsyncThunk(
+  "groupLifeQuotations/calculateDebitNotePremium",
+  async (request: CalculatePremiumRequest, { rejectWithValue }) => {
+    try {
+      const url = `${SERVER_URL}/grouplife/debit-notes/calculate`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: CalculatePremiumResponse = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to calculate premium");
+    }
+  }
+);
+
+// POST /api/grouplife/debit-notes/distribute - Spread the risk across co-insurance participants
+export const distributeDebitNoteRisk = createAsyncThunk(
+  "groupLifeQuotations/distributeDebitNoteRisk",
+  async (request: DistributeRiskRequest, { rejectWithValue }) => {
+    try {
+      const url = `${SERVER_URL}/grouplife/debit-notes/distribute`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: DistributeRiskResponse = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to distribute risk");
+    }
+  }
+);
+
+// POST /api/grouplife/debit-notes - Raise the debit note with default flags = false
+export const raiseDebitNote = createAsyncThunk(
+  "groupLifeQuotations/raiseDebitNote",
+  async (request: RaiseDebitNoteRequest, { rejectWithValue }) => {
+    try {
+      // Ensure all post flags default to false if not provided
+      const payload = {
+        ...request,
+        postCommissionCreditNote: request.postCommissionCreditNote ?? false,
+        postCoinsuranceCreditNotes: request.postCoinsuranceCreditNotes ?? false,
+        postCoinsuranceOrcDebitNotes: request.postCoinsuranceOrcDebitNotes ?? false,
+        postLeadOrcCreditNotes: request.postLeadOrcCreditNotes ?? false,
+      };
+
+      const url = `${SERVER_URL}/grouplife/debit-notes`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: RaiseDebitNoteResponse = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to raise debit note");
+    }
+  }
+);
+
+// PUT /api/grouplife/debit-notes/{dncnNo}/approve - Approve the note
+export const approveDebitNote = createAsyncThunk(
+  "groupLifeQuotations/approveDebitNote",
+  async (request: ApproveDebitNoteRequest, { rejectWithValue }) => {
+    try {
+      if (!request.dncnNo) {
+        throw new Error("Debit note number is required");
+      }
+
+      const url = new URL(`${SERVER_URL}/grouplife/debit-notes/${encodeURIComponent(request.dncnNo)}/approve`);
+      if (request.approvalStatus !== undefined) {
+        url.searchParams.append('approvalStatus', String(request.approvalStatus));
+      }
+
+      const response = await fetch(url.toString(), {
+        method: "PUT",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: ApproveDebitNoteResponse = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to approve debit note");
+    }
+  }
+);
+
+// ================================================================
+// 🆕 CO-INSURANCE CREDIT NOTE ENDPOINTS
+// ================================================================
+
+// GET /api/grouplife/coinsurance-notes - List co-insurance notes
+export const fetchCoinsuranceCreditNotes = createAsyncThunk(
+  "groupLifeQuotations/fetchCoinsuranceCreditNotes",
+  async (filters: CoinsuranceCreditNoteFilters = {}, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (filters.policyNo) queryParams.append('PolicyNo', filters.policyNo);
+      if (filters.refDebitNoteNo) queryParams.append('RefDebitNoteNo', filters.refDebitNoteNo);
+      if (filters.participantId) queryParams.append('ParticipantId', filters.participantId);
+      if (filters.branchId) queryParams.append('BranchId', filters.branchId);
+      if (filters.approval !== undefined) queryParams.append('Approval', String(filters.approval));
+      if (filters.reversalsOnly !== undefined) queryParams.append('ReversalsOnly', String(filters.reversalsOnly));
+      if (filters.billingFrom) queryParams.append('BillingFrom', filters.billingFrom);
+      if (filters.billingTo) queryParams.append('BillingTo', filters.billingTo);
+      if (filters.search) queryParams.append('Search', filters.search);
+      if (filters.page) queryParams.append('Page', String(filters.page));
+      if (filters.pageSize) queryParams.append('PageSize', String(filters.pageSize));
+
+      const queryString = queryParams.toString();
+      const url = `${SERVER_URL}/grouplife/coinsurance-notes${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: CoinsuranceCreditNoteListResponse = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to fetch coinsurance credit notes");
+    }
+  }
+);
+
+// GET /api/grouplife/coinsurance-notes/new - Prefill from the head debit note
+export const prefillCoinsuranceCreditNote = createAsyncThunk(
+  "groupLifeQuotations/prefillCoinsuranceCreditNote",
+  async (request: PrefillCoinsuranceCreditNoteRequest, { rejectWithValue }) => {
+    try {
+      const url = new URL(`${SERVER_URL}/grouplife/coinsurance-notes/new`);
+      url.searchParams.append('policyNo', request.policyNo);
+      url.searchParams.append('refDebitNoteNo', request.refDebitNoteNo);
+      if (request.type) {
+        url.searchParams.append('type', request.type);
+      }
+
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: CoinsuranceCreditNote = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to prefill coinsurance credit note");
+    }
+  }
+);
+
+// ================================================================
+// 🆕 DEBIT NOTE CHILDREN ENDPOINT
+// ================================================================
+
+// GET /api/grouplife/debit-notes/{dncnNo}/children - Get child notes (commission, participant, ORC notes)
+export const fetchDebitNoteChildren = createAsyncThunk(
+  "groupLifeQuotations/fetchDebitNoteChildren",
+  async (dncnNo: string, { rejectWithValue }) => {
+    try {
+      if (!dncnNo) {
+        throw new Error("Debit note number is required");
+      }
+
+      const url = `${SERVER_URL}/grouplife/debit-notes/${encodeURIComponent(dncnNo)}/children`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      return result; // Returns an array of child notes
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to fetch debit note children");
+    }
+  }
+);
+
+// GET /api/grouplife/coinsurance-notes/{dncnNo} - Load an existing co-insurance note
+export const loadCoinsuranceCreditNote = createAsyncThunk(
+  "groupLifeQuotations/loadCoinsuranceCreditNote",
+  async (dncnNo: string, { rejectWithValue }) => {
+    try {
+      if (!dncnNo) {
+        throw new Error("Co-insurance note number is required");
+      }
+
+      const url = `${SERVER_URL}/grouplife/coinsurance-notes/${encodeURIComponent(dncnNo)}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: CoinsuranceCreditNote = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to load coinsurance credit note");
+    }
+  }
+);
+
+// PUT /api/grouplife/coinsurance-notes/{dncnNo} - Amend a co-insurance note that has not reached the ledger
+export const amendCoinsuranceCreditNote = createAsyncThunk(
+  "groupLifeQuotations/amendCoinsuranceCreditNote",
+  async ({ dncnNo, data }: { dncnNo: string; data: AmendCoinsuranceCreditNoteRequest }, { rejectWithValue }) => {
+    try {
+      if (!dncnNo) {
+        throw new Error("Co-insurance note number is required");
+      }
+
+      const url = `${SERVER_URL}/grouplife/coinsurance-notes/${encodeURIComponent(dncnNo)}`;
+
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to amend coinsurance credit note");
+    }
+  }
+);
+
+// POST /api/grouplife/coinsurance-notes/calculate - Share, commission, WHT, net and ORC for one participant
+export const calculateCoinsuranceCreditNote = createAsyncThunk(
+  "groupLifeQuotations/calculateCoinsuranceCreditNote",
+  async (request: CalculateCoinsuranceCreditNoteRequest, { rejectWithValue }) => {
+    try {
+      const url = `${SERVER_URL}/grouplife/coinsurance-notes/calculate`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: CalculateCoinsuranceCreditNoteResponse = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to calculate coinsurance credit note");
+    }
+  }
+);
+
+// POST /api/grouplife/coinsurance-notes - Raise a credit note for one participating company
+export const raiseCoinsuranceCreditNote = createAsyncThunk(
+  "groupLifeQuotations/raiseCoinsuranceCreditNote",
+  async (request: RaiseCoinsuranceCreditNoteRequest, { rejectWithValue }) => {
+    try {
+      const url = `${SERVER_URL}/grouplife/coinsurance-notes`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: RaiseCoinsuranceCreditNoteResponse = await response.json();
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to raise coinsurance credit note");
     }
   }
 );
@@ -1029,7 +2173,15 @@ const groupLifeQuotationSlice = createSlice({
       state.currentMembers = [];
       state.policyDetail = null;
       state.aggregateTotals = null;
-      state.createdEndorsement = null; // Clear endorsement when clearing quotation
+      state.createdEndorsement = null;
+      state.currentDebitNote = null;
+      state.calculatedPremium = null;
+      state.distributedRisk = null;
+      state.raisedDebitNote = null;
+      state.approvedDebitNote = null;
+      state.currentCoinsuranceCreditNote = null;
+      state.calculatedCoinsuranceCreditNote = null;
+      state.raisedCoinsuranceCreditNote = null;
     },
     setCurrentMembers: (
       state,
@@ -1116,10 +2268,43 @@ const groupLifeQuotationSlice = createSlice({
     setPolicyDetail: (state, action: PayloadAction<PolicyDetail | null>) => {
       state.policyDetail = action.payload;
     },
-    // NEW: Clear endorsement state
     clearEndorsement: (state) => {
       state.createdEndorsement = null;
       state.error.endorsement = null;
+    },
+    setCurrentDebitNote: (state, action: PayloadAction<DebitNote | null>) => {
+      state.currentDebitNote = action.payload;
+    },
+    clearCurrentDebitNote: (state) => {
+      state.currentDebitNote = null;
+      state.calculatedPremium = null;
+      state.distributedRisk = null;
+      state.raisedDebitNote = null;
+      state.approvedDebitNote = null;
+    },
+    clearDebitNoteErrors: (state) => {
+      state.error.debitNoteNew = null;
+      state.error.debitNoteLoad = null;
+      state.error.debitNoteAmend = null;
+      state.error.debitNoteRefresh = null;
+      state.error.debitNoteCalculate = null;
+      state.error.debitNoteDistribute = null;
+      state.error.debitNoteRaise = null;
+      state.error.debitNoteApprove = null;
+      state.error.debitNoteList = null;
+    },
+    clearCurrentCoinsuranceCreditNote: (state) => {
+      state.currentCoinsuranceCreditNote = null;
+      state.calculatedCoinsuranceCreditNote = null;
+      state.raisedCoinsuranceCreditNote = null;
+    },
+    clearCoinsuranceCreditNoteErrors: (state) => {
+      state.error.coinsuranceCreditNoteNew = null;
+      state.error.coinsuranceCreditNoteLoad = null;
+      state.error.coinsuranceCreditNoteAmend = null;
+      state.error.coinsuranceCreditNoteCalculate = null;
+      state.error.coinsuranceCreditNoteRaise = null;
+      state.error.coinsuranceCreditNoteList = null;
     },
   },
   extraReducers: (builder) => {
@@ -1156,7 +2341,7 @@ const groupLifeQuotationSlice = createSlice({
         state.error.detail = action.payload as string;
       })
 
-      // NEW: Fetch Policies List
+      // Fetch Policies List
       .addCase(fetchGroupLifePolicies.pending, (state) => {
         state.loading.policies = true;
         state.error.policies = null;
@@ -1235,12 +2420,10 @@ const groupLifeQuotationSlice = createSlice({
           state.currentQuotation.members = action.payload || [];
           state.currentQuotation.totalMembers = action.payload?.length || 0;
         }
-        console.log("✅ Redux state updated with members:", state.currentMembers);
       })
       .addCase(fetchPolicyMembers.rejected, (state, action) => {
         state.loading.detail = false;
         state.error.detail = action.payload as string;
-        console.error("❌ Redux error fetching members:", action.payload);
       })
 
       // Compute Member Premium
@@ -1248,12 +2431,8 @@ const groupLifeQuotationSlice = createSlice({
         state.loading.compute = true;
         state.error.compute = null;
       })
-      .addCase(computeMemberPremium.fulfilled, (state, action) => {
+      .addCase(computeMemberPremium.fulfilled, (state) => {
         state.loading.compute = false;
-        const result = action.payload;
-        if (result && state.currentQuotation) {
-          // Handle the computed premium result
-        }
       })
       .addCase(computeMemberPremium.rejected, (state, action) => {
         state.loading.compute = false;
@@ -1265,17 +2444,12 @@ const groupLifeQuotationSlice = createSlice({
         state.loading.update = true;
         state.error.update = null;
       })
-      .addCase(savePolicyMember.fulfilled, (state, action) => {
+      .addCase(savePolicyMember.fulfilled, (state) => {
         state.loading.update = false;
-        const member = action.payload;
-        console.log("✅ Member saved:", member);
-        // The member is saved on the server, so we should refetch
-        // The component will call fetchMembers after save
       })
       .addCase(savePolicyMember.rejected, (state, action) => {
         state.loading.update = false;
         state.error.update = action.payload as string;
-        console.error("❌ Error saving member:", action.payload);
       })
 
       // Remove Member
@@ -1318,13 +2492,8 @@ const groupLifeQuotationSlice = createSlice({
         state.loading.bulk = true;
         state.error.bulk = null;
       })
-      .addCase(bulkUploadMembers.fulfilled, (state, action) => {
+      .addCase(bulkUploadMembers.fulfilled, (state) => {
         state.loading.bulk = false;
-        const result = action.payload;
-        if (result && result.totalMembers && state.currentQuotation) {
-          // The bulk upload endpoint should return the updated members or count
-          // We might need to refetch members after upload
-        }
       })
       .addCase(bulkUploadMembers.rejected, (state, action) => {
         state.loading.bulk = false;
@@ -1350,14 +2519,8 @@ const groupLifeQuotationSlice = createSlice({
         state.loading.upload = true;
         state.error.upload = null;
       })
-      .addCase(uploadExcelMembers.fulfilled, (state, action) => {
+      .addCase(uploadExcelMembers.fulfilled, (state) => {
         state.loading.upload = false;
-        const result = action.payload;
-        if (result && state.currentQuotation) {
-          // Update the members list
-          // The upload endpoint returns the insert count and totals
-          // We might need to refetch members after upload
-        }
       })
       .addCase(uploadExcelMembers.rejected, (state, action) => {
         state.loading.upload = false;
@@ -1369,9 +2532,8 @@ const groupLifeQuotationSlice = createSlice({
         state.loading.anb = true;
         state.error.anb = null;
       })
-      .addCase(computeAgeNextBirthday.fulfilled, (state, action) => {
+      .addCase(computeAgeNextBirthday.fulfilled, (state) => {
         state.loading.anb = false;
-        // Handle ANB result
       })
       .addCase(computeAgeNextBirthday.rejected, (state, action) => {
         state.loading.anb = false;
@@ -1383,18 +2545,15 @@ const groupLifeQuotationSlice = createSlice({
         state.loading.duration = true;
         state.error.duration = null;
       })
-      .addCase(computeDuration.fulfilled, (state, action) => {
+      .addCase(computeDuration.fulfilled, (state) => {
         state.loading.duration = false;
-        // Handle duration result
       })
       .addCase(computeDuration.rejected, (state, action) => {
         state.loading.duration = false;
         state.error.duration = action.payload as string;
       })
 
-      // ================================================================
-      // 🆕 NEW: Create Endorsement (Renewal, Reversal, Additional)
-      // ================================================================
+      // Create Endorsement
       .addCase(createEndorsement.pending, (state) => {
         state.loading.endorsement = true;
         state.error.endorsement = null;
@@ -1403,13 +2562,286 @@ const groupLifeQuotationSlice = createSlice({
       .addCase(createEndorsement.fulfilled, (state, action) => {
         state.loading.endorsement = false;
         state.createdEndorsement = action.payload;
-        console.log("✅ Endorsement created and stored in state:", action.payload);
       })
       .addCase(createEndorsement.rejected, (state, action) => {
         state.loading.endorsement = false;
         state.error.endorsement = action.payload as string;
         state.createdEndorsement = null;
-        console.error("❌ Endorsement creation failed:", action.payload);
+      })
+
+      // ================================================================
+      // 🆕 DEBIT NOTE REDUCERS
+      // ================================================================
+
+      // Fetch Debit Notes List
+      .addCase(fetchDebitNotes.pending, (state) => {
+        state.loading.debitNoteList = true;
+        state.error.debitNoteList = null;
+      })
+      .addCase(fetchDebitNotes.fulfilled, (state, action) => {
+        state.loading.debitNoteList = false;
+        state.debitNoteList = action.payload.items || [];
+        state.debitNoteListTotalCount = action.payload.totalCount || 0;
+        state.debitNoteListTotalPages = action.payload.totalPages || 0;
+      })
+      .addCase(fetchDebitNotes.rejected, (state, action) => {
+        state.loading.debitNoteList = false;
+        state.error.debitNoteList = action.payload as string;
+        state.debitNoteList = [];
+        state.debitNoteListTotalCount = 0;
+        state.debitNoteListTotalPages = 0;
+      })
+
+      // Prefill Debit Note
+      .addCase(prefillDebitNote.pending, (state) => {
+        state.loading.debitNoteNew = true;
+        state.error.debitNoteNew = null;
+        state.currentDebitNote = null;
+      })
+      .addCase(prefillDebitNote.fulfilled, (state, action) => {
+        state.loading.debitNoteNew = false;
+        state.currentDebitNote = action.payload;
+      })
+      .addCase(prefillDebitNote.rejected, (state, action) => {
+        state.loading.debitNoteNew = false;
+        state.error.debitNoteNew = action.payload as string;
+        state.currentDebitNote = null;
+      })
+
+      // Load Debit Note
+      .addCase(loadDebitNote.pending, (state) => {
+        state.loading.debitNoteLoad = true;
+        state.error.debitNoteLoad = null;
+        state.currentDebitNote = null;
+      })
+      .addCase(loadDebitNote.fulfilled, (state, action) => {
+        state.loading.debitNoteLoad = false;
+        state.currentDebitNote = action.payload;
+      })
+      .addCase(loadDebitNote.rejected, (state, action) => {
+        state.loading.debitNoteLoad = false;
+        state.error.debitNoteLoad = action.payload as string;
+        state.currentDebitNote = null;
+      })
+
+      // Amend Debit Note
+      .addCase(amendDebitNote.pending, (state) => {
+        state.loading.debitNoteAmend = true;
+        state.error.debitNoteAmend = null;
+      })
+      .addCase(amendDebitNote.fulfilled, (state, action) => {
+        state.loading.debitNoteAmend = false;
+        if (state.currentDebitNote) {
+          state.currentDebitNote = { ...state.currentDebitNote, ...action.payload };
+        }
+      })
+      .addCase(amendDebitNote.rejected, (state, action) => {
+        state.loading.debitNoteAmend = false;
+        state.error.debitNoteAmend = action.payload as string;
+      })
+
+      // Refresh Debit Note
+      .addCase(refreshDebitNote.pending, (state) => {
+        state.loading.debitNoteRefresh = true;
+        state.error.debitNoteRefresh = null;
+      })
+      .addCase(refreshDebitNote.fulfilled, (state, action) => {
+        state.loading.debitNoteRefresh = false;
+        state.currentDebitNote = action.payload;
+      })
+      .addCase(refreshDebitNote.rejected, (state, action) => {
+        state.loading.debitNoteRefresh = false;
+        state.error.debitNoteRefresh = action.payload as string;
+      })
+
+      // Calculate Debit Note Premium
+      .addCase(calculateDebitNotePremium.pending, (state) => {
+        state.loading.debitNoteCalculate = true;
+        state.error.debitNoteCalculate = null;
+        state.calculatedPremium = null;
+      })
+      .addCase(calculateDebitNotePremium.fulfilled, (state, action) => {
+        state.loading.debitNoteCalculate = false;
+        state.calculatedPremium = action.payload;
+      })
+      .addCase(calculateDebitNotePremium.rejected, (state, action) => {
+        state.loading.debitNoteCalculate = false;
+        state.error.debitNoteCalculate = action.payload as string;
+        state.calculatedPremium = null;
+      })
+
+      // Distribute Debit Note Risk
+      .addCase(distributeDebitNoteRisk.pending, (state) => {
+        state.loading.debitNoteDistribute = true;
+        state.error.debitNoteDistribute = null;
+        state.distributedRisk = null;
+      })
+      .addCase(distributeDebitNoteRisk.fulfilled, (state, action) => {
+        state.loading.debitNoteDistribute = false;
+        state.distributedRisk = action.payload;
+        if (action.payload.isBalanced && action.payload.errors.length === 0) {
+          if (state.currentDebitNote) {
+            state.currentDebitNote.coinsuranceLines = action.payload.lines;
+          }
+        }
+      })
+      .addCase(distributeDebitNoteRisk.rejected, (state, action) => {
+        state.loading.debitNoteDistribute = false;
+        state.error.debitNoteDistribute = action.payload as string;
+        state.distributedRisk = null;
+      })
+
+      // Raise Debit Note
+      .addCase(raiseDebitNote.pending, (state) => {
+        state.loading.debitNoteRaise = true;
+        state.error.debitNoteRaise = null;
+        state.raisedDebitNote = null;
+      })
+      .addCase(raiseDebitNote.fulfilled, (state, action) => {
+        state.loading.debitNoteRaise = false;
+        state.raisedDebitNote = action.payload;
+      })
+      .addCase(raiseDebitNote.rejected, (state, action) => {
+        state.loading.debitNoteRaise = false;
+        state.error.debitNoteRaise = action.payload as string;
+        state.raisedDebitNote = null;
+      })
+
+      // Approve Debit Note
+      .addCase(approveDebitNote.pending, (state) => {
+        state.loading.debitNoteApprove = true;
+        state.error.debitNoteApprove = null;
+        state.approvedDebitNote = null;
+      })
+      .addCase(approveDebitNote.fulfilled, (state, action) => {
+        state.loading.debitNoteApprove = false;
+        state.approvedDebitNote = action.payload;
+        if (state.currentDebitNote && action.payload.renumbered) {
+          state.currentDebitNote.debitNoteNo = action.payload.debitNoteNo;
+        }
+      })
+      .addCase(approveDebitNote.rejected, (state, action) => {
+        state.loading.debitNoteApprove = false;
+        state.error.debitNoteApprove = action.payload as string;
+        state.approvedDebitNote = null;
+      })
+
+      // ================================================================
+      // 🆕 CO-INSURANCE CREDIT NOTE REDUCERS
+      // ================================================================
+
+      // Fetch Coinsurance Credit Notes List
+      .addCase(fetchCoinsuranceCreditNotes.pending, (state) => {
+        state.loading.coinsuranceCreditNoteList = true;
+        state.error.coinsuranceCreditNoteList = null;
+      })
+      .addCase(fetchCoinsuranceCreditNotes.fulfilled, (state, action) => {
+        state.loading.coinsuranceCreditNoteList = false;
+        state.coinsuranceCreditNoteList = action.payload.items || [];
+        state.coinsuranceCreditNoteListTotalCount = action.payload.totalCount || 0;
+        state.coinsuranceCreditNoteListTotalPages = action.payload.totalPages || 0;
+      })
+      .addCase(fetchCoinsuranceCreditNotes.rejected, (state, action) => {
+        state.loading.coinsuranceCreditNoteList = false;
+        state.error.coinsuranceCreditNoteList = action.payload as string;
+        state.coinsuranceCreditNoteList = [];
+        state.coinsuranceCreditNoteListTotalCount = 0;
+        state.coinsuranceCreditNoteListTotalPages = 0;
+      })
+
+      // Prefill Coinsurance Credit Note
+      .addCase(prefillCoinsuranceCreditNote.pending, (state) => {
+        state.loading.coinsuranceCreditNoteNew = true;
+        state.error.coinsuranceCreditNoteNew = null;
+        state.currentCoinsuranceCreditNote = null;
+      })
+      .addCase(prefillCoinsuranceCreditNote.fulfilled, (state, action) => {
+        state.loading.coinsuranceCreditNoteNew = false;
+        state.currentCoinsuranceCreditNote = action.payload;
+      })
+      .addCase(prefillCoinsuranceCreditNote.rejected, (state, action) => {
+        state.loading.coinsuranceCreditNoteNew = false;
+        state.error.coinsuranceCreditNoteNew = action.payload as string;
+        state.currentCoinsuranceCreditNote = null;
+      })
+
+      // Load Coinsurance Credit Note
+      .addCase(loadCoinsuranceCreditNote.pending, (state) => {
+        state.loading.coinsuranceCreditNoteLoad = true;
+        state.error.coinsuranceCreditNoteLoad = null;
+        state.currentCoinsuranceCreditNote = null;
+      })
+      .addCase(loadCoinsuranceCreditNote.fulfilled, (state, action) => {
+        state.loading.coinsuranceCreditNoteLoad = false;
+        state.currentCoinsuranceCreditNote = action.payload;
+      })
+      .addCase(loadCoinsuranceCreditNote.rejected, (state, action) => {
+        state.loading.coinsuranceCreditNoteLoad = false;
+        state.error.coinsuranceCreditNoteLoad = action.payload as string;
+        state.currentCoinsuranceCreditNote = null;
+      })
+
+      // Amend Coinsurance Credit Note
+      .addCase(amendCoinsuranceCreditNote.pending, (state) => {
+        state.loading.coinsuranceCreditNoteAmend = true;
+        state.error.coinsuranceCreditNoteAmend = null;
+      })
+      .addCase(amendCoinsuranceCreditNote.fulfilled, (state, action) => {
+        state.loading.coinsuranceCreditNoteAmend = false;
+        if (state.currentCoinsuranceCreditNote) {
+          state.currentCoinsuranceCreditNote = { ...state.currentCoinsuranceCreditNote, ...action.payload };
+        }
+      })
+      .addCase(amendCoinsuranceCreditNote.rejected, (state, action) => {
+        state.loading.coinsuranceCreditNoteAmend = false;
+        state.error.coinsuranceCreditNoteAmend = action.payload as string;
+      })
+      // Fetch Debit Note Children
+.addCase(fetchDebitNoteChildren.pending, (state) => {
+  state.loading.debitNoteChildren = true;
+  state.error.debitNoteChildren = null;
+  state.debitNoteChildren = [];
+})
+.addCase(fetchDebitNoteChildren.fulfilled, (state, action) => {
+  state.loading.debitNoteChildren = false;
+  state.debitNoteChildren = action.payload || [];
+})
+.addCase(fetchDebitNoteChildren.rejected, (state, action) => {
+  state.loading.debitNoteChildren = false;
+  state.error.debitNoteChildren = action.payload as string;
+  state.debitNoteChildren = [];
+})
+
+      // Calculate Coinsurance Credit Note
+      .addCase(calculateCoinsuranceCreditNote.pending, (state) => {
+        state.loading.coinsuranceCreditNoteCalculate = true;
+        state.error.coinsuranceCreditNoteCalculate = null;
+        state.calculatedCoinsuranceCreditNote = null;
+      })
+      .addCase(calculateCoinsuranceCreditNote.fulfilled, (state, action) => {
+        state.loading.coinsuranceCreditNoteCalculate = false;
+        state.calculatedCoinsuranceCreditNote = action.payload;
+      })
+      .addCase(calculateCoinsuranceCreditNote.rejected, (state, action) => {
+        state.loading.coinsuranceCreditNoteCalculate = false;
+        state.error.coinsuranceCreditNoteCalculate = action.payload as string;
+        state.calculatedCoinsuranceCreditNote = null;
+      })
+
+      // Raise Coinsurance Credit Note
+      .addCase(raiseCoinsuranceCreditNote.pending, (state) => {
+        state.loading.coinsuranceCreditNoteRaise = true;
+        state.error.coinsuranceCreditNoteRaise = null;
+        state.raisedCoinsuranceCreditNote = null;
+      })
+      .addCase(raiseCoinsuranceCreditNote.fulfilled, (state, action) => {
+        state.loading.coinsuranceCreditNoteRaise = false;
+        state.raisedCoinsuranceCreditNote = action.payload;
+      })
+      .addCase(raiseCoinsuranceCreditNote.rejected, (state, action) => {
+        state.loading.coinsuranceCreditNoteRaise = false;
+        state.error.coinsuranceCreditNoteRaise = action.payload as string;
+        state.raisedCoinsuranceCreditNote = null;
       });
   },
 });
@@ -1428,14 +2860,18 @@ export const {
   setMembersForCurrentQuotation,
   clearAggregateTotals,
   setPolicyDetail,
-  clearEndorsement, // NEW
+  clearEndorsement,
+  setCurrentDebitNote,
+  clearCurrentDebitNote,
+  clearDebitNoteErrors,
+  clearCurrentCoinsuranceCreditNote,
+  clearCoinsuranceCreditNoteErrors,
 } = groupLifeQuotationSlice.actions;
 
 export const selectGroupLifeQuotations = (state: {
   groupLifeQuotations: GroupLifeQuotationState;
 }) => state.groupLifeQuotations;
 
-// NEW: Selector for the policies list
 export const selectGroupLifePolicies = (state: {
   groupLifeQuotations: GroupLifeQuotationState;
 }) => ({
@@ -1446,13 +2882,82 @@ export const selectGroupLifePolicies = (state: {
   error: state.groupLifeQuotations.error.policies,
 });
 
-// NEW: Selector for endorsement state
 export const selectEndorsement = (state: {
   groupLifeQuotations: GroupLifeQuotationState;
 }) => ({
   createdEndorsement: state.groupLifeQuotations.createdEndorsement,
   loading: state.groupLifeQuotations.loading.endorsement,
   error: state.groupLifeQuotations.error.endorsement,
+});
+
+export const selectDebitNote = (state: {
+  groupLifeQuotations: GroupLifeQuotationState;
+}) => ({
+  currentDebitNote: state.groupLifeQuotations.currentDebitNote,
+  debitNoteList: state.groupLifeQuotations.debitNoteList,
+  debitNoteListTotalCount: state.groupLifeQuotations.debitNoteListTotalCount,
+  debitNoteListTotalPages: state.groupLifeQuotations.debitNoteListTotalPages,
+  calculatedPremium: state.groupLifeQuotations.calculatedPremium,
+  distributedRisk: state.groupLifeQuotations.distributedRisk,
+  raisedDebitNote: state.groupLifeQuotations.raisedDebitNote,
+  approvedDebitNote: state.groupLifeQuotations.approvedDebitNote,
+  loading: {
+    new: state.groupLifeQuotations.loading.debitNoteNew,
+    load: state.groupLifeQuotations.loading.debitNoteLoad,
+    amend: state.groupLifeQuotations.loading.debitNoteAmend,
+    refresh: state.groupLifeQuotations.loading.debitNoteRefresh,
+    calculate: state.groupLifeQuotations.loading.debitNoteCalculate,
+    distribute: state.groupLifeQuotations.loading.debitNoteDistribute,
+    raise: state.groupLifeQuotations.loading.debitNoteRaise,
+    approve: state.groupLifeQuotations.loading.debitNoteApprove,
+    list: state.groupLifeQuotations.loading.debitNoteList,
+  },
+  error: {
+    new: state.groupLifeQuotations.error.debitNoteNew,
+    load: state.groupLifeQuotations.error.debitNoteLoad,
+    amend: state.groupLifeQuotations.error.debitNoteAmend,
+    refresh: state.groupLifeQuotations.error.debitNoteRefresh,
+    calculate: state.groupLifeQuotations.error.debitNoteCalculate,
+    distribute: state.groupLifeQuotations.error.debitNoteDistribute,
+    raise: state.groupLifeQuotations.error.debitNoteRaise,
+    approve: state.groupLifeQuotations.error.debitNoteApprove,
+    list: state.groupLifeQuotations.error.debitNoteList,
+  },
+});
+
+export const selectDebitNoteChildren = (state: {
+  groupLifeQuotations: GroupLifeQuotationState;
+}) => ({
+  children: state.groupLifeQuotations.debitNoteChildren,
+  loading: state.groupLifeQuotations.loading.debitNoteChildren,
+  error: state.groupLifeQuotations.error.debitNoteChildren,
+});
+
+export const selectCoinsuranceCreditNote = (state: {
+  groupLifeQuotations: GroupLifeQuotationState;
+}) => ({
+  currentCoinsuranceCreditNote: state.groupLifeQuotations.currentCoinsuranceCreditNote,
+  coinsuranceCreditNoteList: state.groupLifeQuotations.coinsuranceCreditNoteList,
+  coinsuranceCreditNoteListTotalCount: state.groupLifeQuotations.coinsuranceCreditNoteListTotalCount,
+  coinsuranceCreditNoteListTotalPages: state.groupLifeQuotations.coinsuranceCreditNoteListTotalPages,
+  calculatedCoinsuranceCreditNote: state.groupLifeQuotations.calculatedCoinsuranceCreditNote,
+  raisedCoinsuranceCreditNote: state.groupLifeQuotations.raisedCoinsuranceCreditNote,
+  loading: {
+    new: state.groupLifeQuotations.loading.coinsuranceCreditNoteNew,
+    load: state.groupLifeQuotations.loading.coinsuranceCreditNoteLoad,
+    amend: state.groupLifeQuotations.loading.coinsuranceCreditNoteAmend,
+    calculate: state.groupLifeQuotations.loading.coinsuranceCreditNoteCalculate,
+    raise: state.groupLifeQuotations.loading.coinsuranceCreditNoteRaise,
+    list: state.groupLifeQuotations.loading.coinsuranceCreditNoteList,
+  },
+  error: {
+    new: state.groupLifeQuotations.error.coinsuranceCreditNoteNew,
+    load: state.groupLifeQuotations.error.coinsuranceCreditNoteLoad,
+    amend: state.groupLifeQuotations.error.coinsuranceCreditNoteAmend,
+    calculate: state.groupLifeQuotations.error.coinsuranceCreditNoteCalculate,
+    raise: state.groupLifeQuotations.error.coinsuranceCreditNoteRaise,
+    list: state.groupLifeQuotations.error.coinsuranceCreditNoteList,
+  },
 });
 
 export default groupLifeQuotationSlice.reducer;

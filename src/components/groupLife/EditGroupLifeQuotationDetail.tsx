@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../UI/new-select";
-import { ArrowLeft, RefreshCw, Loader2, ChevronDown, X, Users, CreditCard, Paperclip } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, ChevronDown, X, Users, CreditCard, Paperclip, FileText } from "lucide-react";
 import { useToast } from "../UI/use-toast";
 import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
 import {
@@ -39,6 +39,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "../UI/tabs";
 import GroupLifeDetailsTab from "./GroupLifeDetailsTab";
 import CreditNotesTab from "./CreditNotesTab";
 import AttachmentsTab from "./AttachmentsTab";
+import DebitNoteList from './DebitNoteList';
 
 // ==================== TYPES ====================
 
@@ -1740,7 +1741,9 @@ const sourcePage = getSourceFromUrl();
                       flex-shrink-0 min-w-[80px] sm:min-w-0
                     `}
                   >
+                   
                     <span className="flex items-center gap-1.5 sm:gap-2">
+                       <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       <span className="hidden xs:inline">Policy Detail</span>
                       <span className="xs:hidden">Policy Detail</span>
                     </span>
@@ -1799,7 +1802,7 @@ const sourcePage = getSourceFromUrl();
                     <span className="flex items-center gap-1.5 sm:gap-2">
                       <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       <span className="hidden sm:inline">Co-Insurance (Credit Note)</span>
-                      <span className="hidden xs:inline sm:hidden">Credit Note</span>
+                      <span className=" hidden xs:hidden">Credit Note</span>
            
                     </span>
                   </TabsTrigger>
@@ -1850,6 +1853,9 @@ const sourcePage = getSourceFromUrl();
       navigate(`/underwriting/group-life-quotations/endorse/${encodeURIComponent(item.policyNo)}`);
     }}
   />
+</TabsContent>
+<TabsContent value="debit-note" className="mt-0">
+  <DebitNoteList policyNo={policyNo} />
 </TabsContent>
 
                 <TabsContent value="credit-note" className="mt-0">
