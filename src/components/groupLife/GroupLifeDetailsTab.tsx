@@ -229,9 +229,9 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
         certOrDocNo: data.certOrDocNo || "N/A",
         insuredName: data.insuredName || formData?.clientName || "N/A",
         created: data.created || false,
-        sumInsured: formData?.totalSumInsured || 0,
-        premium: formData?.totalPremium || 0,
-        transDate: formData?.transactionDate || new Date().toISOString(),
+        sumInsured: data.sumInsured ?? data.totalSumInsured ?? formData?.totalSumInsured ?? 0,
+        premium: data.grossPremium ?? data.netPremium ?? data.totalPremium ?? formData?.totalPremium ?? 0,
+        transDate: data.effectiveDate || data.submittedOn || formData?.transactionDate || new Date().toISOString(),
       };
       setPolicyDetails([detailItem]);
       

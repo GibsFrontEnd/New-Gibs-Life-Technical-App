@@ -1,302 +1,467 @@
 // src/components/groupLife/AttachmentsTab.tsx
 // @ts-nocheck
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent } from "../UI/card";
-import { Button } from "../UI/new-button";
-import { useToast } from "../UI/use-toast";
-import { SERVER_URL } from "../../utils/constants";
-import { Loader2, Upload, File, Trash2, Download, FileText } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../UI/table";
-import { formatDate } from "../../utils/ui-utilities";
+  fetchDocuments,
+  createDocument,
+  deleteDocument,
+  downloadDocumentFile,
+  clearError,
+} from "../../features/reducers/documentReducers/documentSlice";
+import { CreateDocumentRequest, Document } from "../../types/document";
+import { useToast } from "../../hooks/use-toast";
 
 interface AttachmentsTabProps {
   policyNo: string;
+  className?: string;
 }
 
-interface Attachment {
-  id: string;
-  fileName: string;
-  fileSize: number;
-  fileType: string;
-  uploadedDate: string;
-  uploadedBy: string;
-}
-
-const AttachmentsTab: React.FC<AttachmentsTabProps> = ({ policyNo }) => {
+const AttachmentsTab: React.FC<AttachmentsTabProps> = ({
+  policyNo,
+  className = "",
+}) => {
+  const dispatch = useAppDispatch();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const { documents, loading, error } = useAppSelector((state) => state.documents);
 
-  const fetchAttachments = async () => {
-    if (!policyNo) return;
+  const safeDocuments = Array.isArray(documents) ? documents : [];
 
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      
-      const response = await fetch(
-        `${SERVER_URL}/grouplife/policies/${encodeURIComponent(policyNo)}/attachments`,
-        {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-          }
-        }
-      );
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedDocType, setSelectedDocType] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+  const canUpload = Boolean(policyNo);
 
-      const data = await response.json();
-      setAttachments(data.items || data || []);
-    } catch (error) {
-      console.error("Error fetching attachments:", error);
-      // Set empty array if endpoint doesn't exist yet
-      setAttachments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Filter to only documents that belong to this policy
+  const filteredDocuments = safeDocuments.filter(
+    (doc) => !policyNo || doc.docNo === policyNo
+  );
+
+  const documentTypes = [
+    "AGENCY ONBOARDING",
+    "IDENTIFICATION",
+    "PROOF OF ADDRESS",
+    "EDUCATIONAL CERTIFICATE",
+    "FINANCIAL DOCUMENT",
+    "CONTRACT",
+    "PICTURE",
+    "OTHER",
+  ];
+
+  // ===== EFFECTS =====
 
   useEffect(() => {
     if (policyNo) {
-      fetchAttachments();
+      dispatch(fetchDocuments(policyNo));
     }
-  }, [policyNo]);
+  }, [dispatch, policyNo]);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => dispatch(clearError()), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, dispatch]);
 
-    setUploading(true);
+  // ===== HANDLERS =====
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    if (!policyNo) {
+      toast({
+        title: "Missing policy",
+        description: "Cannot upload without a policy number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const currentUser =
+      localStorage.getItem("agentId") ||
+      localStorage.getItem("userId") ||
+      "portal_user";
+
+    const documentData: CreateDocumentRequest = {
+      DocNo: policyNo,
+      DocTypes: selectedDocType || getDocumentType(file.name),
+      DocFrom: "Group Life Policy",
+      DocumentFile: file,
+      OptionType: "PolicyDoc",
+      SubmittedBy: currentUser,
+    };
+
+    let progressInterval: NodeJS.Timeout | null = null;
+
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("policyNo", policyNo);
+      setUploadProgress(0);
+      progressInterval = setInterval(() => {
+        setUploadProgress((prev) => (prev >= 90 ? 90 : prev + 10));
+      }, 200);
 
-      const response = await fetch(
-        `${SERVER_URL}/grouplife/policies/${encodeURIComponent(policyNo)}/attachments`,
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
+      await dispatch(createDocument(documentData)).unwrap();
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      if (progressInterval) clearInterval(progressInterval);
+      setUploadProgress(100);
 
       toast({
         title: "Success",
-        description: "File uploaded successfully",
-        variant: "default",
+        description: "Document uploaded successfully",
+        variant: "success",
       });
 
-      // Refresh attachments list
-      await fetchAttachments();
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      toast({
-        title: "Error",
-        description: "Failed to upload file",
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
+      setShowUploadModal(false);
 
-  const handleDelete = async (attachmentId: string) => {
-    if (!confirm("Are you sure you want to delete this attachment?")) return;
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
-    try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      
-      const response = await fetch(
-        `${SERVER_URL}/grouplife/policies/${encodeURIComponent(policyNo)}/attachments/${attachmentId}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      dispatch(fetchDocuments(policyNo));
+      setTimeout(() => setUploadProgress(0), 1000);
+    } catch (err: any) {
+      console.error("Upload failed:", err);
+      if (progressInterval) clearInterval(progressInterval);
+      setUploadProgress(0);
 
       toast({
-        title: "Success",
-        description: "Attachment deleted successfully",
-        variant: "default",
-      });
-
-      // Refresh attachments list
-      await fetchAttachments();
-    } catch (error) {
-      console.error("Error deleting attachment:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete attachment",
+        title: "Upload Failed",
+        description: err?.message || "Failed to upload document. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  const handleDownload = async (attachmentId: string, fileName: string) => {
+  const handleDownload = async (docItem: Document) => {
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      
-      const response = await fetch(
-        `${SERVER_URL}/grouplife/policies/${encodeURIComponent(policyNo)}/attachments/${attachmentId}/download`,
-        {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        }
-      );
+      const blob = await dispatch(
+        downloadDocumentFile(docItem.attachID)
+      ).unwrap();
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const link = window.document.createElement("a");
+      link.href = url;
+      link.download = docItem.docDetails || `document-${docItem.attachID}`;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading attachment:", error);
+    } catch (err) {
+      console.error("Download failed:", err);
       toast({
-        title: "Error",
-        description: "Failed to download attachment",
+        title: "Download Failed",
+        description: "Failed to download document.",
         variant: "destructive",
       });
     }
   };
 
-  if (loading) {
+  const handleDelete = async (docItem: Document) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete "${docItem.docDetails || docItem.docNo}"?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await dispatch(deleteDocument(docItem.attachID)).unwrap();
+
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+        variant: "success",
+      });
+
+      if (policyNo) dispatch(fetchDocuments(policyNo));
+    } catch (err) {
+      console.error("Delete failed:", err);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete document.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ===== HELPERS =====
+
+  const getDocumentType = (filename: string): string => {
+    const ext = filename.split(".").pop()?.toLowerCase();
+    const typeMap: { [key: string]: string } = {
+      pdf: "PDF Document",
+      doc: "Word Document",
+      docx: "Word Document",
+      jpg: "Image",
+      jpeg: "Image",
+      png: "Image",
+      xls: "Excel Spreadsheet",
+      xlsx: "Excel Spreadsheet",
+      txt: "Text File",
+    };
+    return typeMap[ext || ""] || "Other";
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (!bytes) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getFileIcon = (docType: string): string => {
+    const iconMap: { [key: string]: string } = {
+      "PDF Document": "📄",
+      "Word Document": "📝",
+      Image: "🖼️",
+      "Excel Spreadsheet": "📊",
+      "Text File": "📃",
+      "AGENCY ONBOARDING": "🏢",
+      IDENTIFICATION: "🆔",
+      "PROOF OF ADDRESS": "🏠",
+      "EDUCATIONAL CERTIFICATE": "🎓",
+      "FINANCIAL DOCUMENT": "💰",
+      CONTRACT: "📑",
+      PICTURE: "🖼️",
+    };
+    return iconMap[docType] || "📎";
+  };
+
+  // ===== LOADING =====
+
+  if (loading && filteredDocuments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
-        <p className="text-gray-600 font-medium">Loading attachments...</p>
+      <div className={`bg-white border border-gray-200 rounded-lg p-6 ${className}`}>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading attachments...</span>
+        </div>
       </div>
     );
   }
 
+  // ===== RENDER =====
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Attachments</h3>
-        <div className="relative">
-          <input
-            type="file"
-            id="file-upload"
-            className="hidden"
-            onChange={handleFileUpload}
-            disabled={uploading}
-          />
-          <label htmlFor="file-upload">
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-              disabled={uploading}
-              as="span"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload File
-                </>
-              )}
-            </Button>
-          </label>
+    <div className={`bg-white border border-gray-200 rounded-lg p-6 ${className}`}>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Attachments</h3>
+          <p className="text-gray-500 text-sm mt-1">
+            {canUpload
+              ? `Documents for policy ${policyNo}`
+              : "Select a policy to manage attachments."}
+          </p>
         </div>
+
+        <button
+          onClick={() => setShowUploadModal(true)}
+          disabled={!canUpload}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center ${
+            canUpload
+              ? "bg-blue-600 hover:bg-blue-700 text-white"
+              : "bg-gray-200 text-gray-500 cursor-not-allowed"
+          }`}
+        >
+          <span className="mr-2">+</span>
+          Upload Documents
+        </button>
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          {attachments.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No attachments found for this policy.</p>
-              <p className="text-sm mt-2">Click "Upload File" to add one.</p>
+      {!canUpload && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+          Select or create a policy to enable document uploads.
+        </div>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <span className="text-red-400">⚠️</span>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>File Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Size</TableHead>
-                  <TableHead>Uploaded Date</TableHead>
-                  <TableHead>Uploaded By</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {attachments.map((attachment) => (
-                  <TableRow key={attachment.id}>
-                    <TableCell className="font-medium flex items-center gap-2">
-                      <File className="w-4 h-4 text-blue-500" />
-                      {attachment.fileName}
-                    </TableCell>
-                    <TableCell>{attachment.fileType}</TableCell>
-                    <TableCell className="text-right">
-                      {(attachment.fileSize / 1024).toFixed(2)} KB
-                    </TableCell>
-                    <TableCell>{formatDate(attachment.uploadedDate)}</TableCell>
-                    <TableCell>{attachment.uploadedBy}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownload(attachment.id, attachment.fileName)}
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(attachment.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <div className="text-sm text-red-700 mt-1">{error}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Documents List */}
+      {filteredDocuments.length > 0 ? (
+        <div className="grid gap-4">
+          {filteredDocuments.map((docItem) => (
+            <div
+              key={docItem.attachID}
+              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            >
+              <div className="flex items-center space-x-4 flex-1">
+                <div className="text-2xl">{getFileIcon(docItem.docTypes)}</div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-medium text-gray-900 truncate">
+                    {docItem.docDetails || docItem.docNo || "Untitled"}
+                  </h4>
+                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-500">
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      {docItem.docTypes}
+                    </span>
+                    <span>{formatFileSize(docItem.documentSize)}</span>
+                    <span>•</span>
+                    <span>Policy: {docItem.docNo}</span>
+                    <span>•</span>
+                    <span>Uploaded {formatDate(docItem.submittedOn)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => handleDownload(docItem)}
+                  className="text-blue-600 hover:text-blue-800 p-2 rounded transition-colors duration-200"
+                  title="Download"
+                >
+                  ⬇️
+                </button>
+                <button
+                  onClick={() => handleDelete(docItem)}
+                  className="text-red-600 hover:text-red-800 p-2 rounded transition-colors duration-200"
+                  title="Delete"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Empty State */
+        <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+          <div className="text-6xl mb-4">📁</div>
+          <h4 className="text-lg font-medium text-gray-900 mb-2">
+            No attachments found
+          </h4>
+          <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+            {policyNo
+              ? `No documents have been uploaded for policy ${policyNo} yet.`
+              : "No documents have been uploaded yet."}
+          </p>
+          {canUpload && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+            >
+              Upload Documents
+            </button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+            <h3 className="text-lg font-semibold mb-4">Upload Document</h3>
+
+            {uploadProgress > 0 ? (
+              <div className="space-y-4">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-gray-600 text-center">
+                  {uploadProgress < 100 ? "Uploading..." : "Upload Complete!"}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Document Type
+                  </label>
+                  <select
+                    value={selectedDocType}
+                    onChange={(e) => setSelectedDocType(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Auto-detect from file</option>
+                    {documentTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200 ${
+                    canUpload
+                      ? "border-gray-300 cursor-pointer hover:border-blue-400"
+                      : "border-gray-200 cursor-not-allowed bg-gray-50"
+                  }`}
+                  onClick={() => {
+                    if (canUpload) handleFileSelect();
+                  }}
+                >
+                  <div className="text-4xl mb-4">📄</div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                    Click to select file
+                  </h4>
+                  <p className="text-gray-500">
+                    {canUpload
+                      ? "Supported formats: PDF, DOC, DOCX, JPG, PNG, XLS, TXT"
+                      : "Select a policy to enable uploads"}
+                  </p>
+                </div>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.txt"
+                  disabled={!canUpload}
+                />
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowUploadModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

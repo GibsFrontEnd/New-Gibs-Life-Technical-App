@@ -184,7 +184,7 @@ const hasFetchedDebitNoteRef = useRef(false);
         commissionAmount: 0,
         whtAmount: 0,
         netPremium: 0,
-        recordParticipation: true,
+        recordParticipation: false,
         totalSumInsured: 0,
         totalPremium: 0,
         creditNoteNo: "",
@@ -575,7 +575,7 @@ useEffect(() => {
                 commissionAmount: Number(formData.commissionAmount) || 0,
                 whtAmount: Number(formData.whtAmount) || 0,
                 netPremium: Number(formData.netPremium) || 0,
-                recordParticipation: formData.recordParticipation !== undefined ? formData.recordParticipation : true,
+                recordParticipation: formData.recordParticipation !== undefined ? formData.recordParticipation : false,
                 totalSumInsured: Number(formData.totalSumInsured) || 0,
                 totalPremium: Number(formData.totalPremium) || 0,
             };
@@ -975,96 +975,96 @@ useEffect(() => {
                     )}
                 </div>
 
-                {/* 3. Premium & Levies - ALL FIELDS EDITABLE */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
-                    {renderSectionHeader(
-                        'premium',
-                        'Premium & Calculations',
-                        <span className="w-5 h-5 text-blue-600 font-bold flex items-center justify-center">₦</span>,
-                        expandedSections.premium && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRecalculate();
-                                }}
-                                disabled={localLoading || !formData.policyNo || !formData.participantId}
-                            >
-                                <RefreshCw className={`w-3 h-3 mr-2 ${localLoading ? 'animate-spin' : ''}`} />
-                                Recalculate
-                            </Button>
-                        )
-                    )}
-                    {expandedSections.premium && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6 md:p-8">
-                            <div className="lg:col-span-4 mt-2 mb-2">
-                                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Total Figures</h4>
-                            </div>
-                            {renderInputField('Total Sum Insured', 'totalSumInsured', String(formData.totalSumInsured), handleInputChange, 'number', false, '')}
-                            {renderInputField('Total Premium', 'totalPremium', String(formData.totalPremium), handleInputChange, 'number', false, '')}
-                            {renderInputField('Business Prop %', 'businessPropPercent', String(formData.businessPropPercent), handleInputChange, 'number')}
-                            {renderInputField('Our Prop %', 'ourPropPercent', String(formData.ourPropPercent), handleInputChange, 'number')}
+                {/* 3. Premium & Calculations - Some fields editable, some read-only */}
+<div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+    {renderSectionHeader(
+        'premium',
+        'Premium & Calculations',
+        <span className="w-5 h-5 text-blue-600 font-bold flex items-center justify-center">₦</span>,
+        expandedSections.premium && (
+            <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleRecalculate();
+                }}
+                disabled={localLoading || !formData.policyNo || !formData.participantId}
+            >
+                <RefreshCw className={`w-3 h-3 mr-2 ${localLoading ? 'animate-spin' : ''}`} />
+                Recalculate
+            </Button>
+        )
+    )}
+    {expandedSections.premium && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6 md:p-8">
+            <div className="lg:col-span-4 mt-2 mb-2">
+                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Total Figures</h4>
+            </div>
+            
+            {/* ✅ READ-ONLY - Disabled (calculated from debit note) */}
+            {renderInputField('Total Sum Insured', 'totalSumInsured', String(formData.totalSumInsured), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
+            {/* ✅ READ-ONLY - Disabled (calculated from debit note) */}
+            {renderInputField('Total Premium', 'totalPremium', String(formData.totalPremium), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
+            
+            {/* ✅ EDITABLE - Rate field (user can change) */}
+            {renderInputField('Business Prop %', 'businessPropPercent', String(formData.businessPropPercent), handleInputChange, 'number')}
+            {/* ✅ EDITABLE - Rate field (user can change) */}
+            {renderInputField('Our Prop %', 'ourPropPercent', String(formData.ourPropPercent), handleInputChange, 'number')}
 
-                            <div className="lg:col-span-4 mt-4 mb-2">
-                                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Share Figures</h4>
-                            </div>
-                            {renderInputField('Share Sum Insured', 'shareSumInsured', String(formData.shareSumInsured), handleInputChange, 'number', false, '')}
-                            {renderInputField('Share Premium', 'sharePremium', String(formData.sharePremium), handleInputChange, 'number', false, '')}
-                            {renderInputField('Our Sum Insured', 'ourSumInsured', String(formData.ourSumInsured), handleInputChange, 'number', false, '')}
-                            {renderInputField('Our Premium', 'ourPremium', String(formData.ourPremium), handleInputChange, 'number', false, '')}
+            <div className="lg:col-span-4 mt-4 mb-2">
+                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Share Figures</h4>
+            </div>
+            
+            {/* ✅ READ-ONLY - Disabled (calculated) */}
+            {renderInputField('Share Sum Insured', 'shareSumInsured', String(formData.shareSumInsured), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
+            {/* ✅ READ-ONLY - Disabled (calculated) */}
+            {renderInputField('Share Premium', 'sharePremium', String(formData.sharePremium), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
+            {/* ✅ READ-ONLY - Disabled (calculated) */}
+            {renderInputField('Our Sum Insured', 'ourSumInsured', String(formData.ourSumInsured), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
+            {/* ✅ READ-ONLY - Disabled (calculated) */}
+            {renderInputField('Our Premium', 'ourPremium', String(formData.ourPremium), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
 
-                            <div className="lg:col-span-4 mt-4 mb-2">
-                                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Commission & Levies</h4>
-                            </div>
-                            {renderInputField('Commission Rate %', 'commissionRate', String(formData.commissionRate), handleInputChange, 'number')}
-                            {renderInputField('Commission Amount', 'commissionAmount', String(formData.commissionAmount), handleInputChange, 'number', false, '')}
-                            {renderInputField('WHT Rate %', 'whtRate', String(formData.whtRate), handleInputChange, 'number')}
-                            {renderInputField('WHT Amount', 'whtAmount', String(formData.whtAmount), handleInputChange, 'number', false, '')}
-                            {renderInputField('ORC Rate %', 'orcRate', String(formData.orcRate), handleInputChange, 'number')}
-                            {renderInputField('ORC Amount', 'orcAmount', String(formData.orcAmount), handleInputChange, 'number', false, '')}
-                            {renderInputField('Net Premium', 'netPremium', String(formData.netPremium), handleInputChange, 'number', false, 'bg-slate-100 text-blue-700 font-bold h-11')}
-                            
-                            <div className="lg:col-span-4 flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                                <Checkbox
-                                    id="whtDeductedFromNet"
-                                    checked={formData.whtDeductedFromNet}
-                                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, whtDeductedFromNet: checked === true }))}
-                                    disabled={false}
-                                />
-                                <Label htmlFor="whtDeductedFromNet" className="text-sm cursor-pointer">
-                                    WHT Deducted from Net Premium
-                                </Label>
-                            </div>
+            <div className="lg:col-span-4 mt-4 mb-2">
+                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Commission & Levies</h4>
+            </div>
+            
+            {/* ✅ EDITABLE - Rate field (user can change) */}
+            {renderInputField('Commission Rate %', 'commissionRate', String(formData.commissionRate), handleInputChange, 'number')}
+            {/* ✅ READ-ONLY - Disabled (calculated) */}
+            {renderInputField('Commission Amount', 'commissionAmount', String(formData.commissionAmount), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
+            
+            {/* ✅ EDITABLE - Rate field (user can change) */}
+            {renderInputField('WHT Rate %', 'whtRate', String(formData.whtRate), handleInputChange, 'number')}
+            {/* ✅ READ-ONLY - Disabled (calculated) */}
+            {renderInputField('WHT Amount', 'whtAmount', String(formData.whtAmount), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
+            
+            {/* ✅ EDITABLE - Rate field (user can change) */}
+            {renderInputField('ORC Rate %', 'orcRate', String(formData.orcRate), handleInputChange, 'number')}
+            {/* ✅ READ-ONLY - Disabled (calculated) */}
+            {renderInputField('ORC Amount', 'orcAmount', String(formData.orcAmount), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
+            
+            {/* ✅ READ-ONLY - Disabled (calculated) */}
+            {renderInputField('Net Premium', 'netPremium', String(formData.netPremium), handleInputChange, 'number', true, 'bg-slate-100 text-blue-700 font-bold h-11')}
+            
+           
 
-                            <div className="lg:col-span-4 flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                                <Checkbox
-                                    id="recordParticipation"
-                                    checked={formData.recordParticipation}
-                                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, recordParticipation: checked === true }))}
-                                    disabled={false}
-                                />
-                                <Label htmlFor="recordParticipation" className="text-sm cursor-pointer">
-                                    Record Participation
-                                </Label>
-                            </div>
-
-                            <div className="lg:col-span-4 mt-4 flex justify-center">
-                                <Button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        handleRecalculate();
-                                    }}
-                                    disabled={localLoading || !formData.policyNo || !formData.participantId}
-                                    type="button"
-                                >
-                                    {localLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Calculator className="w-4 h-4 mr-2" />}
-                                    Calculate All
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </div>
+            <div className="lg:col-span-4 mt-4 flex justify-center">
+                <Button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        handleRecalculate();
+                    }}
+                    disabled={localLoading || !formData.policyNo || !formData.participantId}
+                    type="button"
+                >
+                    {localLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Calculator className="w-4 h-4 mr-2" />}
+                    Calculate All
+                </Button>
+            </div>
+        </div>
+    )}
+</div>
 
                 {/* 4. Foreign Currency Section - ALL FIELDS EDITABLE */}
                 {formData.showCurrencyPanel && (
@@ -1123,38 +1123,7 @@ useEffect(() => {
                     </div>
                 )}
 
-                {/* 5. Approval & Status - READ ONLY (auto-generated) */}
-                {formData.approval !== undefined && (
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
-                        {renderSectionHeader('approval', 'Approval & Status', <FileText className="w-5 h-5 text-blue-600" />)}
-                        {expandedSections.approval && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6 md:p-8">
-                                {renderInputField('Approval Status', 'approval', String(formData.approval), handleInputChange, 'text', true, 'bg-slate-50 text-slate-600')}
-                                {renderInputField('Submitted By', 'submittedBy', formData.submittedBy || '', handleInputChange, 'text', true, 'bg-slate-50 text-slate-600')}
-                                {renderInputField('Submitted On', 'submittedOn', formData.submittedOn?.split("T")[0] || '', handleInputChange, 'date', true, 'bg-slate-50 text-slate-600')}
-                                {renderInputField('Lock Reason', 'lockReason', formData.lockReason || 'Not locked', handleInputChange, 'text', true, 'bg-slate-50 text-slate-600')}
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Editable</Label>
-                                    <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                                        {formData.editable ? (
-                                            <span className="text-green-600 font-medium">✅ Yes</span>
-                                        ) : (
-                                            <span className="text-red-600 font-medium">❌ No</span>
-                                        )}
-                                    </div>
-                                </div>
-                                {formData.showOrcSection && (
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">ORC Section</Label>
-                                        <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                                            <span className="text-green-600 font-medium">✅ Visible</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
+                
 
                 {/* Footer Actions */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-lg p-6 flex justify-end gap-3">

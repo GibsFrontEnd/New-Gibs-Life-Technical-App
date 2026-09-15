@@ -4,12 +4,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { 
+import {
   ArrowLeft, Save, Loader2, Trash2, ChevronDown, X, Eye, Pencil,
-  FileText, Upload, AlertCircle, Calculator, 
+  FileText, Upload, AlertCircle, Calculator,
   CheckCircle, Clock, FileCheck, RefreshCw, Plus,
-  Building2, User, Calendar, CreditCard, Briefcase, 
-  TrendingUp, Wallet, Banknote, FileSpreadsheet
+  Building2, TrendingUp, FileSpreadsheet
 } from "lucide-react";
 import { Button } from "../../components/UI/new-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/UI/card";
@@ -44,10 +43,6 @@ import { SERVER_URL } from "../../utils/constants";
 
 // ==================== TYPES ====================
 
-/**
- * Interface for API dropdown options
- * Used for policy selection dropdown with additional metadata
- */
 interface ApiDropdownOption {
   id: string;
   name: string;
@@ -58,9 +53,6 @@ interface ApiDropdownOption {
   [key: string]: any;
 }
 
-/**
- * Props for the SearchableDropdown component
- */
 interface SearchableDropdownProps {
   options: ApiDropdownOption[];
   value: string;
@@ -75,22 +67,14 @@ interface SearchableDropdownProps {
   searchPlaceholder?: string;
 }
 
-// ==================== NAIRA ICON COMPONENT ====================
+// ==================== NAIRA ICON ====================
 
-/**
- * Naira currency icon component
- * Displays the Nigerian Naira symbol with styling
- */
 const NairaIcon = ({ className = "w-5 h-5" }) => (
   <span className={`font-bold text-purple-600 ${className}`}>₦</span>
 );
 
-// ==================== SECTION HEADER COMPONENT ====================
+// ==================== SECTION HEADER ====================
 
-/**
- * Section header component for grouping form sections
- * Includes title, optional icon, badge, and right element
- */
 const SectionHeader: React.FC<{
   title: string;
   icon?: React.ReactNode;
@@ -99,16 +83,15 @@ const SectionHeader: React.FC<{
   badgeColor?: "blue" | "green" | "red" | "yellow" | "purple" | "gray";
   rightElement?: React.ReactNode;
   borderColor?: string;
-}> = ({ 
-  title, 
-  icon, 
-  className, 
-  badge, 
-  badgeColor = "blue", 
+}> = ({
+  title,
+  icon,
+  className,
+  badge,
+  badgeColor = "blue",
   rightElement,
   borderColor = "border-gray-200"
 }) => {
-  // Mapping of badge colors to their respective CSS classes
   const badgeColors = {
     blue: "bg-blue-100 text-blue-700",
     green: "bg-green-100 text-green-700",
@@ -138,16 +121,8 @@ const SectionHeader: React.FC<{
   );
 };
 
-// ==================== SEARCHABLE DROPDOWN COMPONENT ====================
+// ==================== SEARCHABLE DROPDOWN ====================
 
-/**
- * Searchable dropdown component for policy selection
- * Features:
- * - Search functionality with filtering
- * - Loading and error states
- * - Clear selection option
- * - Click outside to close
- */
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   options,
   value,
@@ -166,17 +141,14 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Find the selected option based on value
   const selectedOption = options.find(opt => opt.id === value);
 
-  // Filter options based on search term
   const filteredOptions = options.filter(opt =>
     opt.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     opt.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     opt.policyNo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -188,17 +160,13 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle option selection
   const handleSelect = (option: ApiDropdownOption) => {
     onChange(option.id);
-    if (onSelect) {
-      onSelect(option);
-    }
+    if (onSelect) onSelect(option);
     setIsOpen(false);
     setSearchTerm("");
   };
 
-  // Clear the selected value
   const handleClear = () => {
     onChange("");
     setSearchTerm("");
@@ -210,7 +178,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         {label} {required && <span className="text-red-500">*</span>}
       </Label>
       <div className="relative">
-        {/* Dropdown trigger */}
         <div
           className={`flex items-center justify-between border rounded-md px-3 py-2.5 cursor-pointer ${
             disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:border-gray-400'
@@ -237,10 +204,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           </div>
         </div>
 
-        {/* Dropdown menu */}
         {isOpen && !disabled && (
           <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
-            {/* Search input */}
             <div className="p-2 border-b border-gray-200">
               <Input
                 ref={inputRef}
@@ -253,7 +218,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                 autoFocus
               />
             </div>
-            {/* Options list */}
             <div className="max-h-48 overflow-y-auto">
               {loading ? (
                 <div className="flex items-center justify-center py-4">
@@ -298,14 +262,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
 
 // ==================== CLAIM DETAILS TAB ====================
 
-/**
- * Claim Details Tab Component
- * Displays the main claim information including:
- * - Loss details
- * - Policy selection (create mode only)
- * - Premium check section (shown after policy selection or in edit mode)
- * - Payment details
- */
 const ClaimDetailsTab: React.FC<{
   formData: Partial<ClaimReserve>;
   handleChange: (key: keyof ClaimReserve, value: any) => void;
@@ -333,20 +289,14 @@ const ClaimDetailsTab: React.FC<{
   handlePolicySelect,
   lossTypeOptions,
 }) => {
-  // Determine if the By Pass Premium Check section should be visible
-  // Show when: 
-  // 1. In CREATE mode AND a policy has been selected from the dropdown
-  // 2. In EDIT mode (policy is already associated with the claim)
-  // 3. In VIEW mode (policy is already associated with the claim)
   const showPremiumCheck = (isCreateMode && hasSelectedPolicy) || isEditMode || isViewMode;
 
   return (
     <div className="space-y-6">
-      {/* ===== LOSS DETAILS SECTION ===== */}
-      {/* This section shows basic claim information like claim number and processing date */}
+      {/* LOSS DETAILS */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <SectionHeader 
-          title="Loss Details" 
+        <SectionHeader
+          title="Loss Details"
           icon={<FileText className="w-4 h-4" />}
           borderColor="border-blue-200"
           badge="Required"
@@ -366,10 +316,10 @@ const ClaimDetailsTab: React.FC<{
             <Label htmlFor="processingDate">Processing Date</Label>
             <Input
               id="processingDate"
-              value={new Date().toLocaleDateString('en-US', { 
-                day: '2-digit', 
-                month: 'short', 
-                year: 'numeric' 
+              value={new Date().toLocaleDateString('en-US', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
               })}
               disabled
               className="bg-gray-50"
@@ -378,26 +328,19 @@ const ClaimDetailsTab: React.FC<{
         </div>
       </div>
 
-      {/* ===== POLICY SELECTION SECTION ===== */}
-      {/* Only visible in create mode - allows user to search and select a policy */}
+      {/* POLICY SELECTION */}
       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-        <SectionHeader 
-          title="Policy Selection" 
+        <SectionHeader
+          title="Policy Selection"
           icon={<Building2 className="w-4 h-4" />}
           borderColor="border-blue-300"
         />
         <div className="mt-2">
           {isCreateMode ? (
-            // Create mode: Show searchable dropdown
             <SearchableDropdown
               options={policies}
               value={formData.policyNo || ""}
-              onChange={(value) => {
-                handleChange("policyNo", value);
-                if (!value) {
-                  // Reset selected policy
-                }
-              }}
+              onChange={(value) => handleChange("policyNo", value)}
               onSelect={handlePolicySelect}
               placeholder="Search for policy..."
               label="Policy Number *"
@@ -407,7 +350,6 @@ const ClaimDetailsTab: React.FC<{
               searchPlaceholder="Search by policy number or insured name..."
             />
           ) : (
-            // Edit/View mode: Show policy number as disabled input
             <Input
               id="policyNo"
               value={formData.policyNo || ""}
@@ -422,25 +364,17 @@ const ClaimDetailsTab: React.FC<{
         </div>
       </div>
 
-      {/* ===== BY PASS PREMIUM CHECK SECTION ===== */}
-      {/* 
-        This section is visible when:
-        1. In CREATE mode AND a policy has been selected from the dropdown
-        2. In EDIT mode (policy is already associated with the claim)
-        3. In VIEW mode (policy is already associated with the claim)
-        In VIEW mode, all fields are read-only (disabled)
-      */}
+      {/* BY PASS PREMIUM CHECK */}
       {showPremiumCheck && (
         <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <SectionHeader 
-            title="By Pass Premium Check" 
+          <SectionHeader
+            title="By Pass Premium Check"
             icon={<CheckCircle className="w-4 h-4" />}
             borderColor="border-green-200"
             badge={isViewMode ? "View Mode" : isEditMode ? "Edit Mode" : "Policy Loaded"}
             badgeColor={isViewMode ? "gray" : "green"}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-            {/* Surname - Required field */}
             <div>
               <Label htmlFor="insuredName">Surname {!isViewMode && "*"}</Label>
               <Input
@@ -455,8 +389,7 @@ const ClaimDetailsTab: React.FC<{
                 <p className="text-red-500 text-xs mt-1">{errors.insuredName}</p>
               )}
             </div>
-            
-            {/* Othername */}
+
             <div>
               <Label htmlFor="othername">Othername</Label>
               <Input
@@ -468,8 +401,7 @@ const ClaimDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50" : ""}
               />
             </div>
-            
-            {/* Commencement Date */}
+
             <div>
               <Label htmlFor="startDate">Commencement Date</Label>
               <Input
@@ -481,23 +413,23 @@ const ClaimDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50" : ""}
               />
             </div>
-             <div>
-      <Label htmlFor="lossDate">Loss Date *</Label>
-      <Input
-        id="lossDate"
-        type="date"
-        value={formData.lossDate || ""}
-        onChange={(e) => handleChange("lossDate", e.target.value)}
-        disabled={isViewMode}
-        className={isViewMode ? "bg-gray-50" : ""}
-        required
-      />
-      {errors.lossDate && !isViewMode && (
-        <p className="text-red-500 text-xs mt-1">{errors.lossDate}</p>
-      )}
-    </div>
-            
-            {/* Maturity Date */}
+
+            <div>
+              <Label htmlFor="lossDate">Loss Date *</Label>
+              <Input
+                id="lossDate"
+                type="date"
+                value={formData.lossDate || ""}
+                onChange={(e) => handleChange("lossDate", e.target.value)}
+                disabled={isViewMode}
+                className={isViewMode ? "bg-gray-50" : ""}
+                required
+              />
+              {errors.lossDate && !isViewMode && (
+                <p className="text-red-500 text-xs mt-1">{errors.lossDate}</p>
+              )}
+            </div>
+
             <div>
               <Label htmlFor="endDate">Maturity Date</Label>
               <Input
@@ -509,8 +441,7 @@ const ClaimDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50" : ""}
               />
             </div>
-            
-            {/* Mode of Payment - Select dropdown */}
+
             <div>
               <Label htmlFor="modeOfPayment">Mode Of Payment</Label>
               <Select
@@ -529,8 +460,7 @@ const ClaimDetailsTab: React.FC<{
                 </SelectContent>
               </Select>
             </div>
-            
-            {/* Sum Assured */}
+
             <div>
               <Label htmlFor="sumAssured">Sum Assured</Label>
               <Input
@@ -543,8 +473,7 @@ const ClaimDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50 font-medium" : ""}
               />
             </div>
-            
-            {/* Policy Status */}
+
             <div>
               <Label htmlFor="policyStatus">Policy Status</Label>
               <Input
@@ -555,8 +484,7 @@ const ClaimDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50 font-medium text-green-600" : ""}
               />
             </div>
-            
-            {/* Cover Name */}
+
             <div>
               <Label htmlFor="subRisk">Cover Name</Label>
               <Input
@@ -568,8 +496,7 @@ const ClaimDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50" : ""}
               />
             </div>
-            
-            {/* Financial Planner */}
+
             <div>
               <Label htmlFor="leader">Financial Planner</Label>
               <Input
@@ -581,8 +508,7 @@ const ClaimDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50" : ""}
               />
             </div>
-            
-            {/* Branch Code */}
+
             <div>
               <Label htmlFor="brcode">Branch</Label>
               <Input
@@ -594,8 +520,7 @@ const ClaimDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50" : ""}
               />
             </div>
-            
-            {/* Regular Saving */}
+
             <div>
               <Label htmlFor="regularSaving">Regular Saving</Label>
               <Input
@@ -612,18 +537,16 @@ const ClaimDetailsTab: React.FC<{
         </div>
       )}
 
-      {/* ===== PAYMENT DETAILS SECTION ===== */}
-      {/* Shows payment-related fields like total contributed, interest, and balances */}
+      {/* PAYMENT DETAILS */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <SectionHeader 
-          title="Payment Details" 
+        <SectionHeader
+          title="Payment Details"
           icon={<NairaIcon className="w-4 h-4" />}
           borderColor="border-purple-200"
           badge="Calculated"
           badgeColor="purple"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          {/* Total Contributed */}
           <div>
             <Label htmlFor="totalContributed">Total Contributed</Label>
             <Input
@@ -636,8 +559,7 @@ const ClaimDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50 font-medium" : ""}
             />
           </div>
-          
-          {/* Amount To Investment */}
+
           <div>
             <Label htmlFor="amtToInvestment">Amt To Investment</Label>
             <Input
@@ -650,8 +572,7 @@ const ClaimDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
-          
-          {/* Year To Date Interest */}
+
           <div>
             <Label htmlFor="yearToDateInterest">Year To Date Interest</Label>
             <Input
@@ -664,8 +585,7 @@ const ClaimDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
-          
-          {/* Life Cover Amount */}
+
           <div>
             <Label htmlFor="lifeCoverAmount">Life Cover Amount</Label>
             <Input
@@ -678,8 +598,7 @@ const ClaimDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
-          
-          {/* Gross Total Balance - Calculated field (read-only) */}
+
           <div className="md:col-span-2">
             <Label htmlFor="grossTotalBalance">Gross Total Balance</Label>
             <Input
@@ -697,19 +616,6 @@ const ClaimDetailsTab: React.FC<{
 
 // ==================== PAYMENT DETAILS TAB ====================
 
-/**
- * Payment Details Tab Component
- * Handles all payment calculations and displays:
- * - Payable amount with calculations
- * - Additional calculations (bonus, WHT, etc.) - Only for non-Surrender claims
- * - DV (Discharge Voucher) details with live exchange rate
- * 
- * Loss Types:
- * - DB: Death Benefit - Shows Surrender Value Rate, Surrender Value, Penalty Charge, Interest Earn
- * - MV: Maturity - Standard calculations
- * - PWD: Partial Withdrawal - Standard calculations
- * - SV: Surrender Value - Simplified: Withdrawal %, Withdrawal Instalment Type, Withdrawal Amount, Net Payable
- */
 const PaymentDetailsTab: React.FC<{
   formData: Partial<ClaimReserve>;
   handleChange: (key: keyof ClaimReserve, value: any) => void;
@@ -718,56 +624,43 @@ const PaymentDetailsTab: React.FC<{
   lossType?: string;
 }> = ({ formData, handleChange, isViewMode, errors, lossType }) => {
   const { toast } = useToast();
-  
-  // Check claim types
+
   const isDeathBenefit = lossType === "DB";
   const isSurrenderClaim = lossType === "SV";
   const isMaturityClaim = lossType === "MV";
   const isPartialWithdrawal = lossType === "PWD";
-  
-  // ===== EXCHANGE RATE STATE =====
+
   const [isFetchingRate, setIsFetchingRate] = useState(false);
-  
-  // ===== DERIVED VALUES CALCULATIONS =====
-  // All calculations are derived from form data and update automatically
-  
-  // Basic financial calculations
+
   const totalContributed = parseFloat(formData.a5 || 0);
   const interestEarned = parseFloat(formData.a6 || 0);
   const totalBalance = totalContributed + interestEarned;
   const lifeCoverAmount = parseFloat(formData.a9 || 0);
   const outstandingLoans = parseFloat(formData.a7 || 0);
   const approvedLoanAmt = parseFloat(formData.a8 || 0);
-  
-  // Death Benefit specific fields (DB only)
+
   const surrenderValueRate = parseFloat(formData.field13 || 0);
   const surrenderValue = parseFloat(formData.field14 || 0);
   const penaltyCharge = parseFloat(formData.field15 || 0);
-  
-  // Surrender Claim specific fields (SV only)
+
   const withdrawalPercentage = parseFloat(formData.field16 || 0);
   const withdrawalInstalmentType = formData.field17 || "";
   const withdrawalAmount = parseFloat(formData.field18 || 0);
-  
-  // Net withdrawal = total balance - outstanding loans - approved loan amount - penalty charge (for DB)
-  // For surrender claims, net withdrawal is the withdrawal amount
+
   let netWithdrawal = 0;
   if (isSurrenderClaim) {
     netWithdrawal = withdrawalAmount;
   } else {
     netWithdrawal = totalBalance - outstandingLoans - approvedLoanAmt - (isDeathBenefit ? penaltyCharge : 0);
   }
-  
-  // Additional calculation fields (not for surrender claims)
+
   const calcLoanInterest = parseFloat(formData.field4 || 0);
   const outstandingLoanInterest = parseFloat(formData.field11 || 0);
   const outstandingPremium = parseFloat(formData.field5 || 0);
   const bonus = parseFloat(formData.field6 || 0);
   const whtOnInterest = parseFloat(formData.field7 || 0);
   const otherDeductions = parseFloat(formData.field10 || 0);
-  
-  // Net payable = netWithdrawal - other deductions - outstanding premium + bonus - whtOnInterest (for non-surrender)
-  // For surrender claims, net payable = withdrawal amount
+
   let netPayable = 0;
   if (isSurrenderClaim) {
     netPayable = withdrawalAmount;
@@ -775,15 +668,12 @@ const PaymentDetailsTab: React.FC<{
     netPayable = netWithdrawal - otherDeductions - outstandingPremium + bonus - whtOnInterest;
   }
 
-  /**
-   * Fetch exchange rate from API
-   */
   const fetchExchangeRate = async (fromCurrency: string, toCurrency: string = "NGN") => {
     if (!fromCurrency || fromCurrency === "NAIRA") {
       handleChange("propRate", 1);
       return;
     }
-    
+
     setIsFetchingRate(true);
     try {
       const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
@@ -791,7 +681,7 @@ const PaymentDetailsTab: React.FC<{
       const data = await response.json();
       const rate = data.rates[toCurrency] || 1;
       handleChange("propRate", rate);
-      
+
       toast({
         title: "Exchange Rate Updated",
         description: `1 ${fromCurrency} = ${rate} ${toCurrency}`,
@@ -810,9 +700,6 @@ const PaymentDetailsTab: React.FC<{
     }
   };
 
-  /**
-   * Handle currency change - fetches exchange rate
-   */
   const handleCurrencyChange = (currency: string) => {
     handleChange("field12", currency);
     if (currency && currency !== "NAIRA") {
@@ -822,9 +709,6 @@ const PaymentDetailsTab: React.FC<{
     }
   };
 
-  /**
-   * Handle recalculation of all values
-   */
   const handleReCalc = () => {
     toast({
       title: "Recalculated",
@@ -835,17 +719,16 @@ const PaymentDetailsTab: React.FC<{
 
   return (
     <div className="space-y-6">
-      {/* ===== PAYABLE AMOUNT SECTION ===== */}
+      {/* PAYABLE AMOUNT */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <SectionHeader 
-          title="Payable Amount" 
+        <SectionHeader
+          title="Payable Amount"
           icon={<Calculator className="w-4 h-4" />}
           borderColor="border-blue-200"
           badge="Auto-calculated"
           badgeColor="blue"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          {/* Claim Description - Read-only */}
           <div className="md:col-span-2">
             <Label htmlFor="claimDescription">Claim Description</Label>
             <Input
@@ -855,12 +738,9 @@ const PaymentDetailsTab: React.FC<{
               className="bg-gray-50"
             />
           </div>
-          
-          {/* ===== DEATH BENEFIT (DB) SPECIFIC FIELDS ===== */}
-          {/* Only show these fields when lossType is "DB" (Death Benefit) */}
+
           {isDeathBenefit && (
             <>
-              {/* Surrender Value Rate */}
               <div>
                 <Label htmlFor="surrenderValueRate">Surrender Value Rate</Label>
                 <Input
@@ -874,8 +754,7 @@ const PaymentDetailsTab: React.FC<{
                   placeholder="Enter surrender value rate"
                 />
               </div>
-              
-              {/* Surrender Value */}
+
               <div>
                 <Label htmlFor="surrenderValue">Surrender Value</Label>
                 <Input
@@ -889,8 +768,7 @@ const PaymentDetailsTab: React.FC<{
                   placeholder="Enter surrender value"
                 />
               </div>
-              
-              {/* Penalty Charge */}
+
               <div>
                 <Label htmlFor="penaltyCharge">Penalty Charge</Label>
                 <Input
@@ -904,8 +782,7 @@ const PaymentDetailsTab: React.FC<{
                   placeholder="Enter penalty charge"
                 />
               </div>
-              
-              {/* Interest Earn - uses a6 field */}
+
               <div>
                 <Label htmlFor="interestEarn">Interest Earn</Label>
                 <Input
@@ -921,12 +798,9 @@ const PaymentDetailsTab: React.FC<{
               </div>
             </>
           )}
-          
-          {/* ===== SURRENDER CLAIM (SV) SPECIFIC FIELDS ===== */}
-          {/* Only show these fields when lossType is "SV" (Surrender Value) */}
+
           {isSurrenderClaim && (
             <>
-              {/* Withdrawal (%) */}
               <div>
                 <Label htmlFor="withdrawalPercentage">Withdrawal (%)</Label>
                 <Input
@@ -937,7 +811,6 @@ const PaymentDetailsTab: React.FC<{
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     handleChange("field16", val);
-                    // Auto-calculate withdrawal amount based on percentage of total balance
                     const amount = (totalBalance * val) / 100;
                     handleChange("field18", amount);
                   }}
@@ -946,8 +819,7 @@ const PaymentDetailsTab: React.FC<{
                   placeholder="Enter withdrawal percentage"
                 />
               </div>
-              
-              {/* Withdrawal Instalment Type */}
+
               <div>
                 <Label htmlFor="withdrawalInstalmentType">Withdrawal Instalment Type</Label>
                 <Select
@@ -967,8 +839,7 @@ const PaymentDetailsTab: React.FC<{
                   </SelectContent>
                 </Select>
               </div>
-              
-              {/* Withdrawal Amount */}
+
               <div>
                 <Label htmlFor="withdrawalAmount">Withdrawal Amount</Label>
                 <Input
@@ -979,7 +850,6 @@ const PaymentDetailsTab: React.FC<{
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     handleChange("field18", val);
-                    // Auto-calculate percentage based on total balance
                     if (totalBalance > 0) {
                       const percent = (val / totalBalance) * 100;
                       handleChange("field16", percent);
@@ -992,8 +862,7 @@ const PaymentDetailsTab: React.FC<{
               </div>
             </>
           )}
-          
-          {/* Approved Loan Amount - Hidden for surrender claims */}
+
           {!isSurrenderClaim && (
             <div>
               <Label htmlFor="approvedLoanAmt">Approved Loan Amt</Label>
@@ -1008,8 +877,7 @@ const PaymentDetailsTab: React.FC<{
               />
             </div>
           )}
-          
-          {/* Outstanding Loans - Hidden for surrender claims */}
+
           {!isSurrenderClaim && (
             <div>
               <Label htmlFor="outstandingLoans">Outstanding Loans</Label>
@@ -1024,8 +892,7 @@ const PaymentDetailsTab: React.FC<{
               />
             </div>
           )}
-          
-          {/* Net Withdrawal - Calculated (read-only) */}
+
           <div>
             <Label htmlFor="netWithdrawal">Net Withdrawal</Label>
             <Input
@@ -1035,8 +902,7 @@ const PaymentDetailsTab: React.FC<{
               className="bg-gray-50 font-bold"
             />
           </div>
-          
-          {/* Other Deductions - Hidden for surrender claims */}
+
           {!isSurrenderClaim && (
             <div>
               <Label htmlFor="otherDeductions">Other Deductions</Label>
@@ -1051,8 +917,7 @@ const PaymentDetailsTab: React.FC<{
               />
             </div>
           )}
-          
-          {/* Recalc Button */}
+
           <div className="md:col-span-2">
             <div className="flex items-center justify-end">
               <Button
@@ -1070,21 +935,17 @@ const PaymentDetailsTab: React.FC<{
         </div>
       </div>
 
-      {/* ===== ADDITIONAL CALCULATIONS SECTION ===== */}
-      {/* Only show for non-Surrender claims */}
+      {/* ADDITIONAL CALCULATIONS */}
       {!isSurrenderClaim && (
         <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <SectionHeader 
-            title="Additional Calculations" 
+          <SectionHeader
+            title="Additional Calculations"
             icon={<TrendingUp className="w-4 h-4" />}
             borderColor="border-yellow-200"
             badge="Summary"
             badgeColor="yellow"
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-           
-            
-            {/* Outstanding Premium */}
             <div>
               <Label htmlFor="outstandingPremium">Outstanding Premium</Label>
               <Input
@@ -1097,8 +958,7 @@ const PaymentDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50" : ""}
               />
             </div>
-            
-            {/* Bonus */}
+
             <div>
               <Label htmlFor="bonus">Bonus</Label>
               <Input
@@ -1111,8 +971,7 @@ const PaymentDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50" : ""}
               />
             </div>
-            
-            {/* WHT On Interest */}
+
             <div>
               <Label htmlFor="whtOnInterest">WHT On Interest</Label>
               <Input
@@ -1125,8 +984,7 @@ const PaymentDetailsTab: React.FC<{
                 className={isViewMode ? "bg-gray-50" : ""}
               />
             </div>
-            
-            {/* Net Payable - Calculated (read-only, highlighted) */}
+
             <div className="md:col-span-2">
               <Label htmlFor="netPayable" className="text-lg font-bold">Net Payable</Label>
               <Input
@@ -1140,8 +998,7 @@ const PaymentDetailsTab: React.FC<{
         </div>
       )}
 
-      {/* ===== NET PAYABLE FOR SURRENDER CLAIMS ===== */}
-      {/* For surrender claims, show Net Payable separately */}
+      {/* NET PAYABLE FOR SURRENDER CLAIMS */}
       {isSurrenderClaim && (
         <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="grid grid-cols-1 gap-4">
@@ -1158,17 +1015,16 @@ const PaymentDetailsTab: React.FC<{
         </div>
       )}
 
-      {/* ===== DV DETAILS SECTION ===== */}
+      {/* DV DETAILS */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <SectionHeader 
-          title="DV Details" 
+        <SectionHeader
+          title="DV Details"
           icon={<NairaIcon className="w-4 h-4" />}
           borderColor="border-purple-200"
           badge="Exchange"
           badgeColor="purple"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          {/* Currency Type - Select dropdown with exchange rate fetch */}
           <div>
             <Label htmlFor="currencyType">Currency Type</Label>
             <Select
@@ -1198,8 +1054,7 @@ const PaymentDetailsTab: React.FC<{
               </div>
             )}
           </div>
-          
-          {/* Exchange Rate */}
+
           <div>
             <Label htmlFor="exchangeRate">Exchange Rate</Label>
             <Input
@@ -1212,8 +1067,7 @@ const PaymentDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
-          
-          {/* Adjusted Amount Due */}
+
           <div>
             <Label htmlFor="adjustedAmountDue">Adjusted Amount Due</Label>
             <Input
@@ -1226,8 +1080,7 @@ const PaymentDetailsTab: React.FC<{
               className={isViewMode ? "bg-gray-50" : ""}
             />
           </div>
-          
-          {/* Our Liability Amount (Local) */}
+
           <div>
             <Label htmlFor="ourLiabilityAmount">Our Liability Amount (Local)</Label>
             <Input
@@ -1246,18 +1099,8 @@ const PaymentDetailsTab: React.FC<{
   );
 };
 
-
 // ==================== DOCUMENT UPLOAD TAB ====================
 
-/**
- * Document Upload Tab Component
- * Handles file uploads, document management, and approval workflow
- * Features:
- * - File upload with validation
- * - Document list with view/delete capabilities
- * - Transaction status management
- * - Authorization selection
- */
 const DocumentUploadTab: React.FC<{
   isViewMode: boolean;
 }> = ({ isViewMode }) => {
@@ -1267,19 +1110,12 @@ const DocumentUploadTab: React.FC<{
   const [transactionStatus, setTransactionStatus] = useState("PENDING");
   const [authorizedBy, setAuthorizedBy] = useState("");
 
-  /**
-   * Handle file selection from input
-   */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
     }
   };
 
-  /**
-   * Upload the selected file
-   * Adds document to the list and clears the file input
-   */
   const handleUpload = () => {
     if (selectedFile) {
       setUploadedDocuments([
@@ -1291,10 +1127,9 @@ const DocumentUploadTab: React.FC<{
         }
       ]);
       setSelectedFile(null);
-      // Reset file input value
       const fileInput = document.getElementById('fileUpload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
-      
+
       toast({
         title: "Document Uploaded",
         description: "Document has been added successfully",
@@ -1303,9 +1138,6 @@ const DocumentUploadTab: React.FC<{
     }
   };
 
-  /**
-   * Delete a document from the list
-   */
   const handleDeleteDocument = (index: number) => {
     setUploadedDocuments(uploadedDocuments.filter((_, i) => i !== index));
     toast({
@@ -1315,9 +1147,6 @@ const DocumentUploadTab: React.FC<{
     });
   };
 
-  /**
-   * Add approval document (sends for approval workflow)
-   */
   const handleAddApprovalDocument = () => {
     toast({
       title: "Approval Document Added",
@@ -1328,17 +1157,16 @@ const DocumentUploadTab: React.FC<{
 
   return (
     <div className="space-y-6">
-      {/* ===== ADDITIONAL INFO SECTION ===== */}
+      {/* ADDITIONAL INFO */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <SectionHeader 
-          title="Additional Info" 
+        <SectionHeader
+          title="Additional Info"
           icon={<Upload className="w-4 h-4" />}
           borderColor="border-blue-200"
           badge="Upload"
           badgeColor="blue"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          {/* File Upload */}
           <div>
             <Label htmlFor="fileUpload">Upload</Label>
             <div className="flex items-center gap-2">
@@ -1363,8 +1191,7 @@ const DocumentUploadTab: React.FC<{
               <p className="text-sm text-gray-500 mt-1">Selected: {selectedFile.name}</p>
             )}
           </div>
-          
-          {/* Transaction Status */}
+
           <div>
             <Label htmlFor="transactionStatus">Transaction Status</Label>
             <Select
@@ -1383,8 +1210,7 @@ const DocumentUploadTab: React.FC<{
               </SelectContent>
             </Select>
           </div>
-          
-          {/* Authorized By */}
+
           <div>
             <Label htmlFor="authorizedBy">Authorized By</Label>
             <Select
@@ -1402,8 +1228,7 @@ const DocumentUploadTab: React.FC<{
               </SelectContent>
             </Select>
           </div>
-          
-          {/* Add Approval Document Button */}
+
           <div className="flex items-end">
             <Button
               onClick={handleAddApprovalDocument}
@@ -1417,11 +1242,10 @@ const DocumentUploadTab: React.FC<{
         </div>
       </div>
 
-      {/* ===== HELP SECTION ===== */}
-      {/* Informational section with usage instructions */}
+      {/* HELP */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <SectionHeader 
-          title="HELP" 
+        <SectionHeader
+          title="HELP"
           icon={<AlertCircle className="w-4 h-4" />}
           borderColor="border-blue-300"
           badge="Important"
@@ -1436,23 +1260,21 @@ const DocumentUploadTab: React.FC<{
         </ul>
       </div>
 
-      {/* ===== UPLOADED DOCUMENTS SECTION ===== */}
+      {/* UPLOADED DOCUMENTS */}
       <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <SectionHeader 
-          title="Uploaded Document Details" 
+        <SectionHeader
+          title="Uploaded Document Details"
           icon={<FileSpreadsheet className="w-4 h-4" />}
           borderColor="border-gray-300"
           badge={`${uploadedDocuments.length} files`}
           badgeColor="gray"
         />
         {uploadedDocuments.length === 0 ? (
-          // Empty state
           <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg mt-2">
             <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
             <p>No documents uploaded yet</p>
           </div>
         ) : (
-          // Document table
           <div className="border rounded-lg overflow-x-auto mt-2">
             <table className="w-full min-w-full">
               <thead className="bg-gray-50">
@@ -1500,13 +1322,9 @@ const DocumentUploadTab: React.FC<{
         )}
       </div>
 
-      {/* ===== BOTTOM ACTIONS ===== */}
+      {/* BOTTOM ACTIONS */}
       <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-        <Button
-          variant="outline"
-          className="bg-white"
-          disabled={isViewMode}
-        >
+        <Button variant="outline" className="bg-white" disabled={isViewMode}>
           Cancel
         </Button>
         <Button
@@ -1531,21 +1349,6 @@ const DocumentUploadTab: React.FC<{
 
 // ==================== MAIN COMPONENT ====================
 
-/**
- * Claim Form Page Component
- * Main container for claim creation, editing, and viewing
- * 
- * Modes:
- * - create: New claim creation with policy search
- * - edit: Edit existing claim with premium check section
- * - view: Read-only view of claim details
- * 
- * Loss Types:
- * - DB: Death Benefit
- * - MV: Maturity
- * - PWD: Partial Withdrawal
- * - SV: Surrender Value
- */
 interface ClaimFormPageProps {
   mode: "create" | "edit" | "view";
   lossType?: string;
@@ -1559,8 +1362,6 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("details");
 
-  // ===== DETERMINE LOSS TYPE FROM URL =====
-  // Map URL-friendly loss type names to their codes
   const mapLossTypeToCode = (type: string): string => {
     const mapping: Record<string, string> = {
       'surrender': 'SV',
@@ -1575,140 +1376,118 @@ const ClaimFormPage: React.FC<ClaimFormPageProps> = ({ mode, lossType }) => {
     return mapping[type?.toLowerCase()] || type || '';
   };
 
-  // Get lossType from URL params if not passed as prop
   const params = useParams<{ lossType?: string }>();
   const urlLossType = params.lossType || '';
   const effectiveLossType = lossType || mapLossTypeToCode(urlLossType);
 
-  // Determine return path based on loss type
-  const returnPath = location.state?.returnPath || 
+  const returnPath = location.state?.returnPath ||
     (effectiveLossType ? `/claims/individual/${urlLossType || effectiveLossType.toLowerCase()}` : "/claims/overview");
 
-  // Redux selectors for claim data
   const currentReserve = useSelector(selectCurrentReserve);
   const loading = useSelector(selectCurrentLoading);
   const error = useSelector(selectCurrentError);
-  
-  // Redux selectors for policy data
+
   const policiesFromRedux = useSelector(selectAllPolicies);
   const policyLoadingFromRedux = useSelector(selectPoliciesLoading);
   const policyErrorFromRedux = useSelector(selectPoliciesError);
 
-  // ===== STATE MANAGEMENT =====
-  
-  // Policy dropdown state
   const [policies, setPolicies] = useState<ApiDropdownOption[]>([]);
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policyError, setPolicyError] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState<ApiDropdownOption | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Form data state
- // In the useState for formData, remove hardcoded values
-const [formData, setFormData] = useState<Partial<ClaimReserve>>({
-  claimID: 0,
-  claimNo: "",
-  brcode: "",
-  policyNo: "",
-  coPolicyNo: "",
-  refDNCNNo: "",
-  insuredName: "",
-  insuredID: "",
-  lossType: effectiveLossType || "",
-  lossDetails: "",
-  lossDate: "",
-  startDate: "",
-  endDate: "",
-  subRiskID: "",
-  subRisk: "",
-  partyID: "",
-  party: "",
-  leadID: "",
-  leader: "",
-  propType: "",
-  leadProp: 0,
-  propRate: 1,
-  undYear: 0,
-  detailID: 0,
-  approval: 0,
-  deleted: 0,
-  active: 1,
-  amtReserved: 0,
-  amtPaid: 0,
-  // ✅ ALL fields start empty
-  field1: "",
-  field2: "",
-  field3: "",
-  field4: "",
-  field5: "",
-  field6: "",
-  field7: "",
-  field8: "",
-  field9: "",
-  field10: "",
-  field11: "",
-  field12: "",
-  field13: "",
-  field14: "",
-  field15: "",
-  field16: "",
-  field17: "",
-  field18: "",
-  a1: 0,
-  a2: 0,
-  a3: 0,
-  a4: 0,
-  a5: 0,
-  a6: 0,
-  a7: 0,
-  a8: 0,
-  a9: 0,
-  submittedBy: "",
-  submittedOn: "",
-  modifiedBy: "",
-  modifiedOn: "",
-  approvedBy: "",
-  approvedOn: "",
-  entryDate: "",
-  notifiedDate: "",
-});
+  const [formData, setFormData] = useState<Partial<ClaimReserve>>({
+    claimID: 0,
+    claimNo: "",
+    brcode: "",
+    policyNo: "",
+    coPolicyNo: "",
+    refDNCNNo: "",
+    insuredName: "",
+    insuredID: "",
+    lossType: effectiveLossType || "",
+    lossDetails: "",
+    lossDate: "",
+    startDate: "",
+    endDate: "",
+    subRiskID: "",
+    subRisk: "",
+    partyID: "",
+    party: "",
+    leadID: "",
+    leader: "",
+    propType: "",
+    leadProp: 0,
+    propRate: 1,
+    undYear: 0,
+    detailID: 0,
+    approval: 0,
+    deleted: 0,
+    active: 1,
+    amtReserved: 0,
+    amtPaid: 0,
+    field1: "",
+    field2: "",
+    field3: "",
+    field4: "",
+    field5: "",
+    field6: "",
+    field7: "",
+    field8: "",
+    field9: "",
+    field10: "",
+    field11: "",
+    field12: "",
+    field13: "",
+    field14: "",
+    field15: "",
+    field16: "",
+    field17: "",
+    field18: "",
+    a1: 0,
+    a2: 0,
+    a3: 0,
+    a4: 0,
+    a5: 0,
+    a6: 0,
+    a7: 0,
+    a8: 0,
+    a9: 0,
+    submittedBy: "",
+    submittedOn: "",
+    modifiedBy: "",
+    modifiedOn: "",
+    approvedBy: "",
+    approvedOn: "",
+    entryDate: "",
+    notifiedDate: "",
+  });
 
-  // Track if a policy has been selected (moved AFTER formData declaration)
   const hasSelectedPolicy = !!formData.policyNo && formData.policyNo.trim() !== "";
-  
-  // Validation and submission state
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mode flags
   const isViewMode = mode === "view";
   const isEditMode = mode === "edit";
   const isCreateMode = mode === "create";
 
-  // ===== API FUNCTIONS =====
-
-  /**
-   * Fetch policies from the API
-   * Uses the searchIndividualPolicies endpoint with search text
-   * Only called in create mode
-   */
+  // ===== FETCH POLICIES =====
   const fetchPolicies = async (searchText: string = "") => {
     if (!isCreateMode) return;
-    
+
     setPolicyLoading(true);
     setPolicyError(false);
-    
+
     try {
       const result = await dispatch(searchIndividualPolicies({
         search: searchText || "",
         page: 1,
         pageSize: 50,
-        isProposal: false, // Only actual policies, not proposals
+        isProposal: false,
       })).unwrap();
-      
-      console.log("✅ Policies fetched from new endpoint:", result);
-      
-      // Transform API response to dropdown format
+
       const policyOptions = (result.items || []).map((item: IndividualPolicy) => ({
         id: item.policyNo || item.policyNo,
         name: `${item.policyNo} - ${item.insuredName || 'N/A'}`,
@@ -1736,9 +1515,9 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
 
       setPolicies(policyOptions);
       setPolicyError(false);
-      
+
     } catch (error: any) {
-      console.error("❌ Error fetching policies:", error);
+      console.error("Error fetching policies:", error);
       setPolicyError(true);
       toast({
         title: "Error",
@@ -1750,9 +1529,6 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
     }
   };
 
-  /**
-   * Handle policy search with debouncing
-   */
   const handlePolicySearch = (searchText: string) => {
     setSearchTerm(searchText);
     const debounceTimer = setTimeout(() => {
@@ -1763,14 +1539,12 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
 
   // ===== EFFECTS =====
 
-  // Fetch policies on mount for create mode
   useEffect(() => {
     if (isCreateMode) {
       fetchPolicies("");
     }
   }, [isCreateMode]);
 
-  // Update local state when Redux state changes
   useEffect(() => {
     if (isCreateMode && policiesFromRedux.length > 0) {
       const transformed = policiesFromRedux.map((item: IndividualPolicy) => ({
@@ -1801,7 +1575,6 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
     }
   }, [policiesFromRedux, isCreateMode]);
 
-  // Sync loading/error states from Redux
   useEffect(() => {
     if (isCreateMode) {
       setPolicyLoading(policyLoadingFromRedux);
@@ -1809,14 +1582,12 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
     }
   }, [policyLoadingFromRedux, policyErrorFromRedux, isCreateMode]);
 
-  // Fetch claim data if in edit or view mode
   useEffect(() => {
     if ((isEditMode || isViewMode) && id) {
       dispatch(fetchClaimReserveById(parseInt(id)));
     }
   }, [isEditMode, isViewMode, id, dispatch]);
 
-  // Populate form when data is loaded (edit/view mode)
   useEffect(() => {
     if ((isEditMode || isViewMode) && currentReserve) {
       setFormData({
@@ -1872,28 +1643,25 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
         a7: currentReserve.a7 || 0,
         a8: currentReserve.a8 || 0,
         a9: currentReserve.a9 || 0,
+        entryDate: currentReserve.entryDate || "",
+        notifiedDate: currentReserve.notifiedDate || "",
       });
     }
   }, [isEditMode, isViewMode, currentReserve]);
 
-  // Clear error on unmount
   useEffect(() => {
     return () => {
       dispatch(clearCurrentError());
     };
   }, [dispatch]);
 
-  // ===== EVENT HANDLERS =====
+  // ===== HANDLERS =====
 
-  /**
-   * Handle policy selection - auto-populates form fields
-   * Called when user selects a policy from the dropdown
-   */
   const handlePolicySelect = (policy: ApiDropdownOption) => {
     if (!isCreateMode) return;
-    
+
     setSelectedPolicy(policy);
-    
+
     setFormData((prev) => ({
       ...prev,
       policyNo: policy.policyNo || policy.id || "",
@@ -1902,13 +1670,12 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
       subRisk: policy.covertype || policy.subRisk || "",
       subRiskID: policy.coverCode || policy.subRiskId || "",
       brcode: policy.brCode || "",
-      startDate: policy.startDate 
-        ? new Date(policy.startDate).toISOString().split("T")[0] 
+      startDate: policy.startDate
+        ? new Date(policy.startDate).toISOString().split("T")[0]
         : "",
-      endDate: policy.maturityDate 
-        ? new Date(policy.maturityDate).toISOString().split("T")[0] 
+      endDate: policy.maturityDate
+        ? new Date(policy.maturityDate).toISOString().split("T")[0]
         : "",
-        lossDate: new Date().toISOString().split("T")[0], 
       a9: policy.sumAssured || policy.faceAmount || policy.lifeCoverAmount || 0,
       a5: policy.totalContribution || 0,
       a6: policy.interestEarned || 0,
@@ -1926,22 +1693,17 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
     }));
 
     toast({
-      title: "✅ Policy Loaded Successfully",
+      title: "Policy Loaded Successfully",
       description: `Policy ${policy.policyNo} - ${policy.insuredName} loaded with all details`,
       duration: 3000,
     });
   };
 
-  /**
-   * Validate form data before submission
-   * Returns true if all validations pass
-   */
   const validate = () => {
     if (isViewMode) return true;
-    
+
     const newErrors: Record<string, string> = {};
 
-    // Required field validations
     if (!formData.policyNo?.trim()) {
       newErrors.policyNo = "Policy number is required";
     }
@@ -1954,8 +1716,7 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
     if (!formData.lossDate) {
       newErrors.lossDate = "Loss date is required";
     }
-    
-    // Numeric validations
+
     if ((formData.amtReserved || 0) < 0) {
       newErrors.amtReserved = "Amount reserved cannot be negative";
     }
@@ -1967,187 +1728,110 @@ const [formData, setFormData] = useState<Partial<ClaimReserve>>({
     return Object.keys(newErrors).length === 0;
   };
 
-  /**
-   * Handle form submission
-   * Creates new claim or updates existing based on mode
-   */
-const handleSubmit = async () => {
-  console.log("🔵 handleSubmit - START");
-  console.log("🔵 isViewMode:", isViewMode);
-  console.log("🔵 isCreateMode:", isCreateMode);
-  console.log("🔵 formData.policyNo:", formData.policyNo);
-  console.log("🔵 formData.insuredName:", formData.insuredName);
-  console.log("🔵 formData.lossDate:", formData.lossDate);
-  console.log("🔵 effectiveLossType:", effectiveLossType);
-  
-  if (isViewMode) {
-    console.log("🔵 View mode - returning early");
-    return;
-  }
-  
-  console.log("🔵 About to validate...");
-  const isValid = validate();
-  console.log("🔵 Validation result:", isValid);
-  
-  if (!isValid) {
-    console.log("🔵 Validation failed!");
-    console.log("🔵 Errors:", errors);
-    return;
-  }
+  const handleSubmit = async () => {
+    if (isViewMode) return;
 
-  setIsSubmitting(true);
-  console.log("🔵 isSubmitting set to true");
-  try {
-    // ✅ Build payload with NO hardcoded values - ALL from formData
-    const submitData = {
-      // Claim identification
-      claimID: formData.claimID || 0,
-      claimNo: formData.claimNo || "",
-      brcode: formData.brcode || "",
-      
-      // Dates
-      entryDate: formData.entryDate || new Date().toISOString(),
-      notifiedDate: formData.notifiedDate || formData.entryDate || new Date().toISOString(),
-      lossDate: formData.lossDate ? new Date(formData.lossDate).toISOString() : new Date().toISOString(),
-      
-      // Policy and Insured
-      policyNo: formData.policyNo || "",
-      coPolicyNo: formData.coPolicyNo || "",
-      refDNCNNo: formData.refDNCNNo || "",
-      insuredName: formData.insuredName || "",
-      insuredID: formData.insuredID || "",
-      
-      // Policy period
-      startDate: formData.startDate ? new Date(formData.startDate).toISOString() : "",
-      endDate: formData.endDate ? new Date(formData.endDate).toISOString() : "",
-      
-      // Risk and Party
-      subRiskID: formData.subRiskID || "",
-      subRisk: formData.subRisk || "",
-      partyID: formData.partyID || "",
-      party: formData.party || "",
-      
-      // Claim details
-      lossType: effectiveLossType || "",
-      lossDetails: formData.lossDetails || "",
-      
-      // ✅ ALL field values as strings (converted from formData)
-      field1: formData.field1 !== undefined && formData.field1 !== null ? String(formData.field1) : "",
-      field2: formData.field2 !== undefined && formData.field2 !== null ? String(formData.field2) : "",
-      field3: formData.field3 !== undefined && formData.field3 !== null ? String(formData.field3) : "",
-      field4: formData.field4 !== undefined && formData.field4 !== null ? String(formData.field4) : "",
-      field5: formData.field5 !== undefined && formData.field5 !== null ? String(formData.field5) : "",
-      field6: formData.field6 !== undefined && formData.field6 !== null ? String(formData.field6) : "",
-      field7: formData.field7 !== undefined && formData.field7 !== null ? String(formData.field7) : "",
-      field8: formData.field8 !== undefined && formData.field8 !== null ? String(formData.field8) : "",
-      field9: formData.field9 !== undefined && formData.field9 !== null ? String(formData.field9) : "",
-      field10: formData.field10 !== undefined && formData.field10 !== null ? String(formData.field10) : "",
-      field11: formData.field11 !== undefined && formData.field11 !== null ? String(formData.field11) : "",
-      field12: formData.field12 !== undefined && formData.field12 !== null ? String(formData.field12) : "",
-      field13: formData.field13 !== undefined && formData.field13 !== null ? String(formData.field13) : "",
-      field14: formData.field14 !== undefined && formData.field14 !== null ? String(formData.field14) : "",
-      field15: formData.field15 !== undefined && formData.field15 !== null ? String(formData.field15) : "",
-      field16: formData.field16 !== undefined && formData.field16 !== null ? String(formData.field16) : "",
-      field17: formData.field17 !== undefined && formData.field17 !== null ? String(formData.field17) : "",
-      field18: formData.field18 !== undefined && formData.field18 !== null ? String(formData.field18) : "",
-      
-      // ✅ ALL a fields as numbers (converted from formData)
-      a1: Number(formData.a1) || 0,
-      a2: Number(formData.a2) || 0,
-      a3: Number(formData.a3) || 0,
-      a4: Number(formData.a4) || 0,
-      a5: Number(formData.a5) || 0,
-      a6: Number(formData.a6) || 0,
-      a7: Number(formData.a7) || 0,
-      a8: Number(formData.a8) || 0,
-      a9: Number(formData.a9) || 0,
-      
-      // Payment amounts
-      amtReserved: Number(formData.amtReserved) || 0,
-      amtPaid: Number(formData.amtPaid) || 0,
-      
-      // Status flags
-      detailID: Number(formData.detailID) || 0,
-      approval: Number(formData.approval) || 0,
-      deleted: Number(formData.deleted) || 0,
-      active: Number(formData.active) || 1,
-      
-      // Audit fields
-      submittedBy: formData.submittedBy || "",
-      submittedOn: formData.submittedOn || new Date().toISOString(),
-      modifiedBy: formData.modifiedBy || "",
-      modifiedOn: formData.modifiedOn || new Date().toISOString(),
-      approvedBy: formData.approvedBy || "",
-      approvedOn: formData.approvedOn || new Date().toISOString(),
-      
-      // Additional fields
-      leadID: formData.leadID || "",
-      leader: formData.leader || "",
-      propType: formData.propType || "",
-      leadProp: Number(formData.leadProp) || 0,
-      propRate: Number(formData.propRate) || 1,
-      undYear: Number(formData.undYear) || new Date().getFullYear(),
-    };
+    const isValid = validate();
+    if (!isValid) return;
 
-    console.log("📤 Submitting payload:", submitData);
+    setIsSubmitting(true);
+    try {
+      const toIso = (d?: string) =>
+        d ? new Date(d).toISOString() : new Date().toISOString();
 
-    if (isCreateMode) {
-      await dispatch(insertClaimReserve(submitData)).unwrap();
+      const submitData = {
+        claimID: Number(formData.claimID) || 0,
+        brCode: formData.brcode || "",
+        claimNo: formData.claimNo || "",
+        policyNo: formData.policyNo || "",
+        dncnNo: formData.refDNCNNo || "",
+        unitID: formData.unitID || "",
+        underYr: Number(formData.undYear) || 0,
+        recType: formData.recType || "CLAIM",
+        insuredName: formData.insuredName || "",
+        startDate: toIso(formData.startDate),
+        endDate: toIso(formData.endDate),
+        renDate: toIso(formData.renDate),
+        subRiskCode: formData.subRiskID || "",
+        subRiskName: formData.subRisk || "",
+        partyCode: formData.partyID || "",
+        insuredCode: formData.insuredID || "",
+        tDate: toIso(formData.entryDate),
+        notifyDate: toIso(formData.notifiedDate),
+        lossDate: toIso(formData.lossDate),
+        lossDetails: formData.lossDetails || "",
+        amount: Number(formData.amtReserved) || 0,
+        paidAmt: Number(formData.amtPaid) || 0,
+        adjAmt: Number(formData.adjAmt) || 0,
+        a1: Number(formData.a1) || 0,
+        a2: Number(formData.a2) || 0,
+        a3: Number(formData.a3) || 0,
+        a4: Number(formData.a4) || 0,
+        a5: Number(formData.a5) || 0,
+        a6: Number(formData.a6) || 0,
+        a7: Number(formData.a7) || 0,
+        a8: Number(formData.a8) || 0,
+        a9: Number(formData.a9) || 0,
+        a10: 0, a11: 0, a12: 0, a13: 0, a14: 0, a15: 0,
+        d1: 0, d2: 0, d3: 0,
+        vehRegNo: 0,
+        submitBy: formData.submittedBy || "",
+        submitOn: formData.submittedOn || new Date().toISOString(),
+        modifiedBy: formData.modifiedBy || "",
+        modifiedOn: formData.modifiedOn || new Date().toISOString(),
+        approvedBy: formData.approvedBy || "",
+        approvedOn: formData.approvedOn || new Date().toISOString(),
+        transGUID: formData.transGUID || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : ""),
+        transSTATUS: formData.transSTATUS || "PENDING",
+        remark: formData.remark || "",
+        tag: formData.tag || "",
+      };
+
+      if (isCreateMode) {
+        await dispatch(insertClaimReserve(submitData)).unwrap();
+        toast({
+          title: "Claim Created",
+          description: "Claim has been created successfully!",
+          variant: "default",
+        });
+      } else if (isEditMode && formData.claimID) {
+        await dispatch(updateClaimReserve({
+          id: formData.claimID,
+          data: submitData
+        })).unwrap();
+        toast({
+          title: "Claim Updated",
+          description: "Claim has been updated successfully!",
+          variant: "default",
+        });
+      }
+
+      navigate(returnPath);
+    } catch (error: any) {
+      console.error("Submit error:", error);
       toast({
-        title: "✅ Claim Created",
-        description: `Claim has been created successfully!`,
-        variant: "default",
+        title: "Error",
+        description: error?.response?.data?.message || error?.message || "Failed to save claim",
+        variant: "destructive",
       });
-    } else if (isEditMode && formData.claimID) {
-      await dispatch(updateClaimReserve({ 
-        id: formData.claimID, 
-        data: submitData 
-      })).unwrap();
-      toast({
-        title: "✅ Claim Updated",
-        description: "Claim has been updated successfully!",
-        variant: "default",
-      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    navigate(returnPath);
-  } catch (error: any) {
-    console.error("❌ Submit error:", error);
-    console.error("❌ Error response:", error?.response?.data);
-    
-    toast({
-      title: "Error",
-      description: error?.response?.data?.message || error?.message || "Failed to save claim",
-      variant: "destructive",
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
-  /**
-   * Handle form field changes
-   * Clears validation error for the field when changed
-   */
   const handleChange = (key: keyof ClaimReserve, value: any) => {
     if (isViewMode) return;
-    
+
     setFormData((prev) => ({ ...prev, [key]: value }));
     if (errors[key]) {
       setErrors((prev) => ({ ...prev, [key]: "" }));
     }
   };
 
-  /**
-   * Navigate back to the previous page
-   */
   const handleCancel = () => {
     navigate(returnPath);
   };
 
-  /**
-   * Refresh policy list
-   */
   const handleRefreshPolicies = () => {
     if (isCreateMode) {
       fetchPolicies(searchTerm);
@@ -2159,46 +1843,37 @@ const handleSubmit = async () => {
     }
   };
 
-  // ===== HELPER FUNCTIONS =====
+  // ===== HELPERS =====
 
-/**
- * Get loss type options based on the current loss type
- */
-const getLossTypeOptions = () => {
-  const options = [
-    { label: "Maturity Claims", value: "MV" },
-    { label: "Death Benefit Claims", value: "DB" },
-    { label: "Partial Withdrawal Claims", value: "PWD" },
-    { label: "Surrender Claims ", value: "SV" },
-  ];
-  
-  if (effectiveLossType) { // ✅ Use effectiveLossType
-    return options.filter(opt => opt.value === effectiveLossType);
-  }
-  return options;
-};
+  const getLossTypeOptions = () => {
+    const options = [
+      { label: "Maturity Claims", value: "MV" },
+      { label: "Death Benefit Claims", value: "DB" },
+      { label: "Partial Withdrawal Claims", value: "PWD" },
+      { label: "Surrender Claims ", value: "SV" },
+    ];
 
-const lossTypeOptions = getLossTypeOptions();
-  
-/**
- * Get page title based on current mode
- */
-const getPageTitle = () => {
-  const allOptions = [
-    { label: "Maturity Claims", value: "MV" },
-    { label: "Death Benefit Claims", value: "DB" },
-    { label: "Partial Withdrawal Claims", value: "PWD" },
-    { label: "Surrender Claims", value: "SV" },
-  ];
-  const lossTypeLabel = allOptions.find(opt => opt.value === effectiveLossType)?.label || effectiveLossType || 'Claim';
-  if (isViewMode) return `${lossTypeLabel} Details`;
-  if (isEditMode) return `Edit ${lossTypeLabel}`;
-  return `New ${lossTypeLabel}`;
-};
-  
-  /**
-   * Get page subtitle based on current mode
-   */
+    if (effectiveLossType) {
+      return options.filter(opt => opt.value === effectiveLossType);
+    }
+    return options;
+  };
+
+  const lossTypeOptions = getLossTypeOptions();
+
+  const getPageTitle = () => {
+    const allOptions = [
+      { label: "Maturity Claims", value: "MV" },
+      { label: "Death Benefit Claims", value: "DB" },
+      { label: "Partial Withdrawal Claims", value: "PWD" },
+      { label: "Surrender Claims", value: "SV" },
+    ];
+    const lossTypeLabel = allOptions.find(opt => opt.value === effectiveLossType)?.label || effectiveLossType || 'Claim';
+    if (isViewMode) return `${lossTypeLabel} Details`;
+    if (isEditMode) return `Edit ${lossTypeLabel}`;
+    return `New ${lossTypeLabel}`;
+  };
+
   const getPageSubtitle = () => {
     if (isViewMode) return "View complete claim details and history";
     if (isEditMode) return "Update claim information and details";
@@ -2207,7 +1882,6 @@ const getPageTitle = () => {
 
   // ===== RENDER =====
 
-  // Loading state
   if (loading && (isEditMode || isViewMode)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -2218,7 +1892,6 @@ const getPageTitle = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="p-6">
@@ -2245,7 +1918,7 @@ const getPageTitle = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="container mx-auto max-w-7xl">
-        {/* ===== HEADER ===== */}
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-4">
             <Button
@@ -2264,7 +1937,6 @@ const getPageTitle = () => {
           </div>
           <div className="flex gap-2 w-10 md:w-auto">
             {isViewMode && (
-              // View mode: Show Edit button
               <Button
                 onClick={() => {
                   navigate(`/claims/individual/claim/edit/${id}`, {
@@ -2278,7 +1950,6 @@ const getPageTitle = () => {
               </Button>
             )}
             {!isViewMode && (
-              // Create/Edit mode: Show Cancel and Submit buttons
               <>
                 <Button
                   variant="outline"
@@ -2288,31 +1959,28 @@ const getPageTitle = () => {
                   Cancel
                 </Button>
                 <Button
-  onClick={() => {
-    console.log("🔵 Button clicked!");
-    handleSubmit();
-  }}
-  disabled={isSubmitting}
-  className="bg-blue-600 hover:bg-blue-700 text-white w-10 md:w-auto"
->
-  {isSubmitting ? (
-    <>
-      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-      {isCreateMode ? "Creating..." : "Updating..."}
-    </>
-  ) : (
-    <>
-      <Save className="w-4 h-4 mr-2" />
-      {isCreateMode ? "Create Claim" : "Update Claim"}
-    </>
-  )}
-</Button>
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="bg-blue-600 hover:bg-blue-700 text-white w-10 md:w-auto"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {isCreateMode ? "Creating..." : "Updating..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      {isCreateMode ? "Create Claim" : "Update Claim"}
+                    </>
+                  )}
+                </Button>
               </>
             )}
           </div>
         </div>
 
-        {/* ===== STATUS BADGE ===== */}
+        {/* STATUS BADGE */}
         {isViewMode && (
           <div className="mb-6 flex items-center gap-3">
             <Badge className="bg-green-100 text-green-700 px-3 py-1">
@@ -2326,16 +1994,15 @@ const getPageTitle = () => {
           </div>
         )}
 
-        {/* ===== MAIN FORM CARD ===== */}
+        {/* MAIN FORM CARD */}
         <Card className="bg-white shadow-sm">
           <CardHeader className="border-b">
-          <CardTitle className="text-lg flex items-center gap-2">
-  <FileText className="w-5 h-5 text-blue-600" />
-  {lossTypeOptions.find(opt => opt.value === effectiveLossType)?.label || effectiveLossType || 'Claim'} Management
-</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600" />
+              {lossTypeOptions.find(opt => opt.value === effectiveLossType)?.label || effectiveLossType || 'Claim'} Management
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            {/* Tabs Navigation */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="details" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
@@ -2352,7 +2019,6 @@ const getPageTitle = () => {
                 </TabsTrigger>
               </TabsList>
 
-              {/* ===== TAB 1: CLAIM DETAILS ===== */}
               <TabsContent value="details" className="animate-in slide-in-from-top-3 fade-in duration-300">
                 <ClaimDetailsTab
                   formData={formData}
@@ -2370,19 +2036,16 @@ const getPageTitle = () => {
                 />
               </TabsContent>
 
-              {/* ===== TAB 2: PAYMENT DETAILS ===== */}
-
- <TabsContent value="payment" className="animate-in slide-in-from-top-3 fade-in duration-300">
+              <TabsContent value="payment" className="animate-in slide-in-from-top-3 fade-in duration-300">
                 <PaymentDetailsTab
                   formData={formData}
                   handleChange={handleChange}
                   isViewMode={isViewMode}
                   errors={errors}
-                  lossType={effectiveLossType} // Pass lossType to show death benefit specific fields
+                  lossType={effectiveLossType}
                 />
               </TabsContent>
 
-              {/* ===== TAB 3: DOCUMENTS ===== */}
               <TabsContent value="documents" className="animate-in slide-in-from-top-3 fade-in duration-300">
                 <DocumentUploadTab isViewMode={isViewMode} />
               </TabsContent>
