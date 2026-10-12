@@ -16,7 +16,7 @@ interface PolicyTabsProps {
 }
 
 const PolicyTabs = ({ 
-  basePath = "/underwritings/edit", 
+  basePath = "/underwriting/edit", 
   showComingSoon = true,
   riskName = "Risk",
   tabs 

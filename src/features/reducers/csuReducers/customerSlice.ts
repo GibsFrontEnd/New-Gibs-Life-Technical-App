@@ -9,17 +9,25 @@ import type { RootState } from "../../store";
 import type {
   Customer,
   CustomerState,
+  CustomerPagination,
   CreateCustomerRequest,
 } from "../../../types/customer";
 import { decryptData } from "../../../utils/encrypt-utils";
 import { SERVER_URL } from "../../../utils/constants";
 
-const encryptedToken = localStorage.getItem("token");
-
 const API_BASE_URL = SERVER_URL;
 
-// You'll need to get this token from your auth system
-const AUTH_TOKEN = decryptData(encryptedToken);
+const getAuthToken = () => {
+  try {
+    const encryptedToken = localStorage.getItem("token");
+    if (!encryptedToken) return "";
+    return decryptData(encryptedToken) || "";
+  } catch {
+    return "";
+  }
+};
+
+const AUTH_TOKEN = getAuthToken();
 
 // Payment types
 interface InitializePaymentRequest {
@@ -45,23 +53,99 @@ interface VerifyPaymentResponse {
 // Async thunks
 export const getAllCustomers = createAsyncThunk(
   "customers/getAllCustomers",
-  async (_, { rejectWithValue }) => {
+  async (
+    params: {
+      pageNumber?: number;
+      pageSize?: number;
+      searchTerm?: string;
+      insuredType?: string;
+    } = {},
+    { rejectWithValue }
+  ) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/v1/Customers`, {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-          Authorization: "Bearer " + AUTH_TOKEN,
-        },
-      });
+      const pageNumber = params.pageNumber || 1;
+      const pageSize = params.pageSize || 20;
+
+      const queryParams = new URLSearchParams();
+      queryParams.append("pageNumber", pageNumber.toString());
+      queryParams.append("pageSize", pageSize.toString());
+      if (params.searchTerm && params.searchTerm.trim()) {
+        queryParams.append("searchTerm", params.searchTerm.trim());
+      }
+      if (params.insuredType && params.insuredType.trim()) {
+        queryParams.append("insuredType", params.insuredType.trim());
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/v1/Customers?${queryParams.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            Authorization: "Bearer " + getAuthToken(),
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      // API wraps the list in { data: [...] }
-      return (data?.data ?? data) as Customer[];
+
+      if (Array.isArray(data)) {
+        return {
+          data,
+          pageNumber,
+          pageSize,
+          totalRecords: data.length,
+          totalPages: Math.ceil(data.length / pageSize) || 1,
+          hasNextPage: pageNumber * pageSize < data.length,
+          hasPreviousPage: pageNumber > 1,
+        };
+      }
+
+      if (data && Array.isArray(data.data)) {
+        const total =
+          data.totalRecords ?? data.totalCount ?? data.count ?? data.data.length;
+        const totalP =
+          data.totalPages ?? Math.ceil(total / pageSize) ?? 1;
+        return {
+          data: data.data,
+          pageNumber: data.pageNumber || pageNumber,
+          pageSize: data.pageSize || pageSize,
+          totalRecords: total,
+          totalPages: totalP,
+          hasNextPage: data.hasNextPage ?? pageNumber < totalP,
+          hasPreviousPage: data.hasPreviousPage ?? pageNumber > 1,
+        };
+      }
+
+      if (data && Array.isArray(data.items)) {
+        const total =
+          data.totalCount ?? data.totalRecords ?? data.items.length;
+        const totalP =
+          data.totalPages ?? Math.ceil(total / pageSize) ?? 1;
+        return {
+          data: data.items,
+          pageNumber: data.page || data.pageNumber || pageNumber,
+          pageSize: data.pageSize || pageSize,
+          totalRecords: total,
+          totalPages: totalP,
+          hasNextPage: data.hasNext ?? pageNumber < totalP,
+          hasPreviousPage: data.hasPrevious ?? pageNumber > 1,
+        };
+      }
+
+      return {
+        data: [],
+        pageNumber,
+        pageSize,
+        totalRecords: 0,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      };
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to fetch customers"
@@ -115,7 +199,16 @@ export const createCustomer = createAsyncThunk(
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errMsg = `HTTP error! status: ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData.errors) {
+            errMsg = Object.values(errData.errors).flat().join(" ") || errData.title || errMsg;
+          } else if (errData.message || errData.title) {
+            errMsg = errData.message || errData.title;
+          }
+        } catch {}
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
@@ -149,7 +242,16 @@ export const updateCustomer = createAsyncThunk(
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errMsg = `HTTP error! status: ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData.errors) {
+            errMsg = Object.values(errData.errors).flat().join(" ") || errData.title || errMsg;
+          } else if (errData.message || errData.title) {
+            errMsg = errData.message || errData.title;
+          }
+        } catch {}
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
@@ -643,6 +745,14 @@ interface CustomerState {
 const initialState: CustomerState = {
   customers: [],
   currentCustomer: null,
+  pagination: {
+    pageNumber: 1,
+    pageSize: 20,
+    totalRecords: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  },
   regularProposals: [],
   traditionalProposals: [],
   regularQuotations: [],
@@ -760,7 +870,27 @@ const customerSlice = createSlice({
       })
       .addCase(getAllCustomers.fulfilled, (state, action) => {
         state.loading.getAllCustomers = false;
-        state.customers = action.payload;
+        if (action.payload && Array.isArray(action.payload.data)) {
+          state.customers = action.payload.data;
+          state.pagination = {
+            pageNumber: action.payload.pageNumber || 1,
+            pageSize: action.payload.pageSize || 20,
+            totalRecords: action.payload.totalRecords || action.payload.data.length,
+            totalPages: action.payload.totalPages || 1,
+            hasNextPage: action.payload.hasNextPage ?? false,
+            hasPreviousPage: action.payload.hasPreviousPage ?? false,
+          };
+        } else if (Array.isArray(action.payload)) {
+          state.customers = action.payload;
+          state.pagination = {
+            pageNumber: 1,
+            pageSize: action.payload.length || 20,
+            totalRecords: action.payload.length,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          };
+        }
       })
       .addCase(getAllCustomers.rejected, (state, action) => {
         state.loading.getAllCustomers = false;
@@ -809,14 +939,15 @@ const customerSlice = createSlice({
       .addCase(updateCustomer.fulfilled, (state, action) => {
         state.loading.updateCustomer = false;
         state.success.updateCustomer = true;
+        const targetId = action.payload.customerID;
         const index = state.customers.findIndex(
-          (c) => c.customerID === action.payload.customerID
+          (c) => c.insuredID === targetId || c.customerID === targetId
         );
         if (index !== -1) {
-          state.customers[index] = action.payload.customerData;
+          state.customers[index] = { ...state.customers[index], ...action.payload.customerData };
         }
-        if (state.currentCustomer?.customerID === action.payload.customerID) {
-          state.currentCustomer = action.payload.customerData;
+        if (state.currentCustomer && (state.currentCustomer.insuredID === targetId || state.currentCustomer.customerID === targetId)) {
+          state.currentCustomer = { ...state.currentCustomer, ...action.payload.customerData };
         }
       })
       .addCase(updateCustomer.rejected, (state, action) => {

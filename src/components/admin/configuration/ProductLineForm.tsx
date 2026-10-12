@@ -20,7 +20,6 @@ interface ProductFormData {
   riskID: string;
   productType: string;
   remarks?: string;
-  // Additional fields for different product types
   mainClass?: string;
   sectionCode?: string;
   coverType?: string;
@@ -32,7 +31,6 @@ interface ProductFormData {
 interface ProductFormProps {
   mode?: "new" | "edit" | "view";
   productId?: string;
-  // Configuration type to determine which form to show
   configType?: "product-lines" | "product-main-class" | "product-settings" | "product-sections" | "product-covers" | "product-smi";
 }
 
@@ -60,10 +58,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const { toast } = useToast();
   const currentProduct = useSelector(selectCurrentProduct);
 
-  // Determine config type from URL if not provided
   const configType = propConfigType || getConfigTypeFromPath(location.pathname);
 
-  // Determine mode from props or URL
   const path = location.pathname;
   const isViewMode = propMode === 'view' || path.includes('/view/');
   const isEditMode = propMode === 'edit' || path.includes('/edit/');
@@ -213,14 +209,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
         riskID: formData.riskID,
         productType: formData.productType,
         remarks: formData.remarks || "",
-        // Additional fields based on config type
         mainClass: formData.mainClass,
         sectionCode: formData.sectionCode,
         coverType: formData.coverType,
         smiCode: formData.smiCode,
         settingCategory: formData.settingCategory,
         settingValue: formData.settingValue,
-        // Default values for required API fields
         description: formData.productName || "",
         tag: "default",
         min_Age: 18,
@@ -254,7 +248,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       }
       
       setLoading(false);
-      navigate(configInfo.backPath);
+      navigate(-1);
     } catch (err: any) {
       setError(err.message || `Failed to save ${configInfo.title}`);
       setLoading(false);
@@ -267,11 +261,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   const handleCancel = () => {
-    navigate(configInfo.backPath);
+    navigate(-1);
   };
 
   const handleGoBack = () => {
-    navigate(configInfo.backPath);
+    navigate(-1);
   };
 
   // ─── Loading State ────────────────────────────────────────────

@@ -3,10 +3,10 @@ import apiCall from "../../../utils/api-call";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 export const getAllBranches = createAsyncThunk(
-  "branches/getAllBranches",
+  "lookups/branches",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await apiCall.get(`/lookups/branches`);
+      const response = await apiCall.get(`/lookups/branches`); // Updated endpoint
       return response.data;
     } catch (error) {
       return rejectWithValue(error);
@@ -95,6 +95,9 @@ const branchSlice = createSlice({
       state.error = { ...initialState.error };
       state.success = { ...initialState.success };
     },
+    clearBranchError: (state) => {
+      state.error.getAllBranches = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -105,6 +108,7 @@ const branchSlice = createSlice({
       .addCase(getAllBranches.fulfilled, (state, action) => {
         state.loading.getAllBranches = false;
         state.branches = action.payload;
+        state.error.getAllBranches = null;
       })
       .addCase(getAllBranches.rejected, (state, action) => {
         state.loading.getAllBranches = false;
@@ -184,6 +188,6 @@ const branchSlice = createSlice({
 export const selectBranch = (state: { branches: BranchState }) =>
   state.branches;
 
-export const { clearBranchMessages } = branchSlice.actions;
+export const { clearBranchMessages, clearBranchError } = branchSlice.actions;
 
 export default branchSlice.reducer;

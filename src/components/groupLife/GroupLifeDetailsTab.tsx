@@ -41,8 +41,10 @@ import {
   Undo2,
   Ban,
   MinusCircle,
-  Clock
+  Clock,
+  Layers
 } from "lucide-react";
+import { Checkbox } from "../UI/checkbox";
 import {
   Table,
   TableBody,
@@ -87,6 +89,15 @@ interface PolicyDetailItem {
   sumInsured?: number;
   premium?: number;
   transDate?: string;
+  // Add these new fields
+  endorsementType?: string;
+  completionStatus?: string;
+  effectiveDate?: string;
+  expiryDate?: string;
+  grossPremium?: number;
+  netPremium?: number;
+  submittedBy?: string;
+  submittedOn?: string;
 }
 
 // Add type definition for endorsement type with description
@@ -124,6 +135,58 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
   
   // Local state for endorsement processing
   const [processingEndorsement, setProcessingEndorsement] = useState<string | null>(null);
+
+  // Selection state for policy details table
+  const [selectedDetailIds, setSelectedDetailIds] = useState<Set<string | number>>(new Set());
+
+  const handleToggleSelectDetail = (id: string | number) => {
+    setSelectedDetailIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllDetails = () => {
+    if (selectedDetailIds.size === policyDetails.length && policyDetails.length > 0) {
+      setSelectedDetailIds(new Set());
+    } else {
+      const allIds = policyDetails.map((item, index) => item.detailID || item.endorsementNo || index);
+      setSelectedDetailIds(new Set(allIds));
+    }
+  };
+
+  const handlePrintSchedule = () => {
+    const selectedItems = policyDetails.filter((item, index) => {
+      const id = item.detailID || item.endorsementNo || index;
+      return selectedDetailIds.has(id);
+    });
+    console.log("Print Schedule clicked for details:", selectedItems.length > 0 ? selectedItems : policyDetails);
+    toast({
+      title: "Print Schedule",
+      description: selectedDetailIds.size > 0
+        ? `Print Schedule triggered for ${selectedDetailIds.size} selected record(s). API will be connected shortly.`
+        : `Print Schedule triggered for policy ${policyNo}. API will be connected shortly.`,
+    });
+  };
+
+  const handleProcessCoinsuranceDetails = () => {
+    const selectedItems = policyDetails.filter((item, index) => {
+      const id = item.detailID || item.endorsementNo || index;
+      return selectedDetailIds.has(id);
+    });
+    console.log("Process Coinsurance Details clicked for details:", selectedItems.length > 0 ? selectedItems : policyDetails);
+    toast({
+      title: "Process Coinsurance Details",
+      description: selectedDetailIds.size > 0
+        ? `Process Coinsurance Details triggered for ${selectedDetailIds.size} selected record(s). API will be connected shortly.`
+        : `Process Coinsurance Details triggered for policy ${policyNo}. API will be connected shortly.`,
+    });
+  };
   
   // ==================== ENDORSEMENT DIALOG STATE ====================
   const [endorsementDialogOpen, setEndorsementDialogOpen] = useState(false);
@@ -193,69 +256,78 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
   const showEndorseButton = sourcePage === "endorsements";
   const showDebitNoteButton = true;
 
-  // Fetch group life details
-  const fetchDetail = async () => {
-    if (!policyNo) return;
+// Fetch group life details
+const fetchDetail = async () => {
+  if (!policyNo) return;
 
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      
-      const response = await fetch(
-        `${SERVER_URL}/grouplife/policies/policyNo/detail?policyNo=${encodeURIComponent(policyNo)}`,
-        {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-          }
+  setLoading(true);
+  try {
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    
+    const response = await fetch(
+      `${SERVER_URL}/grouplife/policies/policyNo/detail?policyNo=${encodeURIComponent(policyNo)}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
         }
-      );
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          await createDetail();
-          return;
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+    );
 
-      const data = await response.json();
-      setDetailData(data);
-      
-      const detailItem: PolicyDetailItem = {
-        detailID: data.detailID,
-        policyNo: data.policyNo || policyNo,
-        endorsementNo: data.endorsementNo || "[AUTO]",
-        certOrDocNo: data.certOrDocNo || "N/A",
-        insuredName: data.insuredName || formData?.clientName || "N/A",
-        created: data.created || false,
-        sumInsured: data.sumInsured ?? data.totalSumInsured ?? formData?.totalSumInsured ?? 0,
-        premium: data.grossPremium ?? data.netPremium ?? data.totalPremium ?? formData?.totalPremium ?? 0,
-        transDate: data.effectiveDate || data.submittedOn || formData?.transactionDate || new Date().toISOString(),
-      };
-      setPolicyDetails([detailItem]);
-      
-      if (data.members) {
-        setMembers(data.members);
+    if (!response.ok) {
+      if (response.status === 404) {
+        await createDetail();
+        return;
       }
-    } catch (error) {
-      console.error("Error fetching detail:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load group life details",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-  };
+
+    const data = await response.json();
+    setDetailData(data);
+    
+    const detailItem: PolicyDetailItem = {
+      detailID: data.detailID,
+      policyNo: data.policyNo || policyNo,
+      endorsementNo: data.endorsementNo || "[AUTO]",
+      certOrDocNo: data.certOrDocNo || "N/A",
+      insuredName: data.insuredName || formData?.clientName || "N/A",
+      created: data.created || false,
+      // ✅ Use actual API data
+      sumInsured: data.sumInsured || 0,
+      premium: data.grossPremium || data.netPremium || 0,
+      transDate: data.effectiveDate || data.submittedOn || formData?.transactionDate || new Date().toISOString(),
+    };
+    setPolicyDetails([detailItem]);
+    
+    if (data.members) {
+      setMembers(data.members);
+    }
+  } catch (error) {
+    console.error("Error fetching detail:", error);
+    toast({
+      title: "Error",
+      description: "Failed to load group life details",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Handle row click - navigate to member detail page
   const handleRowClick = (item: PolicyDetailItem) => {
     const encodedPolicyNo = encodeURIComponent(item.policyNo);
-    const path = `/underwriting/group-life-quotations/members/${encodedPolicyNo}`;
+    const hasEndorsement = item.endorsementNo && item.endorsementNo !== "[AUTO]";
+    const endorsementQuery = hasEndorsement ? `?endorsementNo=${encodeURIComponent(item.endorsementNo)}` : "";
+    const path = `/underwriting/group-life-quotations/members/${encodedPolicyNo}${endorsementQuery}`;
     console.log("🔄 Navigate called with:", path);
-    navigate(path);
+    navigate(path, {
+      state: {
+        endorsementNo: item.endorsementNo,
+        detailId: item.detailID,
+        policyNo: item.policyNo,
+      }
+    });
   };
 
   // Create detail if it doesn't exist
@@ -380,7 +452,9 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
             endorsementNo: item.endorsementNo,
             insuredName: item.insuredName,
             sourcePage: "group-life-details",
-            policyNo: item.policyNo // ← Also pass policyNo in state
+            policyNo: item.policyNo,  // ← Also pass policyNo in state
+            mode: 'add',
+            returnTo: location.pathname + location.search 
         }
     });
 };
@@ -553,10 +627,59 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
       {/* ==================== POLICY DETAILS TABLE ==================== */}
       <Card>
         <CardContent className="p-6">
+          {/* Action Toolbar - Always visible */}
+          <div className="mb-4 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {selectedDetailIds.size > 0 ? (
+                <>
+                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">
+                    {selectedDetailIds.size} {selectedDetailIds.size === 1 ? 'record' : 'records'} selected
+                  </span>
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm font-medium text-slate-700">
+                    Policy Details Actions
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handlePrintSchedule}
+                disabled={selectedDetailIds.size === 0}
+                variant="outline"
+                size="sm"
+                className="bg-white border-blue-300 text-blue-700 hover:bg-blue-50 text-xs sm:text-sm font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4 mr-1.5" />
+                Print Schedule
+              </Button>
+              <Button
+                onClick={handleProcessCoinsuranceDetails}
+                disabled={selectedDetailIds.size === 0}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                size="sm"
+              >
+                <Layers className="w-4 h-4 mr-1.5" />
+                Process Coinsurance Details
+              </Button>
+            </div>
+          </div>
+
           <div className="overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={selectedDetailIds.size === policyDetails.length && policyDetails.length > 0}
+                      onCheckedChange={handleSelectAllDetails}
+                      className="data-[state=checked]:bg-blue-600"
+                    />
+                  </TableHead>
                   <TableHead className="font-semibold text-gray-700">Policy No</TableHead>
                   <TableHead className="font-semibold text-gray-700">Endorsement Num</TableHead>
                   <TableHead className="font-semibold text-gray-700">Insured Name</TableHead>
@@ -571,7 +694,7 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
               <TableBody>
                 {policyDetails.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                       <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                       <p>No policy details found.</p>
                       <p className="text-sm mt-1">Click "New Details" to add a record.</p>
@@ -580,13 +703,22 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
                 ) : (
                   policyDetails.map((item, index) => {
                     const isItemProcessing = isProcessing(item.endorsementNo);
+                    const rowId = item.detailID || item.endorsementNo || index;
+                    const isSelected = selectedDetailIds.has(rowId);
                     
                     return (
                       <TableRow 
                         key={index} 
-                        className="hover:bg-gray-50 transition-colors cursor-pointer"
+                        className={`hover:bg-gray-50 transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}
                         onClick={() => handleRowClick(item)}
                       >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleSelectDetail(rowId)}
+                            className="data-[state=checked]:bg-blue-600"
+                          />
+                        </TableCell>
                         <TableCell className="font-medium text-gray-900">
                           {item.policyNo}
                         </TableCell>
@@ -865,7 +997,13 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
               className="text-green-700 p-0 h-auto mt-1"
               onClick={() => {
                 const encodedPolicyNo = encodeURIComponent(createdEndorsement.policyNo);
-                navigate(`/underwriting/group-life-quotations/members/${encodedPolicyNo}`);
+                const endorsementQuery = createdEndorsement.endorsementNo ? `?endorsementNo=${encodeURIComponent(createdEndorsement.endorsementNo)}` : "";
+                navigate(`/underwriting/group-life-quotations/members/${encodedPolicyNo}${endorsementQuery}`, {
+                  state: {
+                    endorsementNo: createdEndorsement.endorsementNo,
+                    policyNo: createdEndorsement.policyNo,
+                  }
+                });
                 dispatch(clearEndorsement());
               }}
             >

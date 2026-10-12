@@ -33,6 +33,7 @@ import type { GroupLifeMember } from "../../features/reducers/groupLifeReducers/
 import { useToast } from "../UI/use-toast";
 import { debounce } from "lodash";
 import { SERVER_URL } from "../../utils/constants";
+import { inclusiveCoverDays } from "../../utils/cover-days";
 
 // ==================== TYPES ====================
 
@@ -227,6 +228,219 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                     {option.code && (
                       <div className="text-xs text-gray-500">Code: {option.code}</div>
                     )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==================== EXISTING CLIENT DROPDOWN ====================
+
+interface ExistingClientDropdownProps {
+  value: string;
+  displayValue: string;
+  onChange: (client: any | null) => void;
+  placeholder?: string;
+  label?: string;
+  required?: boolean;
+  searchPlaceholder?: string;
+}
+
+const ExistingClientDropdown: React.FC<ExistingClientDropdownProps> = ({
+  value,
+  displayValue,
+  onChange,
+  placeholder = "Select client",
+  label = "Insured Details",
+  required = false,
+  searchPlaceholder = "Search for existing clients...",
+}) => {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const lastQueryRef = useRef<string>("");
+
+  const performSearch = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        setSearching(false);
+        return;
+      }
+
+      setSearching(true);
+      try {
+        const token =
+          localStorage.getItem("token") || sessionStorage.getItem("token");
+
+        const response = await fetch(
+          `${SERVER_URL}/v1/Customers/search?SearchText=${encodeURIComponent(
+            query
+          )}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (!response.ok) throw new Error("Search failed");
+        const data = await response.json();
+
+        if (lastQueryRef.current === query) {
+          setSearchResults(Array.isArray(data) ? data : data.data || []);
+        }
+      } catch (error) {
+        console.error("Client search error:", error);
+        if (lastQueryRef.current === query) {
+          setSearchResults([]);
+        }
+      } finally {
+        if (lastQueryRef.current === query) {
+          setSearching(false);
+        }
+      }
+    }, 500),
+    []
+  );
+
+  useEffect(() => {
+    lastQueryRef.current = searchQuery;
+    if (searchQuery.trim()) {
+      performSearch(searchQuery);
+    } else {
+      setSearchResults([]);
+      setSearching(false);
+    }
+  }, [searchQuery, performSearch]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getDisplayName = (client: any) => {
+    if (client.isOrg && client.orgName) return client.orgName;
+    const titlePart = client.title ? `${client.title} ` : "";
+    const firstPart = client.firstName ? `${client.firstName} ` : "";
+    const lastPart = client.lastName || "";
+    return (
+      (titlePart + firstPart + lastPart).trim() ||
+      client.customerID ||
+      "Unknown"
+    );
+  };
+
+  const handleSelect = (client: any) => {
+    onChange(client);
+    setIsOpen(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(null);
+    setSearchQuery("");
+    setSearchResults([]);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    if (!isOpen) setIsOpen(true);
+  };
+
+  const handleFocus = () => {
+    setIsOpen(true);
+  };
+
+  return (
+    <div className="space-y-2" ref={dropdownRef}>
+      <Label className="text-sm font-medium">
+        {label} {required && <span className="text-red-500">*</span>}
+      </Label>
+
+      <div className="relative">
+        <div className="relative">
+          <Input
+            value={isOpen ? searchQuery : displayValue || ""}
+            onChange={handleInputChange}
+            onFocus={handleFocus}
+            placeholder={isOpen ? searchPlaceholder : placeholder}
+            className="pr-16"
+          />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {searching && (
+              <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+            )}
+            {(displayValue || value) && !searching && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="p-0.5 hover:bg-gray-200 rounded-full"
+              >
+                <X className="h-3 w-3 text-gray-500" />
+              </button>
+            )}
+            <ChevronDown
+              className={`h-4 w-4 text-gray-500 transition-transform ${
+                isOpen ? "rotate-180" : ""
+              }`}
+            />
+          </div>
+        </div>
+
+        {isOpen && (
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+            <div className="max-h-60 overflow-y-auto">
+              {searching ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                  <span className="ml-2 text-sm text-gray-500">
+                    Searching...
+                  </span>
+                </div>
+              ) : !searchQuery.trim() ? (
+                <div className="py-4 text-center text-sm text-gray-500">
+                  Start typing to search clients...
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="py-4 text-center text-sm text-gray-500">
+                  No clients found
+                </div>
+              ) : (
+                searchResults.map((client) => (
+                  <button
+                    key={client.customerID}
+                    type="button"
+                    onClick={() => handleSelect(client)}
+                    className={`w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-0 ${
+                      client.customerID === value ? "bg-blue-50" : ""
+                    }`}
+                  >
+                    <div className="font-medium text-sm">
+                      {getDisplayName(client)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      ID: {client.customerID}
+                      {client.phoneLine1 && ` • Phone: ${client.phoneLine1}`}
+                    </div>
                   </button>
                 ))
               )}
@@ -436,7 +650,14 @@ const GroupLifeQuotationDetail: React.FC = () => {
         const formattedData = rawData.map((item: any) => mapper(item));
 
         switch (key) {
-          case 'products': setProducts(formattedData); break;
+          case 'products': {
+            const filteredProducts = formattedData.filter((item: any) => {
+              const rId = (item.riskID || item.riskId || item.RiskID)?.toString().trim().toUpperCase();
+              return rId === "GL";
+            });
+            setProducts(filteredProducts);
+            break;
+          }
           case 'accountExecutives': setAccountExecutives(formattedData); break;
           case 'agentBrokers': setAgentBrokers(formattedData); break;
           case 'branches': setBranches(formattedData); break;
@@ -492,10 +713,14 @@ const GroupLifeQuotationDetail: React.FC = () => {
     quotationNumber: "[AUTO]",
     transactionDate: new Date().toISOString().split("T")[0],
     effectiveDate: new Date().toISOString().split("T")[0],
-    expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-      .toISOString()
-      .split("T")[0],
-    coverDay: "0.00",
+    // One year less a day, so a standard annual scheme is 365 inclusive cover days.
+    expiryDate: (() => {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() + 1);
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().split("T")[0];
+    })(),
+    coverDay: "0",
     clientName: "",
     groupFactorAmount: "1000",
     insuredType: "company",
@@ -531,7 +756,7 @@ const GroupLifeQuotationDetail: React.FC = () => {
     busChannelId: "",
     subChannelId: "",
     proportionPercent: 100,
-    premiumRatePercent: 2.0,
+    premiumRatePercent: 0,
     businessSector: "",
     product: "",
   });
@@ -541,7 +766,7 @@ const GroupLifeQuotationDetail: React.FC = () => {
     memberQuotation: true,
     memberDetails: true,
     extensionDetails: false,
-    quotationStatus: true,
+    quotationStatus: false,
   });
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -629,13 +854,17 @@ const GroupLifeQuotationDetail: React.FC = () => {
     dispatch(removeMemberFromCurrentQuotation(index));
   };
 
+  // Inclusive of both dates, same as the API and the fire/motor screens.
   const handleGetCoverDay = () => {
-    const effective = new Date(formData.effectiveDate);
-    const expiry = new Date(formData.expiryDate);
-    const diffTime = Math.abs(expiry.getTime() - effective.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    setFormData((prev) => ({ ...prev, coverDay: diffDays.toString() }));
+    const days = inclusiveCoverDays(formData.effectiveDate, formData.expiryDate);
+    setFormData((prev) => ({ ...prev, coverDay: days.toString() }));
   };
+
+  // Keep Cover Day in step with the dates instead of waiting for the button.
+  useEffect(() => {
+    const days = inclusiveCoverDays(formData.effectiveDate, formData.expiryDate);
+    setFormData((prev) => (prev.coverDay === days.toString() ? prev : { ...prev, coverDay: days.toString() }));
+  }, [formData.effectiveDate, formData.expiryDate]);
 
   const handleCancel = () => {
     navigate("/underwriting/group-life-quotations");
@@ -653,6 +882,7 @@ const GroupLifeQuotationDetail: React.FC = () => {
     if (!formData.accountTypeId) missingFields.push("Account Types");
     if (!formData.busChannelId) missingFields.push("Bus Channels");
     if (!formData.product) missingFields.push("Product");
+    if (!(Number(formData.premiumRatePercent) > 0)) missingFields.push("Premium Rate%");
 
     if (missingFields.length > 0) {
       toast({
@@ -667,9 +897,8 @@ const GroupLifeQuotationDetail: React.FC = () => {
     const selectedProduct = products.find(p => p.id === formData.product);
     const subRiskId = selectedProduct?.code || (formData.product === "credit-life" ? "CR-001" : "GL-001");
 
-    // Get premium rate from selected rate type
-    const selectedRateType = rateTypes.find(r => r.id === formData.rateType);
-    const premiumRatePercent = selectedRateType?.value || 2.0;
+    // Entered on the form; the old rate-type lookup is disabled and silently fell back to 2%.
+    const premiumRatePercent = Number(formData.premiumRatePercent);
 
     const quotationData = {
       transactionType: formData.product === "credit-life" ? "Credit Life" : "Group Life",
@@ -878,61 +1107,26 @@ const GroupLifeQuotationDetail: React.FC = () => {
     }
   };
 
-  // Client search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searching, setSearching] = useState(false);
-
-  const handleClientSearch = useCallback(
-    debounce(async (query: string) => {
-      if (!query.trim()) {
-        setSearchResults([]);
-        return;
-      }
-
-      setSearching(true);
-      try {
-        const response = await fetch(
-          `${SERVER_URL}/v1/Customers/search?SearchText=${encodeURIComponent(query)}`
-        );
-        if (!response.ok) throw new Error("Search failed");
-        const data = await response.json();
-        setSearchResults(data);
-      } catch (error) {
-        toast({
-          title: "Search Error",
-          description: "Failed to search for existing clients.",
-          variant: "destructive",
-        });
-      } finally {
-        setSearching(false);
-      }
-    }, 500),
-    []
-  );
-
-  const selectClient = (client: any) => {
-    let clientName = "";
-    if (client.isOrg && client.orgName) {
-      clientName = client.orgName;
-    } else {
-      const titlePart = client.title ? `${client.title} ` : "";
-      const firstPart = client.firstName ? `${client.firstName} ` : "";
-      const lastPart = client.lastName || "";
-      clientName = (titlePart + firstPart + lastPart).trim() || client.customerID;
+  const handleClientChange = (client: any | null) => {
+    if (!client) {
+      setSelectedClientId("");
+      handleInputChange("clientName", "");
+      return;
     }
+  
+    const name =
+      client.isOrg && client.orgName
+        ? client.orgName
+        : [client.title, client.firstName, client.lastName]
+            .filter(Boolean)
+            .join(" ")
+            .trim() || client.customerID;
+  
     setSelectedClientId(client.customerID);
-    handleInputChange("clientName", clientName);
-    setSearchResults([]);
-    setSearchQuery("");
-    handleInputChange("existingClients", false);
+    handleInputChange("clientName", name);
   };
 
-  useEffect(() => {
-    if (formData.existingClients) {
-      handleClientSearch(searchQuery);
-    }
-  }, [searchQuery, formData.existingClients, handleClientSearch]);
+ 
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1050,81 +1244,20 @@ const GroupLifeQuotationDetail: React.FC = () => {
                       />
                     </div>
 
-                    {/* Insured Details / Client Name */}
-                    <div className="space-y-2">
-                      <Label htmlFor="clientName" className="text-sm font-medium">
-                        Insured Details <span className="text-red-500">*</span>
-                      </Label>
-                      {formData.existingClients ? (
-                        <div className="space-y-2">
-                          <div className="relative">
-                            <Input
-                              id="clientNameSearch"
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              placeholder="Search for existing clients..."
-                              className={searching ? "pr-8" : ""}
-                            />
-                            {searching && (
-                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                              </div>
-                            )}
-                          </div>
+                  {/* Insured Details / Client Name */}
+<div className="space-y-2">
+  <ExistingClientDropdown
+    value={selectedClientId}
+    displayValue={formData.clientName}
+    onChange={handleClientChange}
+    label="Insured Details"
+    placeholder="Search or select a client..."
+    required={true}
+    searchPlaceholder="Type to search clients..."
+  />
+</div>
 
-                          {searchResults.length > 0 && (
-                            <div className="border rounded-md max-h-60 overflow-y-auto shadow-sm bg-white">
-                              {searchResults.map((client) => {
-                                let displayName = "";
-                                if (client.isOrg && client.orgName) {
-                                  displayName = client.orgName;
-                                } else {
-                                  const titlePart = client.title ? `${client.title} ` : "";
-                                  const firstPart = client.firstName ? `${client.firstName} ` : "";
-                                  const lastPart = client.lastName || "";
-                                  displayName = (titlePart + firstPart + lastPart).trim() || client.customerID;
-                                }
-
-                                return (
-                                  <button
-                                    key={client.customerID}
-                                    type="button"
-                                    onClick={() => selectClient(client)}
-                                    className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100"
-                                  >
-                                    <div className="font-medium">{displayName}</div>
-                                    <div className="text-xs text-gray-500">
-                                      ID: {client.customerID}
-                                      {client.phoneLine1 && ` • Phone: ${client.phoneLine1}`}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <textarea
-                          id="clientName"
-                          value={formData.clientName}
-                          onChange={(e) => handleInputChange("clientName", e.target.value)}
-                          className="w-full min-h-[80px] px-3 py-2 bg-gray-50 border rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200"
-                          placeholder="Enter client name..."
-                        />
-                      )}
-                      <div className="flex items-center space-x-2 mt-1">
-                        <input
-                          type="checkbox"
-                          id="existingClients"
-                          checked={formData.existingClients}
-                          onChange={(e) => handleInputChange("existingClients", e.target.checked)}
-                          className="rounded"
-                        />
-                        <Label htmlFor="existingClients" className="text-sm">
-                          Existing Clients
-                        </Label>
-                      </div>
-                    </div>
+                    
 
                     {/* Proportion % */}
                     <div className="space-y-2">
@@ -1139,6 +1272,23 @@ const GroupLifeQuotationDetail: React.FC = () => {
                         value={formData.proportionPercent}
                         onChange={(e) => handleInputChange("proportionPercent", parseFloat(e.target.value) || 0)}
                         placeholder="Enter proportion percentage"
+                      />
+                    </div>
+
+                    {/* Premium Rate % — saved on the policy (A10, as a fraction) and used by
+                        "PolicyRate" pricing when members are added or uploaded. */}
+                    <div className="space-y-2">
+                      <Label htmlFor="premiumRatePercent" className="text-sm font-medium">
+                        Premium Rate% <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="premiumRatePercent"
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={formData.premiumRatePercent || ""}
+                        onChange={(e) => handleInputChange("premiumRatePercent", parseFloat(e.target.value) || 0)}
+                        placeholder="e.g. 2 for 2%"
                       />
                     </div>
 
@@ -1336,92 +1486,6 @@ const GroupLifeQuotationDetail: React.FC = () => {
               )}
             </div>
 
-            {/* Extension Details Section */}
-            <div className="border rounded-lg shadow-sm mb-4">
-              <button
-                type="button"
-                onClick={() => toggleSection("extensionDetails")}
-                className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <span className="font-semibold">Group Life Extension Details</span>
-              </button>
-              {expandedSections.extensionDetails && (
-                <div className="p-6">
-                  <p className="text-sm text-gray-500">No extension details available.</p>
-                </div>
-              )}
-            </div>
-
-            {/* Scheme Status Section */}
-            <div className="border rounded-lg shadow-sm mb-4">
-              <button
-                type="button"
-                onClick={() => toggleSection("quotationStatus")}
-                className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <span className="font-semibold">Scheme Status</span>
-              </button>
-              {expandedSections.quotationStatus && (
-                <div className="p-6 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="totalSumInsured" className="text-sm font-medium">
-                        Total Sum Insured:
-                      </Label>
-                      <Input
-                        id="totalSumInsured"
-                        value={formData.totalSumInsured}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="totalPremium" className="text-sm font-medium">
-                        Total Premium:
-                      </Label>
-                      <Input
-                        id="totalPremium"
-                        value={formData.totalPremium}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="loadingPercent" className="text-sm font-medium">
-                        Loading %:
-                      </Label>
-                      <Input
-                        id="loadingPercent"
-                        value={formData.loadingPercent}
-                        onChange={(e) => handleInputChange("loadingPercent", e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="reductionPercent" className="text-sm font-medium">
-                        Reduction %:
-                      </Label>
-                      <Input
-                        id="reductionPercent"
-                        value={formData.reductionPercent}
-                        onChange={(e) => handleInputChange("reductionPercent", e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="netPremiumDue" className="text-sm font-medium">
-                        Net Premium Due:
-                      </Label>
-                      <Input
-                        id="netPremiumDue"
-                        value={formData.netPremiumDue}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Action Buttons */}
             <div className="flex justify-center gap-4 pt-4 bg-transparent p-6 rounded-xl">
               <Button
@@ -1432,12 +1496,7 @@ const GroupLifeQuotationDetail: React.FC = () => {
               >
                 Cancel
               </Button>
-              <Button
-                onClick={handleComputePreview}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                Preview (Compute)
-              </Button>
+              
               <Button
                 type="button"
                 onClick={handleSave}

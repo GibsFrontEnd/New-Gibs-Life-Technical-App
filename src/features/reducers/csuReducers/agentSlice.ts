@@ -1,12 +1,24 @@
 //@ts-nocheck
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit"
 import type { RootState } from "../../store"
-import type { Agent, AgentState, CreateAgentRequest, AuthenticateRequest, AuthenticateResponse, UnitResponse, VerifyAgentRequest } from "../../../types/agent"
+import type { Agent, AgentState, CreateAgentRequest, UpdateAgentRequest, AuthenticateRequest, AuthenticateResponse, Unit, VerifyAgentRequest } from "../../../types/agent"
 import { decryptData } from "../../../utils/encrypt-utils";
 
-const encryptedToken = localStorage.getItem("token");
 const API_BASE_URL = "https://lifetechnicalapi.newgibsonline.com/api";
-const AUTH_TOKEN = decryptData(encryptedToken);
+
+// Read + decrypt fresh on every call, not once at module load — otherwise a
+// login that happens after this module has already been evaluated (no full
+// page reload) leaves every request here using a stale/null token forever.
+const getAuthToken = () => {
+  try {
+    const encryptedToken = localStorage.getItem("token");
+    if (!encryptedToken) return null;
+    return decryptData(encryptedToken);
+  } catch (err) {
+    console.warn("Failed to get token", err);
+    return null;
+  }
+};
 
 // ==============================
 // 1. AUTHENTICATE AGENT
@@ -39,6 +51,19 @@ export const authenticateAgent = createAsyncThunk(
 // ==============================
 // 2. GET ALL AGENTS (with pagination) - FIXED
 // ==============================
+// Builds the multipart/form-data body the create-agent endpoint requires
+const buildAgentFormData = (agentData: CreateAgentRequest): FormData => {
+  const formData = new FormData();
+  Object.entries(agentData).forEach(([key, value]) => {
+    if (key === "Files") {
+      (value as File[] | undefined)?.forEach((file) => formData.append("Files", file));
+    } else if (value !== undefined && value !== null) {
+      formData.append(key, String(value));
+    }
+  });
+  return formData;
+};
+
 export const getAllAgents = createAsyncThunk(
   "agents/getAllAgents",
   async ({ pageNumber = 1, pageSize = 10 }: { pageNumber?: number; pageSize?: number } = {}, { rejectWithValue }) => {
@@ -47,7 +72,7 @@ export const getAllAgents = createAsyncThunk(
         method: "GET",
         headers: {
           "accept": "text/plain",
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
+          "Authorization": `Bearer ${getAuthToken()}`,
         },
       });
 
@@ -112,7 +137,7 @@ export const getAgent = createAsyncThunk(
         method: "GET",
         headers: {
           "accept": "text/plain",
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
+          "Authorization": `Bearer ${getAuthToken()}`,
         },
       });
 
@@ -139,7 +164,7 @@ export const getUnits = createAsyncThunk(
         method: "GET",
         headers: {
           "accept": "text/plain",
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
+          "Authorization": `Bearer ${getAuthToken()}`,
         },
       });
 
@@ -148,7 +173,7 @@ export const getUnits = createAsyncThunk(
       }
 
       const data = await response.json();
-      return data as UnitResponse[];
+      return data as Unit[];
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch units");
     }
@@ -166,7 +191,7 @@ export const verifyAgent = createAsyncThunk(
         method: "POST",
         headers: {
           "accept": "*/*",
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
+          "Authorization": `Bearer ${getAuthToken()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(verificationData),
@@ -191,14 +216,15 @@ export const createAgent = createAsyncThunk(
   "agents/createAgent",
   async (agentData: CreateAgentRequest, { rejectWithValue }) => {
     try {
+      // /v1/Agents/create only accepts multipart/form-data — do not set
+      // Content-Type manually, the browser adds the multipart boundary.
       const response = await fetch(`${API_BASE_URL}/v1/Agents/create`, {
         method: "POST",
         headers: {
           "accept": "*/*",
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
-          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getAuthToken()}`,
         },
-        body: JSON.stringify(agentData),
+        body: buildAgentFormData(agentData),
       });
 
       if (!response.ok) {
@@ -218,13 +244,13 @@ export const createAgent = createAsyncThunk(
 // ==============================
 export const updateAgent = createAsyncThunk(
   "agents/updateAgent",
-  async ({ agentId, agentData }: { agentId: string; agentData: Partial<Agent> }, { rejectWithValue }) => {
+  async ({ agentId, agentData }: { agentId: string; agentData: UpdateAgentRequest }, { rejectWithValue }) => {
     try {
       const response = await fetch(`${API_BASE_URL}/v1/Agents/agent/${agentId}`, {
         method: "PUT",
         headers: {
           "accept": "*/*",
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
+          "Authorization": `Bearer ${getAuthToken()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(agentData),
@@ -234,8 +260,8 @@ export const updateAgent = createAsyncThunk(
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return { agentId, agentData: data };
+      // PUT returns 204 No Content on success — no body to parse.
+      return { agentId, agentData };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to update agent");
     }
@@ -253,7 +279,7 @@ export const deleteAgent = createAsyncThunk(
         method: "DELETE",
         headers: {
           "accept": "*/*",
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
+          "Authorization": `Bearer ${getAuthToken()}`,
         },
       });
 
@@ -279,7 +305,7 @@ export const updatePassword = createAsyncThunk(
         method: "PATCH",
         headers: {
           "accept": "*/*",
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
+          "Authorization": `Bearer ${getAuthToken()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -579,6 +605,7 @@ const agentSlice = createSlice({
 export const { setCurrentAgent, clearMessages, clearAuth } = agentSlice.actions;
 
 export const selectAgents = (state: RootState) => state.agents?.agents || [];
+export const selectAgentState = (state: RootState) => state.agents;
 export const selectCurrentAgent = (state: RootState) => state.agents?.currentAgent || null;
 export const selectUnits = (state: RootState) => state.agents?.units || [];
 export const selectAgentPagination = (state: RootState) => state.agents?.pagination || {

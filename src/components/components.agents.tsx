@@ -17,54 +17,62 @@ import {
 import {
   createAgent,
   updateAgent,
-  selectAgents,
+  selectAgentState,
   clearMessages,
   getAllAgents,
+  getUnits,
 } from "../features/reducers/csuReducers/agentSlice"
 import type { CreateAgentRequest } from "../types/agent"
 import "./components.agents.css"
 
+const emptyAgentForm: CreateAgentRequest = {
+  UnitId: "",
+  AgentName: "",
+  Address: "",
+  Area: "",
+  City: "",
+  State: "",
+  Phone1: "",
+  Phone2: "",
+  FaxNo: "",
+  Email: "",
+  InsPerson: "",
+  FinPerson: "",
+  Balance: 0,
+  CreditLimit: 0,
+  ComRate: 0,
+  Remark: "",
+  AccountNo: "",
+  BankName: "",
+  Tag: "",
+  Password: "",
+  Files: [],
+}
+
 export const CreateAgent = () => {
   const dispatch = useAppDispatch()
   const { showCreateAgentDialog } = useAppSelector(selectUiState)
-  const { loading, success, error } = useAppSelector(selectAgents)
+  const { loading, success, error, units } = useAppSelector(selectAgentState)
 
-  const [formData, setFormData] = useState<CreateAgentRequest>({
-    PartyID: "",
-    StateID: "",
-    Party: "",
-    Description: "",
-    PartyType: "FP",
-    Address: "",
-    mobilePhone: "",
-    LandPhone: "",
-    Email: "",
-    Fax: "",
-    InsContact: "",
-    FinContact: "",
-    CreditLimit: 0,
-    ComRate: 0,
-    StartDate: new Date().toISOString().split("T")[0],
-    ExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-    Remarks: "",
-    Tag: "",
-    Deleted: 0,
-    Active: 1,
-    SubmittedBy: new Date().toISOString(),
-    ModifiedBy: new Date().toISOString(),
-    Z_NAICOM_ID: "",
-  })
-
+  const [formData, setFormData] = useState<CreateAgentRequest>(emptyAgentForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (showCreateAgentDialog && (!units || units.length === 0)) {
+      dispatch(getUnits())
+    }
+  }, [showCreateAgentDialog, units, dispatch])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     const newErrors: Record<string, string> = {}
 
-    if (!formData.PartyID.trim()) newErrors.PartyID = "Party ID is required"
-    if (!formData.Party.trim()) newErrors.Party = "Party name is required"
+    if (!formData.UnitId.trim()) newErrors.UnitId = "Unit is required"
+    if (!formData.AgentName.trim()) newErrors.AgentName = "Agent name is required"
     if (!formData.Address.trim()) newErrors.Address = "Address is required"
+    if (!formData.Phone1.trim()) newErrors.Phone1 = "Primary phone is required"
+    if (!formData.Password.trim()) newErrors.Password = "Password is required"
     if (formData.Email && !/\S+@\S+\.\S+/.test(formData.Email)) {
       newErrors.Email = "Please enter a valid email address"
     }
@@ -78,31 +86,7 @@ export const CreateAgent = () => {
   }
 
   const handleClose = () => {
-    setFormData({
-      PartyID: "",
-      StateID: "",
-      Party: "",
-      Description: "",
-      PartyType: "FP",
-      Address: "",
-      mobilePhone: "",
-      LandPhone: "",
-      Email: "",
-      Fax: "",
-      InsContact: "",
-      FinContact: "",
-      CreditLimit: 0,
-      ComRate: 0,
-      StartDate: new Date().toISOString().split("T")[0],
-      ExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      Remarks: "",
-      Tag: "",
-      Deleted: 0,
-      Active: 1,
-      SubmittedBy: new Date().toISOString(),
-      ModifiedBy: new Date().toISOString(),
-      Z_NAICOM_ID: "",
-    })
+    setFormData(emptyAgentForm)
     setErrors({})
     dispatch(setShowCreateAgentDialog(false))
   }
@@ -136,48 +120,58 @@ export const CreateAgent = () => {
             <h3 className="ca-section-title">Basic Information</h3>
             <div className="ca-form-grid">
               <div className="ca-form-field">
-                <Label htmlFor="partyID">Party ID *</Label>
+                <Label htmlFor="unitId">Unit *</Label>
+                <select
+                  id="unitId"
+                  value={formData.UnitId}
+                  onChange={(e) => handleInputChange("UnitId", e.target.value)}
+                  className={`ca-select ${errors.UnitId ? "ca-error" : ""}`}
+                >
+                  <option value="">Select Unit</option>
+                  {(units || []).map((u: any) => (
+                    <option key={u.unitID} value={u.unitID}>
+                      {u.unitID} - {u.unitName}
+                    </option>
+                  ))}
+                </select>
+                {errors.UnitId && <span className="ca-error-text">{errors.UnitId}</span>}
+              </div>
+              <div className="ca-form-field ca-full-width">
+                <Label htmlFor="agentName">Agent Name *</Label>
                 <Input
-                  id="partyID"
-                  value={formData.PartyID}
-                  onChange={(e) => handleInputChange("PartyID", e.target.value)}
-                  placeholder="Enter party ID (e.g., FP-00001)"
-                  className={errors.PartyID ? "ca-error" : ""}
+                  id="agentName"
+                  value={formData.AgentName}
+                  onChange={(e) => handleInputChange("AgentName", e.target.value)}
+                  placeholder="Enter agent name"
+                  className={errors.AgentName ? "ca-error" : ""}
                 />
-                {errors.PartyID && <span className="ca-error-text">{errors.PartyID}</span>}
+                {errors.AgentName && <span className="ca-error-text">{errors.AgentName}</span>}
               </div>
               <div className="ca-form-field">
-                <Label htmlFor="partyType">Party Type</Label>
-                <select
-                  id="partyType"
-                  value={formData.PartyType}
-                  onChange={(e) => handleInputChange("PartyType", e.target.value)}
-                  className="ca-select"
-                >
-                  <option value="FP">FP - Financial Partner</option>
-                  <option value="AG">AG - Agent</option>
-                  <option value="BN">BN - Bank</option>
-                  <option value="BAS">BAS - Broker Agent Specialist</option>
-                </select>
-              </div>
-              <div className="ca-form-field ca-full-width">
-                <Label htmlFor="party">Party Name *</Label>
+                <Label htmlFor="area">Area</Label>
                 <Input
-                  id="party"
-                  value={formData.Party}
-                  onChange={(e) => handleInputChange("Party", e.target.value)}
-                  placeholder="Enter party name"
-                  className={errors.Party ? "ca-error" : ""}
+                  id="area"
+                  value={formData.Area}
+                  onChange={(e) => handleInputChange("Area", e.target.value)}
+                  placeholder="Enter area"
                 />
-                {errors.Party && <span className="ca-error-text">{errors.Party}</span>}
               </div>
-              <div className="ca-form-field ca-full-width">
-                <Label htmlFor="description">Description</Label>
+              <div className="ca-form-field">
+                <Label htmlFor="city">City</Label>
                 <Input
-                  id="description"
-                  value={formData.Description}
-                  onChange={(e) => handleInputChange("Description", e.target.value)}
-                  placeholder="Enter description"
+                  id="city"
+                  value={formData.City}
+                  onChange={(e) => handleInputChange("City", e.target.value)}
+                  placeholder="Enter city"
+                />
+              </div>
+              <div className="ca-form-field">
+                <Label htmlFor="state">State</Label>
+                <Input
+                  id="state"
+                  value={formData.State}
+                  onChange={(e) => handleInputChange("State", e.target.value)}
+                  placeholder="Enter state"
                 />
               </div>
             </div>
@@ -200,39 +194,32 @@ export const CreateAgent = () => {
                 {errors.Email && <span className="ca-error-text">{errors.Email}</span>}
               </div>
               <div className="ca-form-field">
-                <Label htmlFor="mobilePhone">Mobile Phone</Label>
+                <Label htmlFor="phone1">Phone 1 *</Label>
                 <Input
-                  id="mobilePhone"
-                  value={formData.mobilePhone}
-                  onChange={(e) => handleInputChange("mobilePhone", e.target.value)}
-                  placeholder="Enter mobile phone number"
+                  id="phone1"
+                  value={formData.Phone1}
+                  onChange={(e) => handleInputChange("Phone1", e.target.value)}
+                  placeholder="Enter primary phone number"
+                  className={errors.Phone1 ? "ca-error" : ""}
+                />
+                {errors.Phone1 && <span className="ca-error-text">{errors.Phone1}</span>}
+              </div>
+              <div className="ca-form-field">
+                <Label htmlFor="phone2">Phone 2</Label>
+                <Input
+                  id="phone2"
+                  value={formData.Phone2}
+                  onChange={(e) => handleInputChange("Phone2", e.target.value)}
+                  placeholder="Enter secondary phone number"
                 />
               </div>
               <div className="ca-form-field">
-                <Label htmlFor="landPhone">Land Phone</Label>
+                <Label htmlFor="faxNo">Fax</Label>
                 <Input
-                  id="landPhone"
-                  value={formData.LandPhone}
-                  onChange={(e) => handleInputChange("LandPhone", e.target.value)}
-                  placeholder="Enter land phone number"
-                />
-              </div>
-              <div className="ca-form-field">
-                <Label htmlFor="fax">Fax</Label>
-                <Input
-                  id="fax"
-                  value={formData.Fax}
-                  onChange={(e) => handleInputChange("Fax", e.target.value)}
+                  id="faxNo"
+                  value={formData.FaxNo}
+                  onChange={(e) => handleInputChange("FaxNo", e.target.value)}
                   placeholder="Enter fax number"
-                />
-              </div>
-              <div className="ca-form-field">
-                <Label htmlFor="stateID">State</Label>
-                <Input
-                  id="stateID"
-                  value={formData.StateID}
-                  onChange={(e) => handleInputChange("StateID", e.target.value)}
-                  placeholder="Enter state"
                 />
               </div>
             </div>
@@ -256,21 +243,49 @@ export const CreateAgent = () => {
             <h3 className="ca-section-title">Business Information</h3>
             <div className="ca-form-grid">
               <div className="ca-form-field">
-                <Label htmlFor="insContact">Insurance Contact</Label>
+                <Label htmlFor="insPerson">Insurance Contact</Label>
                 <Input
-                  id="insContact"
-                  value={formData.InsContact}
-                  onChange={(e) => handleInputChange("InsContact", e.target.value)}
+                  id="insPerson"
+                  value={formData.InsPerson}
+                  onChange={(e) => handleInputChange("InsPerson", e.target.value)}
                   placeholder="Enter insurance contact"
                 />
               </div>
               <div className="ca-form-field">
-                <Label htmlFor="finContact">Finance Contact</Label>
+                <Label htmlFor="finPerson">Finance Contact</Label>
                 <Input
-                  id="finContact"
-                  value={formData.FinContact}
-                  onChange={(e) => handleInputChange("FinContact", e.target.value)}
+                  id="finPerson"
+                  value={formData.FinPerson}
+                  onChange={(e) => handleInputChange("FinPerson", e.target.value)}
                   placeholder="Enter finance contact"
+                />
+              </div>
+              <div className="ca-form-field">
+                <Label htmlFor="accountNo">Account Number</Label>
+                <Input
+                  id="accountNo"
+                  value={formData.AccountNo}
+                  onChange={(e) => handleInputChange("AccountNo", e.target.value)}
+                  placeholder="Enter account number"
+                />
+              </div>
+              <div className="ca-form-field">
+                <Label htmlFor="bankName">Bank Name</Label>
+                <Input
+                  id="bankName"
+                  value={formData.BankName}
+                  onChange={(e) => handleInputChange("BankName", e.target.value)}
+                  placeholder="Enter bank name"
+                />
+              </div>
+              <div className="ca-form-field">
+                <Label htmlFor="balance">Opening Balance</Label>
+                <Input
+                  id="balance"
+                  type="number"
+                  value={formData.Balance}
+                  onChange={(e) => handleInputChange("Balance", Number.parseFloat(e.target.value) || 0)}
+                  placeholder="Enter opening balance"
                 />
               </div>
               <div className="ca-form-field">
@@ -295,24 +310,6 @@ export const CreateAgent = () => {
                 />
               </div>
               <div className="ca-form-field">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.StartDate}
-                  onChange={(e) => handleInputChange("StartDate", e.target.value)}
-                />
-              </div>
-              <div className="ca-form-field">
-                <Label htmlFor="expiryDate">Expiry Date</Label>
-                <Input
-                  id="expiryDate"
-                  type="date"
-                  value={formData.ExpiryDate}
-                  onChange={(e) => handleInputChange("ExpiryDate", e.target.value)}
-                />
-              </div>
-              <div className="ca-form-field">
                 <Label htmlFor="tag">Tag</Label>
                 <Input
                   id="tag"
@@ -322,41 +319,39 @@ export const CreateAgent = () => {
                 />
               </div>
               <div className="ca-form-field">
-                <Label htmlFor="naicomId">NAICOM ID</Label>
+                <Label htmlFor="password">Password *</Label>
                 <Input
-                  id="naicomId"
-                  value={formData.Z_NAICOM_ID}
-                  onChange={(e) => handleInputChange("Z_NAICOM_ID", e.target.value)}
-                  placeholder="Enter NAICOM ID"
+                  id="password"
+                  type="password"
+                  value={formData.Password}
+                  onChange={(e) => handleInputChange("Password", e.target.value)}
+                  placeholder="Enter portal password"
+                  className={errors.Password ? "ca-error" : ""}
                 />
+                {errors.Password && <span className="ca-error-text">{errors.Password}</span>}
               </div>
             </div>
 
             <div className="ca-form-field">
-              <Label htmlFor="remarks">Remarks</Label>
+              <Label htmlFor="remark">Remarks</Label>
               <textarea
-                id="remarks"
-                value={formData.Remarks}
-                onChange={(e) => handleInputChange("Remarks", e.target.value)}
+                id="remark"
+                value={formData.Remark}
+                onChange={(e) => handleInputChange("Remark", e.target.value)}
                 placeholder="Enter remarks"
                 className="ca-textarea"
                 rows={2}
               />
             </div>
-          </div>
 
-          {/* Status */}
-          <div className="ca-form-section">
-            <h3 className="ca-section-title">Status</h3>
             <div className="ca-form-field">
-              <label className="ca-checkbox-option">
-                <input
-                  type="checkbox"
-                  checked={formData.Active === 1}
-                  onChange={(e) => handleInputChange("Active", e.target.checked ? 1 : 0)}
-                />
-                <span className="ca-checkbox-label">Active Agent</span>
-              </label>
+              <Label htmlFor="files">Attachments</Label>
+              <input
+                id="files"
+                type="file"
+                multiple
+                onChange={(e) => handleInputChange("Files", Array.from(e.target.files || []))}
+              />
             </div>
           </div>
 
@@ -379,50 +374,64 @@ export const CreateAgent = () => {
 export const EditAgent = () => {
   const dispatch = useAppDispatch()
   const { showEditAgentDialog } = useAppSelector(selectUiState)
-  const { currentAgent, loading, success, error } = useAppSelector(selectAgents)
+  const { currentAgent, loading, success, error, units } = useAppSelector(selectAgentState)
 
   const [formData, setFormData] = useState({
-    party: "",
-    description: "",
+    unitID: "",
+    agent: "",
     address: "",
-    mobilePhone: "",
-    landPhone: "",
+    area: "",
+    city: "",
+    state: "",
+    phone1: "",
+    phone2: "",
+    faxNo: "",
     email: "",
-    fax: "",
-    insContact: "",
-    finContact: "",
+    insPerson: "",
+    finPerson: "",
+    balance: 0,
     creditLimit: 0,
     comRate: 0,
-    startDate: "",
-    expiryDate: "",
-    remarks: "",
+    remark: "",
+    accountNo: "",
+    bankname: "",
     tag: "",
-    active: 1,
-    z_NAICOM_ID: "",
+    passwords: "",
+    isVerified: false,
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    if (showEditAgentDialog && (!units || units.length === 0)) {
+      dispatch(getUnits())
+    }
+  }, [showEditAgentDialog, units, dispatch])
+
+  useEffect(() => {
     if (currentAgent && showEditAgentDialog) {
       setFormData({
-        party: currentAgent.party || "",
-        description: currentAgent.description || "",
+        unitID: currentAgent.unitID || "",
+        agent: currentAgent.agent || "",
         address: currentAgent.address || "",
-        mobilePhone: currentAgent.mobilePhone || "",
-        landPhone: currentAgent.landPhone || "",
+        area: currentAgent.area || "",
+        city: currentAgent.city || "",
+        state: currentAgent.state || "",
+        phone1: currentAgent.phone1 || "",
+        phone2: currentAgent.phone2 || "",
+        faxNo: currentAgent.faxNo || "",
         email: currentAgent.email || "",
-        fax: currentAgent.fax || "",
-        insContact: currentAgent.insContact || "",
-        finContact: currentAgent.finContact || "",
+        insPerson: currentAgent.insPerson || "",
+        finPerson: currentAgent.finPerson || "",
+        balance: currentAgent.balance || 0,
         creditLimit: currentAgent.creditLimit || 0,
         comRate: currentAgent.comRate || 0,
-        startDate: currentAgent.startDate ? currentAgent.startDate.split("T")[0] : "",
-        expiryDate: currentAgent.expiryDate ? currentAgent.expiryDate.split("T")[0] : "",
-        remarks: currentAgent.remarks || "",
+        remark: currentAgent.remark || "",
+        accountNo: currentAgent.accountno || "",
+        bankname: currentAgent.bankname || "",
         tag: currentAgent.tag || "",
-        active: currentAgent.active,
-        z_NAICOM_ID: currentAgent.z_NAICOM_ID || "",
+        passwords: "",
+        isVerified: !!currentAgent.isVerified,
       })
     }
   }, [currentAgent, showEditAgentDialog])
@@ -433,7 +442,7 @@ export const EditAgent = () => {
 
     const newErrors: Record<string, string> = {}
 
-    if (!formData.party.trim()) newErrors.party = "Party name is required"
+    if (!formData.agent.trim()) newErrors.agent = "Agent name is required"
     if (!formData.address.trim()) newErrors.address = "Address is required"
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address"
@@ -444,7 +453,12 @@ export const EditAgent = () => {
       return
     }
 
-    dispatch(updateAgent({ agentID: currentAgent.partyID, agentData: formData }))
+    dispatch(
+      updateAgent({
+        agentId: currentAgent.agentID,
+        agentData: { agentID: currentAgent.agentID, ...formData },
+      }),
+    )
   }
 
   const handleClose = () => {
@@ -464,6 +478,7 @@ export const EditAgent = () => {
     if (success.updateAgent) {
       handleClose()
       dispatch(clearMessages())
+      dispatch(getAllAgents({ pageNumber: 1, pageSize: 10 }))
     }
   }, [success.updateAgent, dispatch])
 
@@ -473,7 +488,7 @@ export const EditAgent = () => {
     <Dialog open={showEditAgentDialog} onOpenChange={handleClose}>
       <DialogContent className="ea-edit-agent-dialog max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Agent - {currentAgent.partyID}</DialogTitle>
+          <DialogTitle>Edit Agent - {currentAgent.agentID}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="ea-agent-form">
@@ -482,27 +497,57 @@ export const EditAgent = () => {
             <h3 className="ea-section-title">Basic Information</h3>
             <div className="ea-form-grid">
               <div className="ea-form-field">
-                <Label htmlFor="editPartyType">Party Type</Label>
-                <div className="ea-readonly-field">{currentAgent.partyType}</div>
+                <Label htmlFor="editUnitID">Unit</Label>
+                <select
+                  id="editUnitID"
+                  value={formData.unitID}
+                  onChange={(e) => handleInputChange("unitID", e.target.value)}
+                  className="ea-select"
+                >
+                  <option value="">Select Unit</option>
+                  {(units || []).map((u: any) => (
+                    <option key={u.unitID} value={u.unitID}>
+                      {u.unitID} - {u.unitName}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="ea-form-field ca-full-width">
-                <Label htmlFor="editParty">Party Name *</Label>
+                <Label htmlFor="editAgent">Agent Name *</Label>
                 <Input
-                  id="editParty"
-                  value={formData.party}
-                  onChange={(e) => handleInputChange("party", e.target.value)}
-                  placeholder="Enter party name"
-                  className={errors.party ? "ea-error" : ""}
+                  id="editAgent"
+                  value={formData.agent}
+                  onChange={(e) => handleInputChange("agent", e.target.value)}
+                  placeholder="Enter agent name"
+                  className={errors.agent ? "ea-error" : ""}
                 />
-                {errors.party && <span className="ea-error-text">{errors.party}</span>}
+                {errors.agent && <span className="ea-error-text">{errors.agent}</span>}
               </div>
-              <div className="ea-form-field ca-full-width">
-                <Label htmlFor="editDescription">Description</Label>
+              <div className="ea-form-field">
+                <Label htmlFor="editArea">Area</Label>
                 <Input
-                  id="editDescription"
-                  value={formData.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                  placeholder="Enter description"
+                  id="editArea"
+                  value={formData.area}
+                  onChange={(e) => handleInputChange("area", e.target.value)}
+                  placeholder="Enter area"
+                />
+              </div>
+              <div className="ea-form-field">
+                <Label htmlFor="editCity">City</Label>
+                <Input
+                  id="editCity"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange("city", e.target.value)}
+                  placeholder="Enter city"
+                />
+              </div>
+              <div className="ea-form-field">
+                <Label htmlFor="editState">State</Label>
+                <Input
+                  id="editState"
+                  value={formData.state}
+                  onChange={(e) => handleInputChange("state", e.target.value)}
+                  placeholder="Enter state"
                 />
               </div>
             </div>
@@ -525,29 +570,29 @@ export const EditAgent = () => {
                 {errors.email && <span className="ea-error-text">{errors.email}</span>}
               </div>
               <div className="ea-form-field">
-                <Label htmlFor="editMobilePhone">Mobile Phone</Label>
+                <Label htmlFor="editPhone1">Phone 1</Label>
                 <Input
-                  id="editMobilePhone"
-                  value={formData.mobilePhone}
-                  onChange={(e) => handleInputChange("mobilePhone", e.target.value)}
-                  placeholder="Enter mobile phone number"
+                  id="editPhone1"
+                  value={formData.phone1}
+                  onChange={(e) => handleInputChange("phone1", e.target.value)}
+                  placeholder="Enter primary phone number"
                 />
               </div>
               <div className="ea-form-field">
-                <Label htmlFor="editLandPhone">Land Phone</Label>
+                <Label htmlFor="editPhone2">Phone 2</Label>
                 <Input
-                  id="editLandPhone"
-                  value={formData.landPhone}
-                  onChange={(e) => handleInputChange("landPhone", e.target.value)}
-                  placeholder="Enter land phone number"
+                  id="editPhone2"
+                  value={formData.phone2}
+                  onChange={(e) => handleInputChange("phone2", e.target.value)}
+                  placeholder="Enter secondary phone number"
                 />
               </div>
               <div className="ea-form-field">
-                <Label htmlFor="editFax">Fax</Label>
+                <Label htmlFor="editFaxNo">Fax</Label>
                 <Input
-                  id="editFax"
-                  value={formData.fax}
-                  onChange={(e) => handleInputChange("fax", e.target.value)}
+                  id="editFaxNo"
+                  value={formData.faxNo}
+                  onChange={(e) => handleInputChange("faxNo", e.target.value)}
                   placeholder="Enter fax number"
                 />
               </div>
@@ -572,21 +617,49 @@ export const EditAgent = () => {
             <h3 className="ea-section-title">Business Information</h3>
             <div className="ea-form-grid">
               <div className="ea-form-field">
-                <Label htmlFor="editInsContact">Insurance Contact</Label>
+                <Label htmlFor="editInsPerson">Insurance Contact</Label>
                 <Input
-                  id="editInsContact"
-                  value={formData.insContact}
-                  onChange={(e) => handleInputChange("insContact", e.target.value)}
+                  id="editInsPerson"
+                  value={formData.insPerson}
+                  onChange={(e) => handleInputChange("insPerson", e.target.value)}
                   placeholder="Enter insurance contact"
                 />
               </div>
               <div className="ea-form-field">
-                <Label htmlFor="editFinContact">Finance Contact</Label>
+                <Label htmlFor="editFinPerson">Finance Contact</Label>
                 <Input
-                  id="editFinContact"
-                  value={formData.finContact}
-                  onChange={(e) => handleInputChange("finContact", e.target.value)}
+                  id="editFinPerson"
+                  value={formData.finPerson}
+                  onChange={(e) => handleInputChange("finPerson", e.target.value)}
                   placeholder="Enter finance contact"
+                />
+              </div>
+              <div className="ea-form-field">
+                <Label htmlFor="editAccountNo">Account Number</Label>
+                <Input
+                  id="editAccountNo"
+                  value={formData.accountNo}
+                  onChange={(e) => handleInputChange("accountNo", e.target.value)}
+                  placeholder="Enter account number"
+                />
+              </div>
+              <div className="ea-form-field">
+                <Label htmlFor="editBankname">Bank Name</Label>
+                <Input
+                  id="editBankname"
+                  value={formData.bankname}
+                  onChange={(e) => handleInputChange("bankname", e.target.value)}
+                  placeholder="Enter bank name"
+                />
+              </div>
+              <div className="ea-form-field">
+                <Label htmlFor="editBalance">Balance</Label>
+                <Input
+                  id="editBalance"
+                  type="number"
+                  value={formData.balance}
+                  onChange={(e) => handleInputChange("balance", Number.parseFloat(e.target.value) || 0)}
+                  placeholder="Enter balance"
                 />
               </div>
               <div className="ea-form-field">
@@ -611,24 +684,6 @@ export const EditAgent = () => {
                 />
               </div>
               <div className="ea-form-field">
-                <Label htmlFor="editStartDate">Start Date</Label>
-                <Input
-                  id="editStartDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => handleInputChange("startDate", e.target.value)}
-                />
-              </div>
-              <div className="ea-form-field">
-                <Label htmlFor="editExpiryDate">Expiry Date</Label>
-                <Input
-                  id="editExpiryDate"
-                  type="date"
-                  value={formData.expiryDate}
-                  onChange={(e) => handleInputChange("expiryDate", e.target.value)}
-                />
-              </div>
-              <div className="ea-form-field">
                 <Label htmlFor="editTag">Tag</Label>
                 <Input
                   id="editTag"
@@ -638,22 +693,23 @@ export const EditAgent = () => {
                 />
               </div>
               <div className="ea-form-field">
-                <Label htmlFor="editNaicomId">NAICOM ID</Label>
+                <Label htmlFor="editPasswords">New Password</Label>
                 <Input
-                  id="editNaicomId"
-                  value={formData.z_NAICOM_ID}
-                  onChange={(e) => handleInputChange("z_NAICOM_ID", e.target.value)}
-                  placeholder="Enter NAICOM ID"
+                  id="editPasswords"
+                  type="password"
+                  value={formData.passwords}
+                  onChange={(e) => handleInputChange("passwords", e.target.value)}
+                  placeholder="Leave blank to keep current password"
                 />
               </div>
             </div>
 
             <div className="ea-form-field">
-              <Label htmlFor="editRemarks">Remarks</Label>
+              <Label htmlFor="editRemark">Remarks</Label>
               <textarea
-                id="editRemarks"
-                value={formData.remarks}
-                onChange={(e) => handleInputChange("remarks", e.target.value)}
+                id="editRemark"
+                value={formData.remark}
+                onChange={(e) => handleInputChange("remark", e.target.value)}
                 placeholder="Enter remarks"
                 className="ea-textarea"
                 rows={2}
@@ -668,10 +724,10 @@ export const EditAgent = () => {
               <label className="ea-checkbox-option">
                 <input
                   type="checkbox"
-                  checked={formData.active === 1}
-                  onChange={(e) => handleInputChange("active", e.target.checked ? 1 : 0)}
+                  checked={formData.isVerified}
+                  onChange={(e) => handleInputChange("isVerified", e.target.checked)}
                 />
-                <span className="ea-checkbox-label">Active Agent</span>
+                <span className="ea-checkbox-label">Verified Agent</span>
               </label>
             </div>
           </div>
@@ -695,7 +751,7 @@ export const EditAgent = () => {
 export const AgentDetails = () => {
   const dispatch = useAppDispatch()
   const { showAgentDetailsDialog } = useAppSelector(selectUiState)
-  const { currentAgent, loading } = useAppSelector(selectAgents)
+  const { currentAgent, loading } = useAppSelector(selectAgentState)
 
   const handleClose = () => {
     dispatch(setShowAgentDetailsDialog(false))
@@ -725,7 +781,7 @@ export const AgentDetails = () => {
     <Dialog open={showAgentDetailsDialog} onOpenChange={handleClose}>
       <DialogContent className="ad-agent-details-dialog max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Agent Details - {currentAgent.partyID}</DialogTitle>
+          <DialogTitle>Agent Details - {currentAgent.agentID}</DialogTitle>
         </DialogHeader>
 
         <div className="ad-agent-content">
@@ -739,14 +795,12 @@ export const AgentDetails = () => {
               </svg>
             </div>
             <div className="ad-agent-info">
-              <h2 className="ad-agent-name">{currentAgent.party || "N/A"}</h2>
+              <h2 className="ad-agent-name">{currentAgent.agent || "N/A"}</h2>
               <div className="ad-agent-meta">
-                <span className={`ad-type-badge ad-type-${currentAgent.partyType?.toLowerCase()}`}>
-                  {currentAgent.partyType}
-                </span>
-                <span className="ad-agent-id">ID: {currentAgent.partyID}</span>
-                <span className={`ad-status-badge ${currentAgent.active === 1 ? "ad-active" : "ad-inactive"}`}>
-                  {currentAgent.active === 1 ? "Active" : "Inactive"}
+                <span className="ad-type-badge">Unit: {currentAgent.unitID || "N/A"}</span>
+                <span className="ad-agent-id">ID: {currentAgent.agentID}</span>
+                <span className={`ad-status-badge ${currentAgent.deleted === 1 ? "ad-inactive" : "ad-active"}`}>
+                  {currentAgent.deleted === 1 ? "Inactive" : "Active"}
                 </span>
               </div>
             </div>
@@ -757,20 +811,24 @@ export const AgentDetails = () => {
             <h3 className="ad-section-title">Basic Information</h3>
             <div className="ad-info-grid">
               <div className="ad-info-item">
-                <span className="ad-label">Party ID:</span>
-                <span className="ad-value">{currentAgent.partyID}</span>
+                <span className="ad-label">Agent ID:</span>
+                <span className="ad-value">{currentAgent.agentID}</span>
               </div>
               <div className="ad-info-item">
-                <span className="ad-label">Party Type:</span>
-                <span className="ad-value">{currentAgent.partyType || "N/A"}</span>
+                <span className="ad-label">Unit ID:</span>
+                <span className="ad-value">{currentAgent.unitID || "N/A"}</span>
               </div>
               <div className="ad-info-item">
-                <span className="ad-label">State ID:</span>
-                <span className="ad-value">{currentAgent.stateID || "N/A"}</span>
+                <span className="ad-label">Area:</span>
+                <span className="ad-value">{currentAgent.area || "N/A"}</span>
               </div>
               <div className="ad-info-item">
-                <span className="ad-label">Description:</span>
-                <span className="ad-value">{currentAgent.description || "N/A"}</span>
+                <span className="ad-label">City:</span>
+                <span className="ad-value">{currentAgent.city || "N/A"}</span>
+              </div>
+              <div className="ad-info-item">
+                <span className="ad-label">State:</span>
+                <span className="ad-value">{currentAgent.state || "N/A"}</span>
               </div>
             </div>
           </div>
@@ -784,16 +842,16 @@ export const AgentDetails = () => {
                 <span className="ad-value">{currentAgent.email || "N/A"}</span>
               </div>
               <div className="ad-info-item">
-                <span className="ad-label">Mobile Phone:</span>
-                <span className="ad-value">{currentAgent.mobilePhone || "N/A"}</span>
+                <span className="ad-label">Phone 1:</span>
+                <span className="ad-value">{currentAgent.phone1 || "N/A"}</span>
               </div>
               <div className="ad-info-item">
-                <span className="ad-label">Land Phone:</span>
-                <span className="ad-value">{currentAgent.landPhone || "N/A"}</span>
+                <span className="ad-label">Phone 2:</span>
+                <span className="ad-value">{currentAgent.phone2 || "N/A"}</span>
               </div>
               <div className="ad-info-item">
                 <span className="ad-label">Fax:</span>
-                <span className="ad-value">{currentAgent.fax || "N/A"}</span>
+                <span className="ad-value">{currentAgent.faxNo || "N/A"}</span>
               </div>
             </div>
             <div className="ad-info-item ad-full-width">
@@ -808,11 +866,15 @@ export const AgentDetails = () => {
             <div className="ad-info-grid">
               <div className="ad-info-item">
                 <span className="ad-label">Insurance Contact:</span>
-                <span className="ad-value">{currentAgent.insContact || "N/A"}</span>
+                <span className="ad-value">{currentAgent.insPerson || "N/A"}</span>
               </div>
               <div className="ad-info-item">
                 <span className="ad-label">Finance Contact:</span>
-                <span className="ad-value">{currentAgent.finContact || "N/A"}</span>
+                <span className="ad-value">{currentAgent.finPerson || "N/A"}</span>
+              </div>
+              <div className="ad-info-item">
+                <span className="ad-label">Balance:</span>
+                <span className="ad-value">{formatCurrency(currentAgent.balance)}</span>
               </div>
               <div className="ad-info-item">
                 <span className="ad-label">Credit Limit:</span>
@@ -823,26 +885,22 @@ export const AgentDetails = () => {
                 <span className="ad-value">{currentAgent.comRate || 0}%</span>
               </div>
               <div className="ad-info-item">
-                <span className="ad-label">Start Date:</span>
-                <span className="ad-value">{formatDate(currentAgent.startDate)}</span>
+                <span className="ad-label">Account Number:</span>
+                <span className="ad-value">{currentAgent.accountno || "N/A"}</span>
               </div>
               <div className="ad-info-item">
-                <span className="ad-label">Expiry Date:</span>
-                <span className="ad-value">{formatDate(currentAgent.expiryDate)}</span>
+                <span className="ad-label">Bank Name:</span>
+                <span className="ad-value">{currentAgent.bankname || "N/A"}</span>
               </div>
               <div className="ad-info-item">
                 <span className="ad-label">Tag:</span>
                 <span className="ad-value">{currentAgent.tag || "N/A"}</span>
               </div>
-              <div className="ad-info-item">
-                <span className="ad-label">NAICOM ID:</span>
-                <span className="ad-value">{currentAgent.z_NAICOM_ID || "N/A"}</span>
-              </div>
             </div>
-            {currentAgent.remarks && (
+            {currentAgent.remark && (
               <div className="ad-info-item ad-full-width">
                 <span className="ad-label">Remarks:</span>
-                <span className="ad-value">{currentAgent.remarks}</span>
+                <span className="ad-value">{currentAgent.remark}</span>
               </div>
             )}
           </div>

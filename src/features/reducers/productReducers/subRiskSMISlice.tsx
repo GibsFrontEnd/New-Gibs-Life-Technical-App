@@ -92,9 +92,19 @@ export const getSubRiskSMIsBySubRiskId = createAsyncThunk(
 // Get SubRiskSMIs by SectionCode
 export const getSubRiskSMIsBySectionCode = createAsyncThunk(
   "subRiskSMIs/getSubRiskSMIsBySectionCode",
-  async (sectionCode: string, { rejectWithValue }) => {
+  async (
+    arg: string | { sectionCode: string; riskID?: string },
+    { rejectWithValue }
+  ) => {
+    // Callers pass either the bare section code or { sectionCode, riskID };
+    // the API matches SMIs on SectionCode and Field1 = RiskID.
+    const sectionCode = typeof arg === "string" ? arg : arg.sectionCode;
+    const riskID = typeof arg === "string" ? undefined : arg.riskID;
     try {
-      const response = await apiCall.get(`/SubRiskSMIs/by-section/${sectionCode}`);
+      const response = await apiCall.get(
+        `/SubRiskSMIs/by-section/${encodeURIComponent(sectionCode)}`,
+        { params: riskID ? { RiskID: riskID } : undefined }
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(error);

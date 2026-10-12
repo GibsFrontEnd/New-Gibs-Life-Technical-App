@@ -2,7 +2,7 @@
 // @ts-nocheck
 
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "../UI/new-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
@@ -21,7 +21,7 @@ import {
   FileText, 
   Building2, 
   Calendar, 
-  DollarSign,
+  Banknote,
   FileCheck,
   X,
   Eye,
@@ -45,13 +45,22 @@ import {
   ButtonDismissDialog,
   DialogHeader,
   DialogTitle,
-  DialogContent
+  DialogContent,
+  DialogFooter
 } from "../UI/new-dialog";
 
 const MemberDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const policyNo = id ? decodeURIComponent(id) : "";
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // ==================== READ endorsementNo FROM THE URL OR LOCATION STATE ====================
+  const [searchParams] = useSearchParams();
+  // "[AUTO]" is only the details-tab placeholder for a section with no endorsement number yet.
+  const rawEndorsementNo = searchParams.get("endorsementNo") || location.state?.endorsementNo || "";
+  const endorsementNo = rawEndorsementNo === "[AUTO]" ? "" : rawEndorsementNo;
+
   const { toast } = useToast();
   const dispatch = useDispatch();
 
@@ -68,12 +77,35 @@ const MemberDetailPage: React.FC = () => {
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingMember, setEditingMember] = useState<GroupLifeMember | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [bizOption, setBizOption] = useState<string>("");
+
   
   // New states for parse & preview workflow
   const [parsedPayload, setParsedPayload] = useState<any>(null);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [uploadMethod, setUploadMethod] = useState<'direct' | 'preview'>('direct');
+
+  // Direct upload options modal
+  const [showDirectUploadModal, setShowDirectUploadModal] = useState(false);
+  const [pricingMode, setPricingMode] = useState<"PolicyRate" | "FixedRate">("PolicyRate");
+  const [fixedPremiumRate, setFixedPremiumRate] = useState<number | string>("");
+  // The scheme's own Premium Rate% (policy A10), used when pricing mode is PolicyRate.
+  const [policyRatePercent, setPolicyRatePercent] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!policyNo) return;
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    fetch(`${SERVER_URL}/grouplife/policies/policyNo?policyNo=${encodeURIComponent(policyNo)}`, {
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((policy) => {
+        const fraction = policy?.premiumRateFraction;
+        setPolicyRatePercent(fraction != null ? Number(fraction) * 100 : null);
+      })
+      .catch(() => setPolicyRatePercent(null));
+  }, [policyNo]);
 
   // Format date for display
   const formatDateDisplay = (dateString: string) => {
@@ -100,9 +132,15 @@ const MemberDetailPage: React.FC = () => {
     setLoadingDetail(true);
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+      // Scope the detail lookup to the specific endorsement when we have one,
+      // so a brand-new Additional/Reversal/etc. endorsement doesn't silently
+      // fall back to whatever the backend considers "current".
+      const query = new URLSearchParams({ policyNo });
+      if (endorsementNo) query.append("endorsementNo", endorsementNo);
       
       const response = await fetch(
-        `${SERVER_URL}/grouplife/policies/policyNo/detail?policyNo=${encodeURIComponent(policyNo)}`,
+        `${SERVER_URL}/grouplife/policies/policyNo/detail?${query.toString()}`,
         {
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -127,9 +165,12 @@ const MemberDetailPage: React.FC = () => {
       const data = await response.json();
       setDetailData(data);
       
+      const effectiveEndorsement = data.endorsementNo || endorsementNo || location.state?.endorsementNo || "";
+      
       setFormData({
         policyNo: data.policyNo || policyNo,
         insuredName: data.insuredName || "N/A",
+        endorsementNo: effectiveEndorsement,
         entryDate: data.entryDate || new Date().toISOString(),
         startDate: data.startDate || new Date().toISOString(),
         expiryDate: data.expiryDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
@@ -141,9 +182,10 @@ const MemberDetailPage: React.FC = () => {
         totalPremium: data.totalPremium || 0,
       });
 
-      if (data.members) {
-        setMembers(data.members);
-      }
+      // Members ultimately come from MemberManagementTable's own fetch (scoped by
+      // policyNo + endorsementNo via Redux), but seed local state from this response
+      // too so the summary cards above don't show stale counts while that loads.
+      setMembers(data.members || []);
 
     } catch (error) {
       console.error("Error fetching policy detail:", error);
@@ -163,13 +205,14 @@ const MemberDetailPage: React.FC = () => {
     } else {
       setLoadingDetail(false);
     }
-  }, [policyNo]);
+    // Re-fetch whenever we land on a different endorsement for the same policy,
+    // not just when the policy number itself changes.
+  }, [policyNo, endorsementNo]);
 
-  // Sync with Redux members when they change
+  // Sync with Redux members when they change - including when they're cleared
+  // to an empty array (e.g. a fresh Additional endorsement with no members yet).
   useEffect(() => {
-    if (currentMembers && currentMembers.length > 0) {
-      setMembers(currentMembers);
-    }
+    setMembers(currentMembers || []);
   }, [currentMembers]);
 
   // Handle member operations
@@ -215,181 +258,231 @@ const MemberDetailPage: React.FC = () => {
   };
 
   // ============================================
-  // 1. DIRECT UPLOAD - upload-excel endpoint
-  // ============================================
-  const handleUploadExcel = async () => {
-    if (!selectedFile) {
+// 1. DIRECT UPLOAD - upload-excel endpoint
+// ============================================
+// PolicyRate prices with the scheme's saved rate; FixedRate needs one typed in here.
+const pricingError = (): string | null => {
+  if (pricingMode === "FixedRate") {
+    return Number(fixedPremiumRate) > 0 ? null : "Enter a Fixed Premium Rate greater than 0.";
+  }
+  return policyRatePercent && policyRatePercent > 0
+    ? null
+    : "This scheme has no Premium Rate% set. Set it on the scheme's edit page, or use FixedRate.";
+};
+
+const handleUploadExcel = async () => {
+  const rateProblem = pricingError();
+  if (rateProblem) {
+    toast({ title: "Premium rate required", description: rateProblem, variant: "destructive" });
+    return;
+  }
+
+  if (!selectedFile) {
+    toast({
+      title: "No file",
+      description: "Please select a file to upload",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  if (!policyNo) {
+    toast({
+      title: "Error",
+      description: "Policy number is required",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setUploading(true);
+  setUploadMethod('direct');
+  try {
+    const result = await dispatch(uploadExcelMembers({
+      file: selectedFile,
+      policyNo: policyNo,
+      endorsementNo: endorsementNo || detailData?.endorsementNo,
+      bizOption: bizOption || undefined,
+      pricingMode: pricingMode,
+      fixedPremiumRate: pricingMode === "FixedRate" ? Number(fixedPremiumRate) : 0,
+    })).unwrap();
+
+    toast({
+      title: "✅ Upload Successful",
+      description: `Uploaded ${result.insertedCount || 0} members successfully`,
+      variant: "default",
+      duration: 4000,
+    });
+
+    setShowDirectUploadModal(false);
+    // Refresh the policy detail to get updated members
+    await fetchPolicyDetail();
+    setSelectedFile(null);
+    setBizOption(""); // Reset BizOption after upload
+    setFixedPremiumRate("");
+    
+  } catch (error: any) {
+    console.error("Error uploading Excel:", error);
+    toast({
+      title: "❌ Upload Failed",
+      description: error || "Failed to upload members",
+      variant: "destructive",
+      duration: 5000,
+    });
+  } finally {
+    setUploading(false);
+  }
+};
+
+ // ============================================
+// 2. PARSE EXCEL - parse-excel endpoint
+// ============================================
+const handleParseExcel = async () => {
+  if (!selectedFile) {
+    toast({
+      title: "No file",
+      description: "Please select a file to parse",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setParsing(true);
+  setUploadMethod('preview');
+  try {
+    // ✅ Pass correct parameters to parse-excel
+    const result = await dispatch(parseExcelMembers({
+      file: selectedFile,
+      sheetName: "Sheet1", // Optional: you can make this a selectable field
+      bizOption: bizOption || undefined,
+    })).unwrap();
+    
+    console.log("📊 Parse Result:", result);
+    
+    // ✅ Handle the response - the API returns the parsed data directly
+    // The response should contain the parsed rows
+    const parsedRows = result.rows || result.payload?.rows || result.data || [];
+    const warnings = result.warnings || [];
+
+    if (parsedRows.length === 0) {
+      const unmapped = result.unmappedColumns?.length ? ` Unrecognised columns: ${result.unmappedColumns.join(", ")}.` : "";
       toast({
-        title: "No file",
-        description: "Please select a file to upload",
+        title: "No members found",
+        description: `${warnings[0] || "No member rows could be read from this file."}${unmapped}`,
         variant: "destructive",
+        duration: 7000,
       });
       return;
     }
 
-    if (!policyNo) {
-      toast({
-        title: "Error",
-        description: "Policy number is required",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Store the parsed data for preview
+    setParsedPayload({
+      rows: parsedRows,
+      warnings: warnings,
+      ...result
+    });
+    setPreviewData(result);
+    
+    // Show preview dialog
+    setShowPreviewDialog(true);
+    
+    const rowsMapped = parsedRows.length || result.rowsMapped || 0;
+    
+    toast({
+      title: "📋 Parse Successful",
+      description: `Parsed ${rowsMapped} members. Review before uploading.`,
+      variant: "default",
+      duration: 4000,
+    });
 
-    setUploading(true);
-    setUploadMethod('direct');
-    try {
-      const result = await dispatch(uploadExcelMembers({
-        file: selectedFile,
-        policyNo: policyNo
-      })).unwrap();
+  } catch (error: any) {
+    console.error("Error parsing Excel:", error);
+    toast({
+      title: "❌ Parse Failed",
+      description: error || "Failed to parse Excel file",
+      variant: "destructive",
+      duration: 5000,
+    });
+  } finally {
+    setParsing(false);
+  }
+};
 
-      toast({
-        title: "✅ Upload Successful",
-        description: `Uploaded ${result.insertedCount || 0} members successfully`,
-        variant: "default",
-        duration: 4000,
-      });
+// ============================================
+// 3. BULK UPLOAD - bulk endpoint (after preview)
+// ============================================
+const handleConfirmUpload = async () => {
+  const rateProblem = pricingError();
+  if (rateProblem) {
+    toast({ title: "Premium rate required", description: rateProblem, variant: "destructive" });
+    return;
+  }
 
-      // Refresh the policy detail to get updated members
-      await fetchPolicyDetail();
-      setSelectedFile(null);
-      
-    } catch (error: any) {
-      console.error("Error uploading Excel:", error);
-      toast({
-        title: "❌ Upload Failed",
-        description: error || "Failed to upload members",
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
+  if (!parsedPayload || !parsedPayload.rows || parsedPayload.rows.length === 0) {
+    toast({
+      title: "No data",
+      description: "No members to upload. Parse an Excel file first.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-  // ============================================
-  // 2. PARSE EXCEL - parse-excel endpoint
-  // ============================================
-  const handleParseExcel = async () => {
-    if (!selectedFile) {
-      toast({
-        title: "No file",
-        description: "Please select a file to parse",
-        variant: "destructive",
-      });
-      return;
-    }
+  if (!policyNo) {
+    toast({
+      title: "Error",
+      description: "Policy number is required",
+      variant: "destructive",
+    });
+    return;
+  }
 
-    setParsing(true);
-    setUploadMethod('preview');
-    try {
-      const result = await dispatch(parseExcelMembers(selectedFile)).unwrap();
-      
-      console.log("📊 Parse Result:", result);
-      
-      // Store the parsed data for preview
-      setParsedPayload(result.payload || result);
-      setPreviewData(result);
-      
-      // Show preview dialog
-      setShowPreviewDialog(true);
-      
-      const rowsMapped = result.rowsMapped || result.payload?.rows?.length || 0;
-      
-      toast({
-        title: "📋 Parse Successful",
-        description: `Parsed ${rowsMapped} members. Review before uploading.`,
-        variant: "default",
-        duration: 4000,
-      });
+  setUploading(true);
+  try {
+    // parse-excel already returns rows in the shape members/bulk expects
+    // (customerName, disbursementAmount, dateOfBirth, ...), so send them through unchanged.
+    const result = await dispatch(bulkUploadMembers({
+      policyNo: policyNo,
+      endorsementNo: endorsementNo || detailData?.endorsementNo,
+      rows: parsedPayload.rows,
+      bizOption: bizOption || undefined,
+      pricingMode: pricingMode,
+      fixedPremiumRate: pricingMode === "FixedRate" ? Number(fixedPremiumRate) : 0,
+    })).unwrap();
 
-    } catch (error: any) {
-      console.error("Error parsing Excel:", error);
-      toast({
-        title: "❌ Parse Failed",
-        description: error || "Failed to parse Excel file",
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      setParsing(false);
-    }
-  };
+    // ✅ Use the correct response fields
+    const insertedCount = result.insertedCount || 0;
+    const skippedCount = result.skippedCount || 0;
+    const totalMembers = result.aggregate?.memberCount || insertedCount;
 
-  // ============================================
-  // 3. BULK UPLOAD - bulk endpoint (after preview)
-  // ============================================
-  const handleConfirmUpload = async () => {
-    if (!parsedPayload || !parsedPayload.rows || parsedPayload.rows.length === 0) {
-      toast({
-        title: "No data",
-        description: "No members to upload. Parse an Excel file first.",
-        variant: "destructive",
-      });
-      return;
-    }
+    toast({
+      title: "✅ Upload Successful",
+      description: `Added ${insertedCount} members successfully${skippedCount > 0 ? `, ${skippedCount} skipped` : ''}`,
+      variant: "default",
+      duration: 4000,
+    });
 
-    if (!policyNo) {
-      toast({
-        title: "Error",
-        description: "Policy number is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setUploading(true);
-    try {
-      // Prepare the payload for bulk upload
-      const bulkPayload = {
-        policyNo: policyNo,
-        members: parsedPayload.rows.map((row: any) => ({
-          ...row,
-          // Map fields to match the API expectations
-          surname: row.surname || row.customerName?.split(' ')[0] || '',
-          otherNames: row.otherNames || row.customerName?.split(' ').slice(1).join(' ') || '',
-          dateOfBirth: row.dateOfBirth || row.dobDate || '',
-          sex: row.sex || row.gender || '',
-          basicSalary: row.basicSalary || row.salary || 0,
-          sumInsured: row.sumInsured || row.disbursementAmount || 0,
-          premium: row.premium || 0,
-        }))
-      };
-
-      const result = await dispatch(bulkUploadMembers({
-        policyNo: policyNo,
-        members: bulkPayload.members
-      })).unwrap();
-
-      toast({
-        title: "✅ Upload Successful",
-        description: `Added ${result.insertedCount || 0} members successfully`,
-        variant: "default",
-        duration: 4000,
-      });
-
-      // Refresh the policy detail to get updated members
-      await fetchPolicyDetail();
-      
-      // Reset states
-      setSelectedFile(null);
-      setParsedPayload(null);
-      setPreviewData(null);
-      setShowPreviewDialog(false);
-      
-    } catch (error: any) {
-      console.error("Error uploading members:", error);
-      toast({
-        title: "❌ Upload Failed",
-        description: error || "Failed to upload members",
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
+    // Refresh the policy detail to get updated members
+    await fetchPolicyDetail();
+    
+    // Reset states
+    setSelectedFile(null);
+    setParsedPayload(null);
+    setPreviewData(null);
+    setShowPreviewDialog(false);
+    setBizOption("");
+    
+  } catch (error: any) {
+    console.error("Error uploading members:", error);
+    toast({
+      title: "❌ Upload Failed",
+      description: error || "Failed to upload members",
+      variant: "destructive",
+      duration: 5000,
+    });
+  } finally {
+    setUploading(false);
+  }
+};
 
   const handleBack = () => {
     navigate(-1);
@@ -457,14 +550,17 @@ const MemberDetailPage: React.FC = () => {
                     <span className="font-medium">Policy No:</span>{" "}
                     {formData.policyNo || "N/A"}
                   </span>
+                  {formData.endorsementNo && (
+                    <span>
+                      <span className="font-medium">Endorsement No:</span>{" "}
+                      {formData.endorsementNo}
+                    </span>
+                  )}
                   <span>
                     <span className="font-medium">Entry Date:</span>{" "}
                     {formatDateDisplay(formData.entryDate)}
                   </span>
-                  <span>
-                    <span className="font-medium">Start Date:</span>{" "}
-                    {formatDateDisplay(formData.startDate)}
-                  </span>
+                  
                   <span>
                     <span className="font-medium">Expiry Date:</span>{" "}
                     {formatDateDisplay(formData.expiryDate)}
@@ -507,101 +603,135 @@ const MemberDetailPage: React.FC = () => {
   </div>
 </div>
 
-        {/* Upload Excel Section - Updated with 3 options */}
-        <Card className="mb-6">
-          <CardHeader className="border-b bg-gray-50">
-            <CardTitle className="text-base font-semibold">Upload Data From Excel</CardTitle>
-            <p className="text-sm text-gray-500 mt-1">
-              Choose upload method: Direct upload or Parse & Preview before saving
-            </p>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="flex-1 w-full">
-                  <Input
-                    type="file"
-                    accept=".csv, .xlsx, .xls"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    className="w-full"
-                  />
-                 
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {/* 1. Parse & Preview Button */}
-                  <Button
-                    onClick={handleParseExcel}
-                    disabled={parsing || !selectedFile || uploading}
-                    variant="outline"
-                    className="border-blue-300 text-blue-700 hover:bg-blue-50 whitespace-nowrap"
-                  >
-                    {parsing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Parsing...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="w-4 h-4 mr-2" />
-                        Parse & Preview
-                      </>
-                    )}
-                  </Button>
+       {/* Upload Excel Section - Updated with BizOption */}
+<Card className="mb-6">
+  <CardHeader className="border-b bg-gray-50">
+    <CardTitle className="text-base font-semibold">Upload Data From Excel</CardTitle>
+    <p className="text-sm text-gray-500 mt-1">
+      Choose upload method: Direct upload or Parse & Preview before saving
+    </p>
+  </CardHeader>
+  <CardContent className="p-6">
+    <div className="flex flex-col gap-4">
+      {/* File input + BizOption row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2">
+          <Label className="text-sm text-gray-600 mb-1 block">Excel File</Label>
+          <Input
+            type="file"
+            accept=".csv, .xlsx, .xls"
+            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+            className="w-full"
+          />
+        </div>
+        {/* <div>
+          <Label className="text-sm text-gray-600 mb-1 block">Biz Option</Label>
+          <select
+            value={bizOption}
+            onChange={(e) => setBizOption(e.target.value)}
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">Select Biz Option</option>
+            <option value="GL">GL - Group Life</option>
+            <option value="GPA">GPA - Group Personal Accident</option>
+            <option value="GHS">GHS - Group Health Scheme</option>
+            <option value="GTL">GTL - Group Term Life</option>
+            <option value="Credit">Credit Life</option>
+            <option value="Mortgage">Mortgage Protection</option>
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Optional: Specify business option for this upload</p>
+        </div> */}
+      </div>
 
-                  {/* 2. Confirm Upload Button (enabled after parsing) */}
-                  <Button
-                    onClick={handleConfirmUpload}
-                    disabled={uploading || !parsedPayload || parsedPayload.rows?.length === 0}
-                    className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
-                  >
-                    {uploading && uploadMethod === 'preview' ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-2" />
-                        Confirm Upload
-                      </>
-                    )}
-                  </Button>
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        <div className="flex flex-wrap gap-2">
+          {/* 1. Parse & Preview Button */}
+          <Button
+            onClick={handleParseExcel}
+            disabled={parsing || !selectedFile || uploading}
+            variant="outline"
+            className="border-blue-300 text-blue-700 hover:bg-blue-50 whitespace-nowrap"
+          >
+            {parsing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Parsing...
+              </>
+            ) : (
+              <>
+                <FileText className="w-4 h-4 mr-2" />
+                Parse & Preview
+              </>
+            )}
+          </Button>
 
-                  {/* 3. Direct Upload Button */}
-                  <Button
-                    onClick={handleUploadExcel}
-                    disabled={uploading || !selectedFile || parsing}
-                    className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
-                  >
-                    {uploading && uploadMethod === 'direct' ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Direct
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
+          {/* 2. Confirm Upload Button (enabled after parsing) */}
+          <Button
+            onClick={handleConfirmUpload}
+            disabled={uploading || !parsedPayload || parsedPayload.rows?.length === 0}
+            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+          >
+            {uploading && uploadMethod === 'preview' ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Confirm Upload
+              </>
+            )}
+          </Button>
 
-              {/* Upload Method Info */}
-              <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <span>Parse & Preview: Review before saving</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span>Upload Direct: Parse and save in one step</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          {/* 3. Direct Upload Button */}
+          <Button
+            onClick={() => {
+              if (!selectedFile) {
+                toast({
+                  title: "No file",
+                  description: "Please select an Excel or CSV file first",
+                  variant: "destructive",
+                });
+                return;
+              }
+              setShowDirectUploadModal(true);
+            }}
+            disabled={uploading || !selectedFile || parsing}
+            className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
+          >
+            {uploading && uploadMethod === 'direct' ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Direct
+              </>
+            )}
+          </Button>
+
+        </div>
+      </div>
+
+      {/* Upload Method Info */}
+      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+          <span>Parse & Preview: Review before saving</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+          <span>Upload Direct: Parse and save in one step</span>
+        </div>
+        
+      </div>
+    </div>
+  </CardContent>
+</Card>
 
         {/* Member Management Table */}
         <Card>
@@ -611,6 +741,7 @@ const MemberDetailPage: React.FC = () => {
                 <CardTitle className="text-base font-semibold">Member Details</CardTitle>
                 <p className="text-sm text-gray-500 mt-1">
                   Manage members for policy {policyNo}
+                  {endorsementNo && <> — endorsement {endorsementNo}</>}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -634,7 +765,9 @@ const MemberDetailPage: React.FC = () => {
               onDeleteMember={handleDeleteMember}
               groupFactorAmount={1000}
               policyNo={policyNo}
+              endorsementNo={formData?.endorsementNo || detailData?.endorsementNo || endorsementNo || location.state?.endorsementNo || ""}
               readOnly={false}
+              coverStartDate={detailData?.startDate || formData?.startDate}
             />
           </CardContent>
         </Card>
@@ -647,85 +780,72 @@ const MemberDetailPage: React.FC = () => {
         open={showPreviewDialog} 
         onOpenChange={() => setShowPreviewDialog(false)}
         maxWidth="1200px"
-        height="90vh"
       >
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-            <Eye className="w-5 h-5 text-blue-600" />
-            Preview Parsed Data
-          </DialogTitle>
-          <p className="text-sm text-gray-500 mt-1">
-            Review the data below before confirming the upload.
+        <DialogHeader className="pr-12">
+          <DialogTitle className="text-lg sm:text-xl font-semibold flex items-center gap-2">
+            <Eye className="w-5 h-5 text-blue-600 flex-shrink-0" />
+            <span>Preview Parsed Data</span>
             {previewData?.rowsMapped && (
-              <span className="ml-2 font-medium text-blue-600">
+              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 {previewData.rowsMapped} members found
               </span>
             )}
+          </DialogTitle>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+            Review the data below before confirming the upload.
           </p>
         </DialogHeader>
 
-        <DialogContent className="p-6 space-y-4">
-          {/* Summary Cards */}
-          {parsedPayload && parsedPayload.rows && (
-            <>
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-  <div className="relative bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-lg p-4 border border-blue-200 hover:shadow-xl hover:border-blue-400 transition-all duration-300 cursor-default group overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/0 to-blue-400/0 group-hover:from-blue-400/10 group-hover:via-blue-400/5 group-hover:to-blue-400/10 transition-all duration-500"></div>
-    <div className="relative z-10">
-      <p className="text-xs font-medium text-blue-600 group-hover:text-blue-700 transition-colors">Total Members</p>
-      <p className="text-2xl font-bold text-blue-800 group-hover:text-blue-900 transition-colors">
-        {parsedPayload.rows.length}
-      </p>
-    </div>
-  </div>
+        {parsedPayload && parsedPayload.rows && (
+          <>
+            <DialogContent className="p-4 sm:p-6 space-y-4">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="relative bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-lg p-3 sm:p-4 border border-blue-200 shadow-sm">
+                  <p className="text-xs font-medium text-blue-600">Total Members</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-900 mt-1">
+                    {parsedPayload.rows.length}
+                  </p>
+                </div>
 
-  <div className="relative bg-gradient-to-br from-green-50 to-green-100/50 rounded-lg p-4 border border-green-200 hover:shadow-xl hover:border-green-400 transition-all duration-300 cursor-default group overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-r from-green-400/0 via-green-400/0 to-green-400/0 group-hover:from-green-400/10 group-hover:via-green-400/5 group-hover:to-green-400/10 transition-all duration-500"></div>
-    <div className="relative z-10">
-      <p className="text-xs font-medium text-green-600 group-hover:text-green-700 transition-colors">Total Sum Insured</p>
-      <p className="text-2xl font-bold text-green-800 group-hover:text-green-900 transition-colors">
-        {formatCurrency(
-          parsedPayload.rows.reduce((sum: number, r: any) => 
-            sum + (r.sumInsured || r.disbursementAmount || 0), 0
-          )
-        )}
-      </p>
-    </div>
-  </div>
+                <div className="relative bg-gradient-to-br from-green-50 to-green-100/50 rounded-lg p-3 sm:p-4 border border-green-200 shadow-sm">
+                  <p className="text-xs font-medium text-green-600">Total Sum Insured</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-900 mt-1 truncate" title={formatCurrency(parsedPayload.rows.reduce((sum: number, r: any) => sum + (r.sumInsured || r.disbursementAmount || 0), 0))}>
+                    {formatCurrency(
+                      parsedPayload.rows.reduce((sum: number, r: any) => 
+                        sum + (r.sumInsured || r.disbursementAmount || 0), 0
+                      )
+                    )}
+                  </p>
+                </div>
 
-  <div className="relative bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-lg p-4 border border-purple-200 hover:shadow-xl hover:border-purple-400 transition-all duration-300 cursor-default group overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-r from-purple-400/0 via-purple-400/0 to-purple-400/0 group-hover:from-purple-400/10 group-hover:via-purple-400/5 group-hover:to-purple-400/10 transition-all duration-500"></div>
-    <div className="relative z-10">
-      <p className="text-xs font-medium text-purple-600 group-hover:text-purple-700 transition-colors">Total Premium</p>
-      <p className="text-2xl font-bold text-purple-800 group-hover:text-purple-900 transition-colors">
-        {formatCurrency(
-          parsedPayload.rows.reduce((sum: number, r: any) => 
-            sum + (r.premium || 0), 0
-          )
-        )}
-      </p>
-    </div>
-  </div>
+                <div className="relative bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-lg p-3 sm:p-4 border border-purple-200 shadow-sm">
+                  <p className="text-xs font-medium text-purple-600">Total Premium</p>
+                  <p className="text-xl sm:text-2xl font-bold text-purple-900 mt-1 truncate" title={formatCurrency(parsedPayload.rows.reduce((sum: number, r: any) => sum + (r.premium || 0), 0))}>
+                    {formatCurrency(
+                      parsedPayload.rows.reduce((sum: number, r: any) => 
+                        sum + (r.premium || 0), 0
+                      )
+                    )}
+                  </p>
+                </div>
 
-  <div className="relative bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-lg p-4 border border-orange-200 hover:shadow-xl hover:border-orange-400 transition-all duration-300 cursor-default group overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-r from-orange-400/0 via-orange-400/0 to-orange-400/0 group-hover:from-orange-400/10 group-hover:via-orange-400/5 group-hover:to-orange-400/10 transition-all duration-500"></div>
-    <div className="relative z-10">
-      <p className="text-xs font-medium text-orange-600 group-hover:text-orange-700 transition-colors">Warnings</p>
-      <p className="text-2xl font-bold text-orange-800 group-hover:text-orange-900 transition-colors">
-        {previewData?.warnings?.length || 0}
-      </p>
-    </div>
-  </div>
-</div>
+                <div className="relative bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-lg p-3 sm:p-4 border border-orange-200 shadow-sm">
+                  <p className="text-xs font-medium text-orange-600">Warnings</p>
+                  <p className="text-xl sm:text-2xl font-bold text-orange-900 mt-1">
+                    {previewData?.warnings?.length || 0}
+                  </p>
+                </div>
+              </div>
 
               {/* Warnings Section */}
               {previewData?.warnings && previewData.warnings.length > 0 && (
-                <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-yellow-800">Warnings</p>
-                      <ul className="text-xs text-yellow-700 mt-1 list-disc list-inside">
+                      <p className="text-sm font-semibold text-amber-800">Warnings</p>
+                      <ul className="text-xs text-amber-700 mt-1 list-disc list-inside space-y-0.5">
                         {previewData.warnings.map((warning: string, idx: number) => (
                           <li key={idx}>{warning}</li>
                         ))}
@@ -736,26 +856,26 @@ const MemberDetailPage: React.FC = () => {
               )}
 
               {/* Preview Table */}
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 sticky top-0">
+              <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="overflow-x-auto max-h-[340px] sm:max-h-[380px] overflow-y-auto">
+                  <table className="w-full text-sm min-w-[700px]">
+                    <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
                       <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">#</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Customer No</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Customer Name</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Gender</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Date of Birth</th>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Amount</th>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Premium</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-700 w-12">#</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-700">Customer No</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-700">Customer Name</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-700">Gender</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-700">Date of Birth</th>
+                        <th className="px-3 py-2.5 text-right font-semibold text-gray-700">Amount</th>
+                        <th className="px-3 py-2.5 text-right font-semibold text-gray-700">Premium</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                       {parsedPayload.rows.slice(0, 20).map((row: any, idx: number) => (
-                        <tr key={idx} className="border-b hover:bg-gray-50 transition-colors">
-                          <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
-                          <td className="px-3 py-2 font-medium">{row.customerNo || '—'}</td>
-                          <td className="px-3 py-2">{row.customerName || row.surname || '—'}</td>
+                        <tr key={idx} className="hover:bg-blue-50/40 transition-colors">
+                          <td className="px-3 py-2 text-gray-500 font-mono text-xs">{idx + 1}</td>
+                          <td className="px-3 py-2 font-medium text-gray-900">{row.customerNo || '—'}</td>
+                          <td className="px-3 py-2 text-gray-800">{row.customerName || row.surname || '—'}</td>
                           <td className="px-3 py-2">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                               row.sex === 'Male' || row.gender === 'Male' 
@@ -767,18 +887,18 @@ const MemberDetailPage: React.FC = () => {
                               {row.sex || row.gender || '—'}
                             </span>
                           </td>
-                          <td className="px-3 py-2">{formatDateDisplay(row.dateOfBirth || row.dobDate)}</td>
-                          <td className="px-3 py-2 text-right font-medium text-blue-700">
+                          <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{formatDateDisplay(row.dateOfBirth || row.dobDate)}</td>
+                          <td className="px-3 py-2 text-right font-medium text-blue-700 whitespace-nowrap">
                             {formatCurrency(row.sumInsured || row.disbursementAmount || 0)}
                           </td>
-                          <td className="px-3 py-2 text-right font-medium text-green-700">
+                          <td className="px-3 py-2 text-right font-medium text-green-700 whitespace-nowrap">
                             {formatCurrency(row.premium || 0)}
                           </td>
                         </tr>
                       ))}
                       {parsedPayload.rows.length > 20 && (
                         <tr>
-                          <td colSpan={7} className="px-3 py-2 text-center text-gray-500 text-sm">
+                          <td colSpan={7} className="px-3 py-2.5 text-center text-gray-500 text-xs sm:text-sm bg-gray-50/50">
                             ... and {parsedPayload.rows.length - 20} more members
                           </td>
                         </tr>
@@ -787,48 +907,156 @@ const MemberDetailPage: React.FC = () => {
                   </table>
                 </div>
               </div>
+            </DialogContent>
 
-              {/* Footer Actions */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span>Total: {parsedPayload.rows.length} members ready to upload</span>
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowPreviewDialog(false);
-                      setParsedPayload(null);
-                      setPreviewData(null);
-                    }}
-                    className="flex-1 sm:flex-none"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleConfirmUpload}
-                    disabled={uploading}
-                    className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {uploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-2" />
-                        Confirm & Upload ({parsedPayload.rows.length} members)
-                      </>
-                    )}
-                  </Button>
-                </div>
+            {/* Sticky Footer Actions - Always visible on any screen size */}
+            <DialogFooter className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span>Total: <strong className="text-gray-900">{parsedPayload.rows.length}</strong> members ready to upload</span>
               </div>
-            </>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowPreviewDialog(false);
+                    setParsedPayload(null);
+                    setPreviewData(null);
+                  }}
+                  className="flex-1 sm:flex-none"
+                >
+                  <X className="w-4 h-4 mr-1.5" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmUpload}
+                  disabled={uploading}
+                  className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-1.5" />
+                      Confirm & Upload ({parsedPayload.rows.length})
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
+          </>
+        )}
+      </ButtonDismissDialog>
+
+      {/* Direct Upload Options Modal */}
+      <ButtonDismissDialog
+        open={showDirectUploadModal}
+        onOpenChange={() => setShowDirectUploadModal(false)}
+        maxWidth="480px"
+      >
+        <DialogHeader className="pr-12">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+            <Upload className="w-5 h-5 text-green-600" />
+            Direct Upload Configuration
+          </DialogTitle>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+            Configure pricing options before uploading members.
+          </p>
+        </DialogHeader>
+
+        <DialogContent className="p-4 sm:p-6 space-y-4">
+          {selectedFile && (
+            <div className="p-3 bg-gray-50 rounded-md border border-gray-200 text-xs text-gray-600">
+              <p className="font-semibold text-gray-800">File: {selectedFile.name}</p>
+              <p className="text-gray-500">Policy: {policyNo}</p>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700 block mb-1">
+              Pricing Mode
+            </Label>
+            <select
+              value={pricingMode}
+              onChange={(e) => setPricingMode(e.target.value as "PolicyRate" | "FixedRate")}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="PolicyRate">PolicyRate</option>
+              <option value="FixedRate">FixedRate</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {pricingMode === "PolicyRate"
+                ? "Uses the Premium Rate% saved on the scheme."
+                : "Applies a uniform fixed rate across all members."}
+            </p>
+          </div>
+
+          {pricingMode === "PolicyRate" ? (
+            <div>
+              <Label className="text-sm font-medium text-gray-700 block mb-1">
+                Scheme Premium Rate
+              </Label>
+              <div className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800">
+                {policyRatePercent != null ? `${policyRatePercent}%` : "Not set"}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {policyRatePercent != null
+                  ? "Change it on the scheme's edit page."
+                  : "Set a Premium Rate% on the scheme before uploading with PolicyRate."}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <Label className="text-sm font-medium text-gray-700 block mb-1">
+                Fixed Premium Rate
+              </Label>
+              <Input
+                type="number"
+                step="any"
+                min="0"
+                placeholder="e.g. 5"
+                value={fixedPremiumRate}
+                onChange={(e) => setFixedPremiumRate(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Specify the fixed premium rate as a percentage (e.g., 5 for 5%).
+              </p>
+            </div>
           )}
         </DialogContent>
+
+        <DialogFooter className="flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowDirectUploadModal(false)}
+            disabled={uploading}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleUploadExcel}
+            disabled={uploading}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </ButtonDismissDialog>
     </div>
   );

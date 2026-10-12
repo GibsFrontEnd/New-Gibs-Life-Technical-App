@@ -32,6 +32,7 @@ import type { GroupLifeMember } from "../../features/reducers/groupLifeReducers/
 import MemberManagementTable from "./MemberManagementTable";
 import { formatDate } from "@/utils/ui-utilities";
 import { SERVER_URL } from "../../utils/constants";
+import { inclusiveCoverDays } from "../../utils/cover-days";
 import { debounce } from "lodash";
 
 // Import the tabs components
@@ -385,7 +386,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
     policyDetails: true,
     memberDetails: true,
     extensionDetails: false,
-    quotationStatus: true,
+    quotationStatus: false,
   });
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -465,6 +466,7 @@ const sourcePage = getSourceFromUrl();
           id: item.productID || item.riskID || item.id || item.subRiskId,
           name: item.productName || item.description || item.name || item.subRiskName,
           code: item.productID || item.code || item.subRiskId,
+          riskID: item.riskID || item.riskId || item.RiskID,
           ...item
         })
       },
@@ -558,7 +560,14 @@ const sourcePage = getSourceFromUrl();
         console.log(`✅ Formatted data for ${key}:`, formattedData);
 
         switch (key) {
-          case 'products': setProducts(formattedData); break;
+          case 'products': {
+            const filteredProducts = formattedData.filter((item: any) => {
+              const rId = (item.riskID || item.riskId || item.RiskID)?.toString().trim().toUpperCase();
+              return rId === "GL";
+            });
+            setProducts(filteredProducts);
+            break;
+          }
           case 'accountExecutives': setAccountExecutives(formattedData); break;
           case 'agentBrokers': setAgentBrokers(formattedData); break;
           case 'branches': setBranches(formattedData); break;
@@ -795,9 +804,12 @@ const sourcePage = getSourceFromUrl();
           totalPremium: data.totalPremium != null ? data.totalPremium.toFixed(2) : "0.00",
           reductionPercent: data.reductionPercentage != null ? data.reductionPercentage.toString() : "0",
           netPremiumDue: data.netPremiumDue != null ? data.netPremiumDue.toFixed(2) : "0.00",
-          currency: data.currency || "NGN",
+          currency: data.currency || data.currencyName || "NGN",
           exRate: data.exchangeRate || 1,
-          accountExecutiveId: findOptionId(accountExecutives, data.accountExecutiveId || data.accountExecutive || ""),
+          accountExecutiveId: findOptionId(
+            accountExecutives,
+            data.accountExecId || data.accountExecutiveId || data.accountExecName || data.accountExecutive || ""
+          ),
           branchId: findOptionId(branches, data.branchId || data.branch || ""),
           businessSource: findOptionId(businessSources, data.businessSource || ""),
           agentBrokerId: findOptionId(agentBrokers, data.agentBrokerId || data.agentBroker || ""),
@@ -805,10 +817,16 @@ const sourcePage = getSourceFromUrl();
           busChannelId: findOptionId(busChannels, data.busChannelId || data.busChannel || ""),
           subChannelId: data.subChannelId || data.subChannel || "",
           proportionPercent: data.proportionPercent || 100,
-          premiumRatePercent: data.premiumRatePercent || 2.0,
+          premiumRatePercent: data.premiumRateFraction != null
+            ? data.premiumRateFraction * 100
+            : (data.premiumRatePercent || 0),
           businessSector: data.businessSector || "",
           product: findOptionId(products, data.subRiskId || data.subRiskName || ""),
         };
+
+        if (data.insuredId) {
+          setSelectedClientId(data.insuredId);
+        }
 
         console.log("📋 Form data to set:", updatedFormData);
         setFormData(updatedFormData);
@@ -981,13 +999,17 @@ const sourcePage = getSourceFromUrl();
     }
   };
 
+  // Inclusive of both dates, same as the API and the fire/motor screens.
   const handleGetCoverDay = () => {
-    const effective = new Date(formData.effectiveDate);
-    const expiry = new Date(formData.expiryDate);
-    const diffTime = Math.abs(expiry.getTime() - effective.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    setFormData((prev) => ({ ...prev, coverDay: diffDays.toString() }));
+    const days = inclusiveCoverDays(formData.effectiveDate, formData.expiryDate);
+    setFormData((prev) => ({ ...prev, coverDay: days.toString() }));
   };
+
+  // Keep Cover Day in step with the dates (including once the saved scheme loads).
+  useEffect(() => {
+    const days = inclusiveCoverDays(formData.effectiveDate, formData.expiryDate);
+    setFormData((prev) => (prev.coverDay === days.toString() ? prev : { ...prev, coverDay: days.toString() }));
+  }, [formData.effectiveDate, formData.expiryDate]);
 
   const handleComputePreview = async () => {
     if (!members || members.length === 0) {
@@ -1078,13 +1100,13 @@ const sourcePage = getSourceFromUrl();
     if (!formData.clientName || formData.clientName.trim() === "") {
       missingFields.push("Client Name");
     }
-    if (!formData.schemeTypes) missingFields.push("Scheme Types");
     if (!formData.accountExecutiveId) missingFields.push("Account Executive");
     if (!formData.branchId) missingFields.push("Branch/Location");
     if (!formData.businessSource) missingFields.push("Business Source");
     if (!formData.accountTypeId) missingFields.push("Account Types");
     if (!formData.busChannelId) missingFields.push("Bus Channels");
     if (!formData.product) missingFields.push("Product");
+    if (!(Number(formData.premiumRatePercent) > 0)) missingFields.push("Premium Rate%");
 
     if (missingFields.length > 0) {
       toast({
@@ -1095,56 +1117,35 @@ const sourcePage = getSourceFromUrl();
       return;
     }
 
-    // ✅ REMOVED: Members are NOT required to save
-    // if (!members || members.length === 0) {
-    //   toast({
-    //     title: "No members",
-    //     description: "Members must be available to save",
-    //     variant: "destructive",
-    //   });
-    //   return;
-    // }
+    // Get subRiskId from selected product
+    const selectedProduct = products.find((p) => p.id === formData.product);
+    const subRiskId = selectedProduct?.code || selectedProduct?.id || formData.product;
 
     const policyData = {
-      policyNo: formData.policyNo || policyNo,
-      companyName: formData.clientName,
-      transDate: formData.transactionDate,
-      effectiveDate: formData.effectiveDate,
-      expiryDate: formData.expiryDate,
-      subRiskName: formData.schemeTypes,
-      insuredType: formData.insuredType,
-      totalMembers: members?.length || 0,
-      totalSumInsured: Number.parseFloat(formData.totalSumInsured) || 0,
-      totalPremium: Number.parseFloat(formData.totalPremium) || 0,
-      netPremiumDue: Number.parseFloat(formData.netPremiumDue) || 0,
-      loadingPercentage: Number.parseFloat(formData.loadingPercent) || 0,
-      reductionPercentage: Number.parseFloat(formData.reductionPercent) || 0,
-      status: formData.quotationStatus as "PROSPECT" | "ACTIVE" | "PENDING" | "CANCELLED",
+      transactionType: formData.product === "credit-life" ? "Credit Life" : "Group Life",
+      class: formData.insuredType || "Company",
+      subRiskId: subRiskId,
+      entryDate: formData.transactionDate
+        ? new Date(formData.transactionDate).toISOString()
+        : new Date().toISOString(),
+      startDate: formData.effectiveDate
+        ? new Date(formData.effectiveDate).toISOString()
+        : new Date().toISOString(),
+      expiryDate: formData.expiryDate
+        ? new Date(formData.expiryDate).toISOString()
+        : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
       accountExecutiveId: formData.accountExecutiveId,
       branchId: formData.branchId,
       businessSource: formData.businessSource,
       agentBrokerId: formData.agentBrokerId,
+      insuredId: selectedClientId || currentQuotation?.insuredId || "",
       accountTypeId: formData.accountTypeId,
       busChannelId: formData.busChannelId,
-      subChannelId: formData.subChannelId,
-      proportionPercent: formData.proportionPercent || 100,
-      premiumRatePercent: formData.premiumRatePercent || 2.0,
-      currency: formData.currency || "NGN",
-      exchangeRate: formData.exRate || 1,
-      businessSector: formData.businessSector,
-      product: formData.product,
-      members: members && members.length > 0 ? members.map((m) => ({
-        name: m.employeeNames || m.name || "Unknown",
-        dateOfBirth: m.dateOfBirth,
-        gender: (m.sex || m.gender || "M") as "M" | "F",
-        salary: m.basicSalary || m.salary || 0,
-        sumAssured: m.sumInsured || m.sumAssured || 0,
-        premium: m.premium || 0,
-        staffNo: m.staffNo || "",
-        housingAllowance: m.housingAllowance || 0,
-        transportAllowance: m.transportAllowance || 0,
-        hireDate: m.hireDate || new Date().toISOString().split("T")[0],
-      })) : [],
+      subChannelId: formData.subChannelId || "",
+      proportionPercent: Number(formData.proportionPercent) || 100,
+      premiumRatePercent: Number(formData.premiumRatePercent),
+      currencyName: formData.currency || "NGN",
+      exchangeRate: Number(formData.exRate) || 1,
     };
 
     try {
@@ -1364,6 +1365,22 @@ const sourcePage = getSourceFromUrl();
                   />
                 </div>
 
+                {/* Premium Rate % — used by "PolicyRate" pricing for added/uploaded members */}
+                <div className="space-y-2">
+                  <Label htmlFor="premiumRatePercent" className="text-sm font-medium">
+                    Premium Rate% <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="premiumRatePercent"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={formData.premiumRatePercent || ""}
+                    onChange={(e) => handleInputChange("premiumRatePercent", parseFloat(e.target.value) || 0)}
+                    placeholder="e.g. 2 for 2%"
+                  />
+                </div>
+
                 {/* Foreign Currency */}
                 <div className="space-y-2">
                   <Label htmlFor="currency" className="text-sm font-medium">
@@ -1548,117 +1565,6 @@ const sourcePage = getSourceFromUrl();
                       <SelectItem value="CANCELLED">CANCELLED</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-       
-
-        {/* Extension Details Section */}
-        <div className="border rounded-lg shadow-sm mb-4">
-          <button
-            type="button"
-            onClick={() => toggleSection("extensionDetails")}
-            className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-          >
-            <span className="font-semibold">
-              Group Life Extension Details
-            </span>
-          </button>
-          {expandedSections.extensionDetails && (
-            <div className="p-6">
-              <p className="text-sm text-gray-500">
-                No extension details available.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Scheme Status Section */}
-        <div className="border rounded-lg shadow-sm mb-4">
-          <button
-            type="button"
-            onClick={() => toggleSection("quotationStatus")}
-            className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
-          >
-            <span className="font-semibold">Scheme Status</span>
-          </button>
-          {expandedSections.quotationStatus && (
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="totalSumInsured"
-                    className="text-sm font-medium"
-                  >
-                    Total Sum Insured:
-                  </Label>
-                  <Input
-                    id="totalSumInsured"
-                    value={formData.totalSumInsured}
-                    readOnly
-                    className="bg-gray-50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="totalPremium"
-                    className="text-sm font-medium"
-                  >
-                    Total Premium:
-                  </Label>
-                  <Input
-                    id="totalPremium"
-                    value={formData.totalPremium}
-                    readOnly
-                    className="bg-gray-50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="loadingPercent"
-                    className="text-sm font-medium"
-                  >
-                    Loading %:
-                  </Label>
-                  <Input
-                    id="loadingPercent"
-                    value={formData.loadingPercent}
-                    onChange={(e) =>
-                      handleInputChange("loadingPercent", e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="reductionPercent"
-                    className="text-sm font-medium"
-                  >
-                    Reduction %:
-                  </Label>
-                  <Input
-                    id="reductionPercent"
-                    value={formData.reductionPercent}
-                    onChange={(e) =>
-                      handleInputChange("reductionPercent", e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="netPremiumDue"
-                    className="text-sm font-medium"
-                  >
-                    Net Premium Due:
-                  </Label>
-                  <Input
-                    id="netPremiumDue"
-                    value={formData.netPremiumDue}
-                    readOnly
-                    className="bg-gray-50"
-                  />
                 </div>
               </div>
             </div>

@@ -36,7 +36,8 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Users as UsersIcon
+  Users as UsersIcon,
+  Printer
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -376,6 +377,30 @@ const DebitNoteList = ({
       const allIds = debitNoteList.map((note: any) => note.debitNoteNo || note.dncnNo || note.id);
       setSelectedNotes(new Set(allIds));
     }
+  };
+
+  // Handle Do CoInsurance Note
+  const handleDoCoinsuranceNote = () => {
+    const selectedList = debitNoteList.filter((note: any) => {
+      const dncnNo = note.debitNoteNo || note.dncnNo || note.id;
+      return selectedNotes.has(dncnNo);
+    });
+    console.log("Do CoInsurance Note clicked for notes:", selectedList.length > 0 ? selectedList : debitNoteList);
+    toast.info(selectedNotes.size > 0
+      ? `Do CoInsurance Note triggered for ${selectedNotes.size} selected note(s). API will be connected shortly.`
+      : `Do CoInsurance Note triggered for policy ${policyNo}. API will be connected shortly.`);
+  };
+
+  // Handle Print Policy Document
+  const handlePrintPolicyDocument = () => {
+    const selectedList = debitNoteList.filter((note: any) => {
+      const dncnNo = note.debitNoteNo || note.dncnNo || note.id;
+      return selectedNotes.has(dncnNo);
+    });
+    console.log("Print Policy Document clicked for notes:", selectedList.length > 0 ? selectedList : debitNoteList);
+    toast.info(selectedNotes.size > 0
+      ? `Print Policy Document triggered for ${selectedNotes.size} selected note(s). API will be connected shortly.`
+      : `Print Policy Document triggered for policy ${policyNo}. API will be connected shortly.`);
   };
 
   // Handle download
@@ -763,39 +788,68 @@ const DebitNoteList = ({
       {/* ✅ Main Table Card */}
       <Card className="border border-slate-200 shadow-sm">
         <CardContent className="p-0">
-          {/* Selection toolbar */}
-          {selectedNotes.size > 0 && (
-            <div className="px-4 py-3 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-blue-600" />
-                <span className="text-sm font-medium text-blue-800">
-                  {selectedNotes.size} note{selectedNotes.size > 1 ? 's' : ''} selected
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {approvableCount > 0 && (
-                  <Button
-                    onClick={handleApproveSelected}
-                    disabled={isApprovingMultiple}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    size="sm"
-                  >
-                    {isApprovingMultiple ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Approving...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Approve DebitNote
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
+          {/* Action toolbar - Always visible */}
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {selectedNotes.size > 0 ? (
+                <>
+                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">
+                    {selectedNotes.size} note{selectedNotes.size > 1 ? 's' : ''} selected
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Layers className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm font-medium text-slate-700">
+                    Debit Notes Actions
+                  </span>
+                </>
+              )}
             </div>
-          )}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                onClick={handleDoCoinsuranceNote}
+                disabled={selectedNotes.size === 0}
+                variant="outline"
+                size="sm"
+                className="bg-white border-blue-300 text-blue-700 hover:bg-blue-50 text-xs sm:text-sm font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Layers className="w-4 h-4 mr-1.5" />
+                Do CoInsurance Note
+              </Button>
+              <Button
+                onClick={handlePrintPolicyDocument}
+                disabled={selectedNotes.size === 0}
+                variant="outline"
+                size="sm"
+                className="bg-white border-blue-300 text-blue-700 hover:bg-blue-50 text-xs sm:text-sm font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4 mr-1.5" />
+                Print Policy Document
+              </Button>
+              {approvableCount > 0 && (
+                <Button
+                  onClick={handleApproveSelected}
+                  disabled={isApprovingMultiple}
+                  className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm font-medium shadow-sm"
+                  size="sm"
+                >
+                  {isApprovingMultiple ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Approving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Approve DebitNote
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
 
           <div className="overflow-x-auto">
             <Table>
@@ -819,102 +873,121 @@ const DebitNoteList = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {debitNoteList.map((note: any, index: number) => {
-                  const dncnNo = note.debitNoteNo || note.dncnNo || note.id || index;
-                  const policyNoDisplay = note.policyNo || note.policyNo || '-';
-                  const insuredNameDisplay = note.insuredName || note.insuredName || note.insured || '-';
-                  const billingDate = note.billingDate || note.billingDate || note.dncnDate;
-                  const grossPremium = note.grossPremium || note.grossPremium || 0;
-                  const netPremium = note.premium?.netPremium || note.netPremium || note.netAmount || 0;
-                  const approvalStatus = note.approval !== undefined ? note.approval : (note.approvalStatus === 'Approved' ? 2 : 1);
-                  const isSelected = selectedNotes.has(dncnNo);
-                  const isApproved = approvalStatus === 2;
-                  
-                  return (
-                    <TableRow 
-                      key={dncnNo} 
-                      className={`hover:bg-slate-50 transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}
-                      onClick={() => handleViewNote(note)}
-                    >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleToggleSelect(dncnNo)}
-                          disabled={isApproved}
-                          className={`data-[state=checked]:bg-blue-600 ${isApproved ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium text-blue-600">
-                        {dncnNo}
-                      </TableCell>
-                      <TableCell className="text-slate-600">{policyNoDisplay}</TableCell>
-                      <TableCell className="text-slate-600 max-w-[150px] truncate" title={insuredNameDisplay}>
-                        {insuredNameDisplay}
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {billingDate ? formatDate(billingDate) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-slate-900">
-                        {formatCurrency(grossPremium)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-slate-900">
-                        {formatCurrency(netPremium)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          {getStatusIcon(approvalStatus)}
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(approvalStatus)}`}>
-                            {getStatusLabel(approvalStatus)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div 
-                          className="flex items-center justify-center gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleViewNote(note)}
-                            title="View Details"
+                {debitNoteList && debitNoteList.length > 0 ? (
+                  debitNoteList.map((note: any, index: number) => {
+                    const dncnNo = note.debitNoteNo || note.dncnNo || note.id || index;
+                    const policyNoDisplay = note.policyNo || note.policyNo || '-';
+                    const insuredNameDisplay = note.insuredName || note.insuredName || note.insured || '-';
+                    const billingDate = note.billingDate || note.billingDate || note.dncnDate;
+                    const grossPremium = note.grossPremium || note.grossPremium || 0;
+                    const netPremium = note.premium?.netPremium || note.netPremium || note.netAmount || 0;
+                    const approvalStatus = note.approval !== undefined ? note.approval : (note.approvalStatus === 'Approved' ? 2 : 1);
+                    const isSelected = selectedNotes.has(dncnNo);
+                    const isApproved = approvalStatus === 2;
+                    
+                    return (
+                      <TableRow 
+                        key={dncnNo} 
+                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}
+                        onClick={() => handleViewNote(note)}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleSelect(dncnNo)}
+                            className="data-[state=checked]:bg-blue-600"
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium text-blue-600">
+                          {dncnNo}
+                        </TableCell>
+                        <TableCell className="text-slate-600">{policyNoDisplay}</TableCell>
+                        <TableCell className="text-slate-600 max-w-[150px] truncate" title={insuredNameDisplay}>
+                          {insuredNameDisplay}
+                        </TableCell>
+                        <TableCell className="text-slate-600">
+                          {billingDate ? formatDate(billingDate) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-slate-900">
+                          {formatCurrency(grossPremium)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-slate-900">
+                          {formatCurrency(netPremium)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            {getStatusIcon(approvalStatus)}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(approvalStatus)}`}>
+                              {getStatusLabel(approvalStatus)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div 
+                            className="flex items-center justify-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <Eye className="w-4 h-4 text-slate-500 hover:text-blue-600" />
-                          </Button>
-                         
-                          {approvalStatus !== 2 && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0"
-                              onClick={() => handleEditNote(note)}
-                              title="Edit Note"
+                              onClick={() => handleViewNote(note)}
+                              title="View Details"
                             >
-                              <Edit className="w-4 h-4 text-slate-500 hover:text-blue-600" />
+                              <Eye className="w-4 h-4 text-slate-500 hover:text-blue-600" />
                             </Button>
-                          )}
-                         
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 gap-1.5"
-                            onClick={() => handleCreateCreditNote(note)}
-                            title="Create Credit Note">
-                            <FileSpreadsheet className="w-3.5 h-3.5" />
-                            <span className="text-xs font-medium">Credit Note</span>
-                          </Button>
+                           
+                            {approvalStatus !== 2 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleEditNote(note)}
+                                title="Edit Note"
+                              >
+                                <Edit className="w-4 h-4 text-slate-500 hover:text-blue-600" />
+                              </Button>
+                            )}
+                           
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 gap-1.5"
+                              onClick={() => handleCreateCreditNote(note)}
+                              title="Create Credit Note">
+                              <FileSpreadsheet className="w-3.5 h-3.5" />
+                              <span className="text-xs font-medium">Credit Note</span>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  /* ✅ "No debit notes found" message - exactly like CreditNotesTab */
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12 px-4">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="p-4 bg-gray-50 rounded-full">
+                          <FileText className="w-12 h-12 text-gray-400" />
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                        <div>
+                          <p className="text-lg font-semibold text-gray-600">No Debit Notes Found</p>
+                          <p className="text-sm text-gray-400 mt-1">
+                            No debit notes have been created for this policy yet.
+                          </p>
+                          
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
 
           {/* ✅ Server-side Pagination */}
-          {debitNoteListTotalPages > 0 && (
+          {debitNoteListTotalPages > 0 && debitNoteList && debitNoteList.length > 0 && (
             <div className="px-4 py-4 border-t border-gray-200 bg-gray-50/50">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4 order-2 sm:order-1">

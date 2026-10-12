@@ -75,37 +75,43 @@ const ProductsRegions = () => {
   const [hasRegionFilter, setHasRegionFilter] = useState(false)
   const [hasEmailFilter, setHasEmailFilter] = useState(false)
 
-  //@ts-ignore
- const filteredRegions = (regions || []).filter((region) => {
-    const matchesSearch =
-      region.regionID?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      region.region?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      region.email?.toLowerCase().includes(searchTerm.toLowerCase()) 
+  const filteredRegions = (regions || []).filter((region) => {
+  const search = searchTerm.toLowerCase().trim()
+  const idStr = String(region.regionID ?? "")
 
+  const matchesSearch =
+    !search ||
+    idStr.toLowerCase().includes(search) ||
+    region.region?.toLowerCase().includes(search) ||
+    region.email?.toLowerCase().includes(search)
 
-    const matchesRegionID =
-      !regionIDFilter || region.regionID?.toLowerCase().includes(regionIDFilter.toLowerCase())
-    const matchesRegion =
-      !regionFilter || region.region?.toLowerCase().includes(regionFilter.toLowerCase())
-    const matchesEmail =
-      !emailFilter || region.email?.toLowerCase().includes(emailFilter.toLowerCase())
+  const matchesRegionID =
+    !regionIDFilter || idStr.toLowerCase().includes(regionIDFilter.toLowerCase())
 
-     const matchesActiveOnly = !activeOnlyFilter || region.active === true
+  const matchesRegion =
+    !regionFilter || region.region?.toLowerCase().includes(regionFilter.toLowerCase())
+
+  const matchesEmail =
+    !emailFilter || region.email?.toLowerCase().includes(emailFilter.toLowerCase())
+
+  const matchesActiveOnly = !activeOnlyFilter || region.active === true
+
   const matchesHasRegion =
     !hasRegionFilter || (region.region && region.region.trim() !== "")
+
   const matchesHasEmail =
     !hasEmailFilter || (region.email && region.email.trim() !== "")
 
-    return (
-      matchesSearch &&
-      matchesRegionID &&
-      matchesRegion &&
-      matchesEmail &&
-      matchesActiveOnly &&
-      matchesHasRegion &&
-      matchesHasEmail
-    )
-  })
+  return (
+    matchesSearch &&
+    matchesRegionID &&
+    matchesRegion &&
+    matchesEmail &&
+    matchesActiveOnly &&
+    matchesHasRegion &&
+    matchesHasEmail
+  )
+})
 
   const [currentPage, setCurrentPage] = useState(1)
   const rowsPerPage = 3

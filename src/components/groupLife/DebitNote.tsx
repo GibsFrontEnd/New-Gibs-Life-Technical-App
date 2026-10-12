@@ -670,7 +670,7 @@ useEffect(() => {
                     netPremium: result.netPremium ?? prev.netPremium,
                 }));
                 toast({
-                    description: `✅ Debit Note recalculated successfully! Net: ${formatCurrency(result.netPremium || prev.netPremium)}`,
+                    description: `✅ Debit Note recalculated successfully! Net: ${formatCurrency(result.netPremium ?? formData.netPremium)}`,
                     variant: "default"
                 });
             }

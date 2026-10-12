@@ -1,7 +1,5 @@
 import { Link } from "react-router-dom";
 import {
-  FileOutput,
-  GitBranch,
   User,
   Users,
   CreditCard,
@@ -27,18 +25,6 @@ const sections = [
     blurb: "Manage credit life schemes and renewals.",
     icon: CreditCard,
     path: "/underwriting/credit-life/scheme-admin",
-  },
-  {
-    label: "Convert to Policy",
-    blurb: "Turn approved proposals into active policies.",
-    icon: FileOutput,
-    path: "/underwriting/convert-to-policy/investment-policies",
-  },
-  {
-    label: "Convert to Scheme",
-    blurb: "Onboard group and credit life schemes.",
-    icon: GitBranch,
-    path: "/underwriting/convert-to-scheme/group-life-policies",
   },
 ];
 

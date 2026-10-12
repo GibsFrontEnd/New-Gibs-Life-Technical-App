@@ -1,5 +1,4 @@
 // @ts-nocheck
-"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
@@ -25,7 +24,7 @@ import {
   CheckCircle,
   Eye,
   Trash2,
-  DollarSign,
+  Banknote,
   Calendar,
   Phone,
   Mail,
@@ -1714,7 +1713,7 @@ const NewQuotation = () => {
               {/* Financial Information */}
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center">
-                  <DollarSign className="h-3 w-3 mr-1" /> Financial Details
+                  <Banknote className= "h-3 w-3 mr-1" /> Financial Details
                 </h3>
                 <div className="bg-white p-8 rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-8">

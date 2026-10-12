@@ -30,6 +30,16 @@ export interface Customer {
   modifiedBy: string | null
   modifiedOn: string | null
   password?: string | null
+  customerID?: string
+  isOrg?: boolean
+  orgName?: string | null
+  orgRegNumber?: string | null
+  orgRegDate?: string | null
+  taxIdNumber?: string | null
+  cityLGA?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  otherName?: string | null
 }
 
 export interface NextOfKin {
@@ -64,7 +74,7 @@ export interface CreateCustomerRequest {
   stateID: string
   nationality: string
   dateOfBirth: string
-  kycType: "NOT_AVAILABLE" | "PASSPORT" | "DRIVERS_LICENSE" | "NATIONAL_ID" | "VOTERS_CARD"
+  kycType: "NOT_AVAILABLE" | "PASSPORT" | "DRIVERS_LICENSE" | "NATIONAL_ID_CARD" | "COMPANY_REG_NO"
   kycNumber: string
   kycIssueDate: string
   kycExpiryDate: string
@@ -79,10 +89,20 @@ export interface CustomerPolicy {
   premium: number
 }
 
+export interface CustomerPagination {
+  pageNumber: number
+  pageSize: number
+  totalRecords: number
+  totalPages: number
+  hasNextPage: boolean
+  hasPreviousPage: boolean
+}
+
 export interface CustomerState {
   customers: Customer[]
   currentCustomer: Customer | null
   customerPolicies: CustomerPolicy[]
+  pagination?: CustomerPagination
   loading: {
     getAllCustomers: boolean
     createCustomer: boolean

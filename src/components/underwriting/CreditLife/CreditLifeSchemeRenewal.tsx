@@ -1,4 +1,4 @@
-// src/pages/Underwriting/CreditLife/CreditLifeSchemeRenewals.tsx
+// src/pages/underwriting/CreditLife/CreditLifeSchemeRenewals.tsx
 // @ts-nocheck
 
 import { useState, useEffect } from "react";

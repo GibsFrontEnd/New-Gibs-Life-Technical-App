@@ -1,4 +1,4 @@
-// src/pages/Underwriting/GroupLife/SchemeRenewals.tsx
+// src/pages/underwriting/GroupLife/SchemeRenewals.tsx
 // @ts-nocheck
 
 import { useState, useEffect } from "react";
@@ -192,137 +192,29 @@ export default function SchemeRenewals() {
     setIsAllSelected(!isAllSelected);
   };
 
-  const handleProcessRenewal = async (quote: any) => {
-    dispatch(setCurrentQuotation(quote));
-    const quoteNumber = getQuotationNumber(quote);
-    navigate(`/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}`);
-  };
+  const handleProcessRenewal =  (quote: any) => {
+  dispatch(setCurrentQuotation(quote));
+  const quoteNumber = getQuotationNumber(quote);
+  // ✅ Make sure this is correct
+  const url = `/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}?source=renewals`;
+  navigate(url);
+};
 
-  const confirmRenewal = async () => {
-    if (!selectedForRenewal || !renewalDate) {
-      toast({
-        title: "Error",
-        description: "Please select a renewal date",
-        variant: "destructive",
-      });
-      return;
-    }
+  const confirmRenewal =  (quote: any) => {
+  dispatch(setCurrentQuotation(quote));
+  const quoteNumber = getQuotationNumber(quote);
+  // ✅ Make sure this is correct
+  const url = `/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}?source=renewals`;
+  navigate(url);
+};
 
-    try {
-      setIsProcessingRenewal(true);
-      const quoteId = getQuotationId(selectedForRenewal);
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-
-      const response = await fetch(
-        `${SERVER_URL}/api/v1/lifepolicyAdmin/renew-scheme`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            quotationId: quoteId,
-            renewalDate: renewalDate,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to process renewal");
-      }
-
-      toast({
-        title: "Success",
-        description: `Scheme ${getQuotationNumber(selectedForRenewal)} renewed successfully!`,
-        variant: "default",
-      });
-
-      setShowRenewalDialog(false);
-      setSelectedForRenewal(null);
-      
-      // ✅ Refresh the policies list
-      dispatch(fetchGroupLifePolicies({
-        page: currentPage,
-        pageSize: pageSize,
-        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-      }));
-      
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process renewal",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingRenewal(false);
-    }
-  };
-
-  const handleBulkRenewal = async () => {
-    if (selectedQuotations.size === 0) return;
-
-    try {
-      setProcessError("");
-      const quotesToRenew = Array.from(selectedQuotations);
-      setProcessingRenewals(new Set(quotesToRenew));
-
-      let successCount = 0;
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-
-      for (const quoteId of quotesToRenew) {
-        try {
-          const response = await fetch(
-            `${SERVER_URL}/api/v1/lifepolicyAdmin/renew-scheme`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              },
-              body: JSON.stringify({
-                quotationId: quoteId,
-                renewalDate: new Date().toISOString().split('T')[0],
-              }),
-            }
-          );
-
-          if (response.ok) {
-            successCount++;
-          }
-        } catch (err) {
-          console.error(`Failed to renew ${quoteId}:`, err);
-        }
-      }
-
-      if (successCount > 0) {
-        setSuccessMessage(
-          `Successfully renewed ${successCount} out of ${quotesToRenew.length} schemes!`
-        );
-        setShowSuccessToast(true);
-
-        setTimeout(() => {
-          setShowSuccessToast(false);
-        }, 5000);
-      }
-
-      // ✅ Refresh the policies list
-      dispatch(fetchGroupLifePolicies({
-        page: currentPage,
-        pageSize: pageSize,
-        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-      }));
-      
-      setSelectedQuotations(new Set());
-      setIsAllSelected(false);
-    } catch (err) {
-      const errorMessage = err?.message || "Unknown error occurred";
-      setProcessError("Error during bulk renewal: " + errorMessage);
-    } finally {
-      setProcessingRenewals(new Set());
-    }
-  };
+  const handleBulkRenewal =  (quote: any) => {
+  dispatch(setCurrentQuotation(quote));
+  const quoteNumber = getQuotationNumber(quote);
+  // ✅ Make sure this is correct
+  const url = `/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}?source=renewals`;
+  navigate(url);
+};
 
   const applyFilters = () => {
     setCurrentPage(1);
@@ -480,7 +372,6 @@ const handleViewScheme = (quote: any) => {
   const quoteNumber = getQuotationNumber(quote);
   // ✅ Make sure this is correct
   const url = `/underwriting/group-life-quotations/${encodeURIComponent(quoteNumber)}?source=renewals`;
-  console.log('🔗 Navigating to:', url); // Add this to debug
   navigate(url);
 };
 

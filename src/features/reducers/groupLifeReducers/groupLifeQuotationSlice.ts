@@ -966,7 +966,7 @@ export const fetchGroupLifePolicies = createAsyncThunk(
   }
 );
 
-// PUT /api/grouplife/policies/policyNo - Update policy
+// PUT /api/grouplife/policies/policyNo?policyNo={policyNo} - Update policy
 export const updateGroupLifePolicy = createAsyncThunk(
   "groupLifeQuotations/updatePolicy",
   async (
@@ -979,7 +979,7 @@ export const updateGroupLifePolicy = createAsyncThunk(
       }
 
       const response = await fetch(
-        `${SERVER_URL}/grouplife/policies/${encodeURIComponent(policyNo)}`,
+        `${SERVER_URL}/grouplife/policies/policyNo?policyNo=${encodeURIComponent(policyNo)}`,
         {
           method: "PUT",
           headers: getHeaders(),
@@ -1313,36 +1313,67 @@ export const fetchAggregateTotals = createAsyncThunk(
   }
 );
 
-// POST /api/grouplife/policies/members/bulk - Bulk upload members
+// The bulk endpoints have no exception middleware, so business-rule failures come back as a
+// 500 whose body is either JSON ({ message }) or the plain-text exception ("XException: reason").
+const readBulkError = async (response: Response): Promise<string> => {
+  const fallback = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ""}`;
+  const text = await response.text().catch(() => "");
+  if (!text) return fallback;
+  try {
+    const data = JSON.parse(text);
+    if (typeof data === "string") return data;
+    return data?.message || data?.title || fallback;
+  } catch {
+    const firstLine = text.split(/\r?\n/)[0].trim();
+    const match = firstLine.match(/Exception:\s*(.+)$/);
+    return (match ? match[1] : firstLine).slice(0, 300) || fallback;
+  }
+};
+
+// POST /api/grouplife/policies/members/bulk - Bulk upload members.
+// `rows` are BulkMemberRowDto-shaped (customerName, disbursementAmount, dateOfBirth, ...),
+// i.e. exactly what parse-excel returns under payload.rows.
 export const bulkUploadMembers = createAsyncThunk(
   "groupLifeQuotations/bulkUpload",
   async (
-    { policyNo, members }: { policyNo: string; members: GroupLifeMember[] },
+    payload: {
+      policyNo: string;
+      rows: Record<string, any>[];
+      endorsementNo?: string;
+      bizOption?: string;
+      pricingMode?: "PolicyRate" | "FixedRate" | string;
+      fixedPremiumRate?: number;
+      loadingRate?: number;
+      discountRate?: number;
+    },
     { rejectWithValue }
   ) => {
     try {
+      const { policyNo, rows, endorsementNo, bizOption, pricingMode, fixedPremiumRate, loadingRate, discountRate } = payload;
       if (!policyNo) {
         throw new Error("Policy number is required");
       }
+
+      const bodyData: any = { policyNo, rows };
+      if (endorsementNo) bodyData.endorsementNo = endorsementNo;
+      if (bizOption) bodyData.bizOption = bizOption;
+      // The API has no string-enum converter: BulkPricingMode must go over JSON as 0/1.
+      if (pricingMode) bodyData.pricingMode = pricingMode === "FixedRate" ? 1 : 0;
+      if (fixedPremiumRate !== undefined) bodyData.fixedPremiumRate = fixedPremiumRate;
+      if (loadingRate !== undefined) bodyData.loadingRate = loadingRate;
+      if (discountRate !== undefined) bodyData.discountRate = discountRate;
 
       const response = await fetch(
         `${SERVER_URL}/grouplife/policies/members/bulk`,
         {
           method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ policyNo, members }),
+          body: JSON.stringify(bodyData),
         }
       );
 
       if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          errorMessage = response.statusText || errorMessage;
-        }
-        throw new Error(errorMessage);
+        throw new Error(await readBulkError(response));
       }
 
       const result = await response.json();
@@ -1353,13 +1384,33 @@ export const bulkUploadMembers = createAsyncThunk(
   }
 );
 
+export interface ParseExcelMembersPayload {
+  file: File;
+  sheetName?: string;
+  bizOption?: string;
+}
+
 // POST /api/grouplife/policies/members/bulk/parse-excel - Parse Excel without saving
 export const parseExcelMembers = createAsyncThunk(
   "groupLifeQuotations/parseExcel",
-  async (file: File, { rejectWithValue }) => {
+  async (
+    arg: File | ParseExcelMembersPayload,
+    { rejectWithValue }
+  ) => {
     try {
+      const isFile = arg instanceof File;
+      const file = isFile ? arg : arg?.file;
+      const sheetName = !isFile ? arg?.sheetName : undefined;
+      const bizOption = !isFile ? arg?.bizOption : undefined;
+
+      if (!file) {
+        throw new Error("No file was selected");
+      }
+
       const formData = new FormData();
       formData.append('file', file);
+      if (sheetName) formData.append('sheetName', sheetName);
+      if (bizOption) formData.append('BizOption', bizOption);
 
       const response = await fetch(
         `${SERVER_URL}/grouplife/policies/members/bulk/parse-excel`,
@@ -1371,14 +1422,7 @@ export const parseExcelMembers = createAsyncThunk(
       );
 
       if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          errorMessage = response.statusText || errorMessage;
-        }
-        throw new Error(errorMessage);
+        throw new Error(await readBulkError(response));
       }
 
       const result = await response.json();
@@ -1393,13 +1437,40 @@ export const parseExcelMembers = createAsyncThunk(
 export const uploadExcelMembers = createAsyncThunk(
   "groupLifeQuotations/uploadExcel",
   async (
-    { file, policyNo }: { file: File; policyNo: string },
+    {
+      file,
+      policyNo,
+      endorsementNo,
+      bizOption,
+      pricingMode,
+      fixedPremiumRate,
+      loadingRate,
+      discountRate,
+      sheetName,
+    }: {
+      file: File;
+      policyNo: string;
+      endorsementNo?: string;
+      bizOption?: string;
+      pricingMode?: "PolicyRate" | "FixedRate" | string;
+      fixedPremiumRate?: number;
+      loadingRate?: number;
+      discountRate?: number;
+      sheetName?: string;
+    },
     { rejectWithValue }
   ) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('policyNo', policyNo);
+      if (endorsementNo) formData.append('endorsementNo', endorsementNo);
+      if (bizOption) formData.append('BizOption', bizOption);
+      if (pricingMode) formData.append('pricingMode', pricingMode);
+      if (fixedPremiumRate !== undefined) formData.append('fixedPremiumRate', String(fixedPremiumRate));
+      if (loadingRate !== undefined) formData.append('loadingRate', String(loadingRate));
+      if (discountRate !== undefined) formData.append('discountRate', String(discountRate));
+      if (sheetName) formData.append('sheetName', sheetName);
 
       const response = await fetch(
         `${SERVER_URL}/grouplife/policies/members/bulk/upload-excel`,
@@ -1411,14 +1482,7 @@ export const uploadExcelMembers = createAsyncThunk(
       );
 
       if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          errorMessage = response.statusText || errorMessage;
-        }
-        throw new Error(errorMessage);
+        throw new Error(await readBulkError(response));
       }
 
       const result = await response.json();
@@ -1602,7 +1666,6 @@ export const fetchDebitNotes = createAsyncThunk(
   }
 );
 
-// GET /api/grouplife/debit-notes/new - Prefill for a new debit note
 export const prefillDebitNote = createAsyncThunk(
   "groupLifeQuotations/prefillDebitNote",
   async (request: PrefillDebitNoteRequest, { rejectWithValue }) => {
@@ -1629,7 +1692,91 @@ export const prefillDebitNote = createAsyncThunk(
       }
 
       const result: DebitNote = await response.json();
-      return result;
+      
+      // ✅ Return a flattened version with all fields properly mapped
+      return {
+        // Basic info
+        detailId: result.detailId,
+        policyNo: result.policyNo,
+        branchId: result.branchId,
+        bizSource: result.bizSource,
+        bizOption: result.bizOption,
+        sourceType: result.bizOption,
+        
+        // Party info
+        insuredId: result.insuredId,
+        insuredName: result.insuredName,
+        partyId: result.partyId,
+        partyName: result.partyName,
+        mktStaffId: result.mktStaffId,
+        mktStaffName: result.mktStaffName,
+        
+        // Dates
+        startDate: result.startDate,
+        endDate: result.endDate,
+        billingDate: result.billingDate,
+        
+        // Premium - main fields
+        sumInsured: result.sumInsured || 0,
+        grossPremium: result.grossPremium || 0,
+        totalRiskSumInsured: result.totalRiskSumInsured || result.sumInsured || 0,
+        totalRiskPremium: result.totalRiskPremium || result.grossPremium || 0,
+        ourSharePercent: result.ourSharePercent || 100,
+        
+        // Premium - nested premium object
+        premium: result.premium || {
+          grossPremium: result.grossPremium || 0,
+          commissionRate: 0,
+          commissionAmount: 0,
+          whtRate: 0,
+          whtAmount: 0,
+          orcRate: 0,
+          orcAmount: 0,
+          netPremium: result.grossPremium || 0,
+          ncdfRate: 0,
+          ncdfValue: 0,
+          ncdfNetValue: 0,
+          naicomLevyRate: 0,
+          naicomLevyValue: 0,
+          naicomLevyNetValue: 0,
+          orcDeductedFromNet: false
+        },
+        
+        // Currency
+        exRate: result.exRate || 1,
+        exCurrency: result.exCurrency || "NGN",
+        sumInsuredFrgn: result.sumInsuredFrgn || 0,
+        grossPremiumFrgn: result.grossPremiumFrgn || 0,
+        
+        // Payment
+        paymentType: result.paymentType || "DIRECT CASH",
+        creditRefNo: result.creditRefNo || "N/A",
+        narration: result.narration || "",
+        transGuid: result.transGuid || `DN-${Date.now()}`,
+        
+        // Coinsurance
+        coinsuranceLines: result.coinsuranceLines || [],
+        
+        // Other
+        totalTrackingCost: result.totalTrackingCost || 0,
+        approval: result.approval || 0,
+        
+        // UI flags
+        ui: result.ui || {
+          showCommissionSection: true,
+          showWhtSection: true,
+          showOrcSection: false,
+          showDistributionSection: false,
+          showComputeButton: false,
+          showTrackingCost: false,
+          showLevies: false,
+          showCurrencyPanel: true,
+          showShareTotals: false,
+          commissionEditable: true,
+          editable: true,
+          lockReason: null
+        }
+      };
     } catch (error: any) {
       return rejectWithValue(error.message || "Failed to prefill debit note");
     }

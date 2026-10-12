@@ -140,11 +140,16 @@ export default function GroupLifeQuotation() {
         const list = Array.isArray(data)
           ? data
           : data.data || data.items || data.records || data.results || [];
+        // Only group-life products (RiskID "GL") belong on this screen.
         setProductOptions(
-          list.map((item: any) => ({
-            id: item.productID || item.riskID || item.id,
-            name: item.productName || item.description || item.name,
-          }))
+          list
+            .filter((item: any) =>
+              (item.riskID || item.riskId || item.RiskID)?.toString().trim().toUpperCase() === "GL"
+            )
+            .map((item: any) => ({
+              id: item.productID || item.riskID || item.id,
+              name: item.productName || item.description || item.name,
+            }))
         );
       } catch (err) {
         console.error("Failed to fetch product options:", err);
@@ -371,6 +376,15 @@ export default function GroupLifeQuotation() {
 
   const getDisplayQuotations = () => {
     let filtered = itemsArray;
+
+    // The deployed list endpoint returns every product (fire, motor, ...) when no subRiskId is
+    // sent; those have no group-life members or sections, so hide anything that isn't GL.
+    if (productOptions.length > 0) {
+      const groupLifeIds = new Set(productOptions.map((p) => String(p.id).trim().toUpperCase()));
+      filtered = filtered.filter((quote: any) =>
+        groupLifeIds.has(String(quote.subRiskId ?? quote.subRiskID ?? "").trim().toUpperCase())
+      );
+    }
 
     // Apply client-side filters (in addition to server-side)
     if (filterCriteria.searchValue) {

@@ -1,5 +1,5 @@
+// src/types/document.ts
 //@ts-nocheck
-
 
 export interface Document {
   attachID: number;
@@ -40,4 +40,12 @@ export interface DocumentState {
   currentDocument: Document | null;
   loading: boolean;
   error: string | null;
+}
+
+/**
+ * Optional query params for the "fetch all documents" endpoint.
+ * Kept extensible so you can add filters later without changing thunk signatures.
+ */
+export interface FetchDocumentsQuery {
+  docNo?: string;
 }

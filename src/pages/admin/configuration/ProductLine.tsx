@@ -1,7 +1,7 @@
 //@ts-nocheck
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { 
   fetchProducts, 
   deleteProduct, 
@@ -19,11 +19,17 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Filter
+  Filter,
+  Layers,
+  Package,
+  FileText,
+  BarChart,
+  Grid
 } from "lucide-react";
 import { Button } from "../../../components/UI/new-button";
 import { Card, CardContent } from "../../../components/UI/card";
 import { useToast } from "../../../hooks/use-toast";
+import { Tabs, TabsList, TabsTrigger } from "../../../components/UI/tabs";
 
 // ─── helper components ───────────────────────────────────────────────
 
@@ -52,6 +58,7 @@ const StatusBadge = ({ type }: { type: string | null }) => {
 const ProductLine = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   
   const { products, totalCount, loading, error } = useSelector(selectProductsList);
@@ -61,7 +68,7 @@ const ProductLine = () => {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
-  const [filtersOpen, setFiltersOpen] = useState(false); // ← ADD THIS
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
     searchText: "",
     productType: "",
@@ -75,6 +82,24 @@ const ProductLine = () => {
     type: "",
     modifiedBy: ""
   });
+
+  // ─── Get active tab based on current path ──────────────────────
+  const getActiveTab = () => {
+    const path = location.pathname;
+    if (path.includes('product-main-class')) return 'product-main-class';
+    if (path.includes('product-lines')) return 'product-lines';
+    if (path.includes('product-settings')) return 'product-settings';
+    if (path.includes('product-sections')) return 'product-sections';
+    if (path.includes('product-smi')) return 'product-smi';
+    return 'product-lines';
+  };
+
+  const activeTab = getActiveTab();
+
+  // ─── Tab navigation ──────────────────────────────────────────────
+  const handleTabChange = (value: string) => {
+    navigate(`/admin/configurations/${value}`);
+  };
 
   // ─── Mobile detection ─────────────────────────────────────────────
   useEffect(() => {
@@ -240,269 +265,265 @@ const ProductLine = () => {
     <div className="min-h-screen">
       <div className="container mx-auto">
         <div className="rounded-lg">
-          {/* Header Card */}
-          <Card className="bg-gradient-to-r from-gray-200 to-gray-200 border-white-200 mb-6">
-            <div className="p-4 pb-0">
-              <h2 className="text-xl font-bold text-gray-900">Product Lines</h2>
-              <p className="text-sm text-gray-600 mt-1">Manage and configure product lines</p>
-            </div>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleCreate}
-                  className="w-30 sm:w-auto text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 hover:border-gray-300 transition-all duration-200 mb-4 group shadow-sm hover:shadow-md text-white"
-                >
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">New Product</span>
-                  <span className="sm:hidden">New</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchProductsData}
-                  className="w-5 sm:w-auto text-xs sm:text-sm"
-                >
-                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Refresh</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Filter Section - Collapsible */}
-          <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-hidden">
-            {/* Toggle Header */}
-            <button
-              onClick={() => setFiltersOpen(!filtersOpen)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
+          
+          {/* ===== TABS NAVIGATION ===== */}
+          <div className="bg-white border-b border-gray-200 rounded-t-lg">
+            <Tabs 
+              value={activeTab}
+              onValueChange={handleTabChange}
+              variant="default" 
+              size="md"
             >
-              <div className="flex items-center gap-2 text-gray-700 font-medium">
-                <Filter size={16} />
-                Search &amp; Filters
-                {filters.searchText || filters.productType || filters.riskID ? (
-                  <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
-                    Active
-                  </span>
-                ) : null}
-              </div>
-              {filtersOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-            </button>
+              <TabsList fullWidth className="px-4 pt-2 pb-1">
+                <TabsTrigger 
+                  value="product-main-class" 
+                  icon={<Grid className="w-4 h-4" />}
+                  className="flex-1 justify-center"
+                >
+                  Product Main Class
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="product-lines" 
+                  icon={<Layers className="w-4 h-4" />}
+                  className="flex-1 justify-center"
+                >
+                  Product Lines
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="product-settings" 
+                  icon={<Package className="w-4 h-4" />}
+                  className="flex-1 justify-center"
+                >
+                  Product Settings
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="product-sections" 
+                  icon={<FileText className="w-4 h-4" />}
+                  className="flex-1 justify-center"
+                >
+                  Product Sections
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="product-smi" 
+                  icon={<BarChart className="w-4 h-4" />}
+                  className="flex-1 justify-center"
+                >
+                  Product SMI
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
-            {/* Filter Content - Only shown when expanded */}
-            {filtersOpen && (
-              <div className="p-4 border-t border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Search</label>
-                    <input
-                      type="text"
-                      value={filters.searchText}
-                      onChange={(e) => setFilters({ ...filters, searchText: e.target.value })}
-                      placeholder="Search by ID, Name, or Description"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Product Type</label>
-                    <input
-                      type="text"
-                      value={filters.productType}
-                      onChange={(e) => setFilters({ ...filters, productType: e.target.value })}
-                      placeholder="e.g. Investment, Traditional"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Risk ID</label>
-                    <input
-                      type="text"
-                      value={filters.riskID}
-                      onChange={(e) => setFilters({ ...filters, riskID: e.target.value })}
-                      placeholder="e.g. A, B, GL"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-4">
+          {/* ===== CONTENT ===== */}
+          <div className="bg-white rounded-b-lg p-4">
+            {/* Header Card */}
+            <Card className="bg-gradient-to-r from-gray-200 to-gray-200 border-white-200 mb-6">
+              <div className="p-4 pb-0">
+                <h2 className="text-xl font-bold text-gray-900">Product Lines</h2>
+                <p className="text-sm text-gray-600 mt-1">Manage and configure product lines</p>
+              </div>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={applyFilters}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={handleCreate}
+                    className="w-30 sm:w-auto text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 hover:border-gray-300 transition-all duration-200 mb-4 group shadow-sm hover:shadow-md text-white"
                   >
-                    Apply Filters
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">New Product</span>
+                    <span className="sm:hidden">New</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={clearFilters}
+                    onClick={fetchProductsData}
+                    className="w-5 sm:w-auto text-xs sm:text-sm"
                   >
-                    Clear
+                    <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Refresh</span>
                   </Button>
                 </div>
-              </div>
-            )}
-          </div>
+              </CardContent>
+            </Card>
 
-          {/* Table Section */}
-          <div className="border border-border rounded-lg bg-white">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">ID</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Name</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Details</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Type</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-600 whitespace-nowrap">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-16 text-center text-gray-400">
-                        No products found.
-                      </td>
-                    </tr>
-                  ) : (
-                    paginated.map((p: any) => {
-                      return (
-                        <tr
-                          key={p.productID}
-                          className="border-b border-gray-100 transition-colors hover:bg-gray-50"
-                        >
-                          <td className="px-4 py-3">
-                            <div className="font-semibold text-gray-800">{p.productID}</div>
-                            <div className="text-xs text-gray-400 mt-0.5">Risk: {p.riskID}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="font-semibold text-gray-800">{p.productName}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="text-gray-600">{p.description || "—"}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <StatusBadge type={p.productType} />
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => handleView(p)}
-                                title="View Details"
-                                className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
-                              >
-                                <Eye size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleEdit(p)}
-                                title="Edit Type"
-                                className="p-2 rounded-lg text-[#8c4b8d] hover:bg-[#8c4b8d]/10 transition-colors"
-                              >
-                                <Pencil size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(p)}
-                                title="Delete Product"
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+            {/* Filter Section */}
+            <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-hidden">
+              <button
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2 text-gray-700 font-medium">
+                  <Filter size={16} />
+                  Search &amp; Filters
+                  {filters.searchText || filters.productType || filters.riskID ? (
+                    <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                      Active
+                    </span>
+                  ) : null}
+                </div>
+                {filtersOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+              </button>
+
+              {filtersOpen && (
+                <div className="p-4 border-t border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Search</label>
+                      <input
+                        type="text"
+                        value={filters.searchText}
+                        onChange={(e) => setFilters({ ...filters, searchText: e.target.value })}
+                        placeholder="Search by ID, Name, or Description"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Product Type</label>
+                      <input
+                        type="text"
+                        value={filters.productType}
+                        onChange={(e) => setFilters({ ...filters, productType: e.target.value })}
+                        placeholder="e.g. Investment, Traditional"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Risk ID</label>
+                      <input
+                        type="text"
+                        value={filters.riskID}
+                        onChange={(e) => setFilters({ ...filters, riskID: e.target.value })}
+                        placeholder="e.g. A, B, GL"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={applyFilters}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Apply Filters
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearFilters}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Pagination */}
-            {filtered.length > pageSize && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
-                <span className="text-sm text-gray-500">
-                  Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={currentPage <= 1}
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-100 transition-colors"
-                  >
-                    ← Prev
-                  </button>
-                  <span className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-sm font-medium">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    disabled={currentPage >= totalPages}
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-100 transition-colors"
-                  >
-                    Next →
-                  </button>
-                </div>
+            {/* Table Section */}
+            <div className="border border-border rounded-lg bg-white">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">ID</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Name</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Details</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Type</th>
+                      <th className="px-4 py-3 text-center font-semibold text-gray-600 whitespace-nowrap">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginated.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-16 text-center text-gray-400">
+                          No products found.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginated.map((p: any) => {
+                        return (
+                          <tr
+                            key={p.productID}
+                            className="border-b border-gray-100 transition-colors hover:bg-gray-50"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="font-semibold text-gray-800">{p.productID}</div>
+                              <div className="text-xs text-gray-400 mt-0.5">Risk: {p.riskID}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="font-semibold text-gray-800">{p.productName}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-gray-600">{p.description || "—"}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusBadge type={p.productType} />
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => handleView(p)}
+                                  title="View Details"
+                                  className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handleEdit(p)}
+                                  title="Edit Type"
+                                  className="p-2 rounded-lg text-[#8c4b8d] hover:bg-[#8c4b8d]/10 transition-colors"
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(p)}
+                                  title="Delete Product"
+                                  className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
-            )}
+
+              {/* Pagination */}
+              {filtered.length > pageSize && (
+                <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
+                  <span className="text-sm text-gray-500">
+                    Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={currentPage <= 1}
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-100 transition-colors"
+                    >
+                      ← Prev
+                    </button>
+                    <span className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-sm font-medium">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      disabled={currentPage >= totalPages}
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-100 transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Edit Modal */}
-      {/* {showEditModal && editingProduct && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">Update Product Type</h3>
-              <p className="text-sm text-gray-500 mt-1">{editingProduct.productName}</p>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Type
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.type}
-                  onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value })}
-                  placeholder="Enter product type"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Modified By
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.modifiedBy}
-                  onChange={(e) => setEditFormData({ ...editFormData, modifiedBy: e.target.value })}
-                  placeholder="Your name"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                />
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdateType}
-                className="px-4 py-2 rounded-lg text-white text-sm font-semibold bg-blue-600 hover:bg-blue-700"
-              >
-                Update Type
-              </button>
-            </div>
-          </div>
-        </div>
-      )} */}
     </div>
   );
 };

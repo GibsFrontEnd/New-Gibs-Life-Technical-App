@@ -121,7 +121,7 @@ export interface Agent {
   creditLimit: number;
   comRate: number;
   remark: string;
-  accountNo: string;
+  accountno: string;
   bankname: string;
   tag: string;
   deleted: number;
@@ -132,6 +132,75 @@ export interface Agent {
   passwords: string;
   isVerified: boolean;
   attachments: Attachment[];
+}
+
+// Matches PUT /v1/Agents/agent/{agentId} (application/json, returns 204 No Content)
+export interface UpdateAgentRequest {
+  agentID: string;
+  unitID: string;
+  agent: string;
+  address: string;
+  area: string;
+  city: string;
+  state: string;
+  phone1: string;
+  phone2: string;
+  faxNo: string;
+  email: string;
+  insPerson: string;
+  finPerson: string;
+  balance: number;
+  creditLimit: number;
+  comRate: number;
+  remark: string;
+  accountNo: string;
+  bankname: string;
+  tag: string;
+  passwords: string;
+  isVerified: boolean;
+}
+
+export interface Unit {
+  unitID: string;
+  centreID: string | null;
+  unitName: string;
+  description: string | null;
+  unitHead: string | null;
+  comission: number | null;
+  a1: number | null;
+  a2: number | null;
+  remark: string | null;
+  tag: string | null;
+  deleted: number;
+  submittedBy: string | null;
+  submittedOn: string | null;
+  modifiedBy: string | null;
+  modifiedOn: string | null;
+}
+
+// Matches POST /v1/Agents/create (multipart/form-data)
+export interface CreateAgentRequest {
+  UnitId: string;
+  AgentName: string;
+  Address: string;
+  Area: string;
+  City: string;
+  State: string;
+  Phone1: string;
+  Phone2: string;
+  FaxNo: string;
+  Email: string;
+  InsPerson: string;
+  FinPerson: string;
+  Balance: number;
+  CreditLimit: number;
+  ComRate: number;
+  Remark: string;
+  AccountNo: string;
+  BankName: string;
+  Tag: string;
+  Password: string;
+  Files: File[];
 }
 
 export interface GenericResponse {

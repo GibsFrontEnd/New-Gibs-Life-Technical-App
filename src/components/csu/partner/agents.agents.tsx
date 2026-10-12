@@ -87,16 +87,15 @@ const Party = () => {
   const filteredAgents = Array.isArray(agents) ? agents.filter((agent) => {
     if (!agent) return false
     const matchesSearch =
-      agent.partyID?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (agent.party && agent.party.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      agent.agentID?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (agent.agent && agent.agent.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (agent.email && agent.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (agent.partyType && agent.partyType.toLowerCase().includes(searchTerm.toLowerCase()))
+      (agent.unitID && agent.unitID.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesFilter =
       filterType === "all" ||
-      (filterType === "active" && agent.active === 1) ||
-      (filterType === "inactive" && agent.active === 0) ||
-      filterType === agent.partyType
+      (filterType === "active" && agent.deleted !== 1) ||
+      (filterType === "inactive" && agent.deleted === 1)
 
     return matchesSearch && matchesFilter
   }) : []
@@ -112,13 +111,13 @@ const Party = () => {
 
   const handleViewAgent = (agent: any) => {
     dispatch(setCurrentAgent(agent))
-    dispatch(getAgent(agent.partyID))
+    dispatch(getAgent(agent.agentID))
     dispatch(setShowAgentDetailsDialog(true))
   }
 
-  const handleDeleteAgent = (partyID: string) => {
+  const handleDeleteAgent = (agentID: string) => {
     if (window.confirm("Are you sure you want to delete this agent?")) {
-      dispatch(deleteAgent(partyID))
+      dispatch(deleteAgent(agentID))
     }
   }
 
@@ -138,8 +137,8 @@ const Party = () => {
   const getAgentStats = () => {
     const safeAgents = Array.isArray(agents) ? agents : []
     const total = pagination?.totalRecords ?? safeAgents.length
-    const active = safeAgents.filter((a) => a?.active === 1).length
-    const inactive = safeAgents.filter((a) => a?.active === 0).length
+    const active = safeAgents.filter((a) => a?.deleted !== 1).length
+    const inactive = safeAgents.filter((a) => a?.deleted === 1).length
     const withEmail = safeAgents.filter((a) => a?.email && a.email.trim() !== "").length
 
     return { total, active, inactive, withEmail }
@@ -147,7 +146,6 @@ const Party = () => {
 
   const stats = getAgentStats()
   const safeAgents = Array.isArray(agents) ? agents : []
-  const partyTypes = [...new Set(safeAgents.map((a) => a?.partyType).filter(Boolean))]
 
   // Pagination helpers
   const pageSize = pagination?.pageSize ?? 10
@@ -248,7 +246,7 @@ const Party = () => {
             </svg>
             <Input
               type="text"
-              placeholder="Search agents by ID, name, email, or type..."
+              placeholder="Search agents by ID, name, email, or unit..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="sa-search-input"
@@ -261,11 +259,6 @@ const Party = () => {
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
-            {partyTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
           </select>
         </div>
       </div>
@@ -323,9 +316,9 @@ const Party = () => {
           <table className="sa-agents-table">
             <thead>
               <tr className="sa-table-header">
-                <th className="sa-table-head">Party ID</th>
+                <th className="sa-table-head">Agent ID</th>
                 <th className="sa-table-head">Name</th>
-                <th className="sa-table-head">Type</th>
+                <th className="sa-table-head">Unit</th>
                 <th className="sa-table-head">Email</th>
                 <th className="sa-table-head">Phone</th>
                 <th className="sa-table-head">Status</th>
@@ -335,30 +328,28 @@ const Party = () => {
             </thead>
             <tbody>
               {filteredAgents.map((agent) => (
-                <tr key={agent.partyID} className="sa-table-row">
+                <tr key={agent.agentID} className="sa-table-row">
                   <td className="sa-table-cell">
-                    <span className="sa-agent-id">{agent.partyID}</span>
+                    <span className="sa-agent-id">{agent.agentID}</span>
                   </td>
                   <td className="sa-table-cell">
                     <div className="sa-agent-info">
-                      <span className="sa-agent-name">{agent.party || "N/A"}</span>
+                      <span className="sa-agent-name">{agent.agent || "N/A"}</span>
                       {agent.address && <span className="sa-agent-address">{agent.address.substring(0, 50)}...</span>}
                     </div>
                   </td>
                   <td className="sa-table-cell">
-                    <span className={`sa-type-badge sa-type-${agent.partyType?.toLowerCase()}`}>
-                      {agent.partyType || "N/A"}
-                    </span>
+                    <span className="sa-type-badge">{agent.unitID || "N/A"}</span>
                   </td>
                   <td className="sa-table-cell">
                     <span className="sa-agent-email">{agent.email || "N/A"}</span>
                   </td>
                   <td className="sa-table-cell">
-                    <span className="sa-agent-phone">{agent.mobilePhone || agent.landPhone || "N/A"}</span>
+                    <span className="sa-agent-phone">{agent.phone1 || agent.phone2 || "N/A"}</span>
                   </td>
                   <td className="sa-table-cell">
-                    <span className={`sa-status-badge ${agent.active === 1 ? "sa-active" : "sa-inactive"}`}>
-                      {agent.active === 1 ? "Active" : "Inactive"}
+                    <span className={`sa-status-badge ${agent.deleted === 1 ? "sa-inactive" : "sa-active"}`}>
+                      {agent.deleted === 1 ? "Inactive" : "Active"}
                     </span>
                   </td>
                   <td className="sa-table-cell">
@@ -387,7 +378,7 @@ const Party = () => {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleDeleteAgent(agent.partyID)}
+                        onClick={() => handleDeleteAgent(agent.agentID)}
                         className="sa-action-btn sa-delete-btn"
                         title="Delete Agent"
                         disabled={loading?.deleteAgent}

@@ -11,55 +11,62 @@ import type {
 } from "../../../types/risk";
 import type { RootState } from "../../store";
 import { decryptData } from "../../../utils/encrypt-utils";
+// Import the server URL from constants
+import { SERVER_URL } from "../../../utils/constants";
 
 const encryptedToken = localStorage.getItem("token");
 
-const API_BASE_URL = "https://lifetechnicalapi.newgibsonline.com/api";
+// Use SERVER_URL from constants instead of hardcoded URL
+const API_BASE_URL = `${SERVER_URL}`;
 
 // You'll need to get this token from your auth system
 const getAuthToken = () => {
   return decryptData(encryptedToken);
 };
 
-// Async thunks
-export const getAllRisks = createAsyncThunk(
-  "risks/getAllRisks",
-  async (
-    {
-      pageNumber = 1,
-      pageSize = 50,
-    }: { pageNumber?: number; pageSize?: number } = {},
-    { rejectWithValue }
-  ) => {
+// UPDATED: Changed to use the List endpoint
+export const getAllRisks = createAsyncThunk<
+  any[],
+  { pageNumber: number; pageSize: number },
+  { rejectValue: string }
+>(
+  'risks/getAllRisks',
+  async (params, { rejectWithValue }) => {
     try {
+      const token = getAuthToken()
+      
+      // UPDATED: Using /Risks/List endpoint
       const response = await fetch(
-        `${API_BASE_URL}/risks?PageNumber=${pageNumber}&PageSize=${pageSize}`,
+        `${API_BASE_URL}/v1/Risks/List?PageNumber=${params.pageNumber}&PageSize=${params.pageSize}`,
         {
           method: "GET",
           headers: {
-            accept: "application/json",
-            Authorization: `Bearer ${getAuthToken()}`,
-          },
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'accept': 'text/plain'
+          }
         }
       );
-
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-
-      const data: Risk[] = await response.json();
-      return data;
-    } catch (error: any) {
-      return rejectWithValue(error.message || "Failed to fetch risks");
+      
+      const data = await response.json();
+      // Return the items array from the response
+      return data.items || data;
+    } catch (error) {
+      console.error("Error fetching risks:", error);
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch risks");
     }
   }
-);
+)
 
 export const getRiskById = createAsyncThunk(
   "risks/getRiskById",
   async (riskId: string, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/risks/${riskId}`, {
+      const response = await fetch(`${API_BASE_URL}/v1/Risks/${riskId}`, {
         method: "GET",
         headers: {
           accept: "application/json",
@@ -83,7 +90,7 @@ export const createRisk = createAsyncThunk(
   "risks/createRisk",
   async (riskData: CreateRiskRequest, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/risks`, {
+      const response = await fetch(`${API_BASE_URL}/v1/Risks`, {
         method: "POST",
         headers: {
           accept: "application/json",
@@ -112,7 +119,7 @@ export const updateRisk = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/risks/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/v1/Risks/${id}`, {
         method: "PUT",
         headers: {
           accept: "application/json",
@@ -138,7 +145,7 @@ export const deleteRisk = createAsyncThunk(
   "risks/deleteRisk",
   async (riskId: string, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/risks/${riskId}`, {
+      const response = await fetch(`${API_BASE_URL}/v1/Risks/${riskId}`, {
         method: "DELETE",
         headers: {
           accept: "application/json",

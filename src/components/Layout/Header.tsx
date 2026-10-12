@@ -37,12 +37,24 @@ const getQuotationsUrl = (): string | undefined => {
   return getConfigValue('QUOTATIONS_URL');
 };
 
+// Splits "Group · Label" entries into headed groups so long menus stay scannable
+const groupItems = (items: any[]) => {
+  const groups: { name: string; items: any[] }[] = [];
+  items.forEach((it) => {
+    const parts = it.label.split(" · ");
+    const name = parts.length > 1 ? parts[0] : "";
+    const shortLabel = parts.length > 1 ? parts.slice(1).join(" · ") : it.label;
+    const last = groups[groups.length - 1];
+    if (last && last.name === name) last.items.push({ ...it, shortLabel });
+    else groups.push({ name, items: [{ ...it, shortLabel }] });
+  });
+  return groups;
+};
+
 const Header: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [time, setTime] = useState(0);
-  const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
   const navigate = useNavigate();
 
   // Get quotations URL from config
@@ -54,29 +66,6 @@ const Header: React.FC = () => {
       console.warn('⚠️ QUOTATIONS_URL is not configured in APP_CONFIG. Please fix');
     }
   }, [quotationsUrl]);
-
-  // Animated background effects
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTime(prev => (prev + 1) % 360);
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Mouse move effect for interactive background
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const sidebar = document.getElementById('mobile-sidebar');
-      if (sidebar) {
-        const rect = sidebar.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        setMousePosition({ x, y });
-      }
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
 
   // Get user role from localStorage
   useEffect(() => {
@@ -149,6 +138,13 @@ const Header: React.FC = () => {
     { path: "/underwriting/convert-to-policy/group-business-quotations", label: "Convert to Policy · Group Business Quotations", icon: BarChart },
     { path: "/underwriting/convert-to-scheme/group-life-policies", label: "Convert to Scheme · Group Life Policies", icon: GitBranch },
     { path: "/underwriting/convert-to-scheme/credit-life-policies", label: "Convert to Scheme · Credit Life Policies", icon: GitPullRequest },
+    // Annuity
+    { path: "/underwriting/annuity/proposals", label: "Annuity · Proposals", icon: FileCheck },
+    { path: "/underwriting/annuity/policies", label: "Annuity · Policies", icon: Shield },
+    { path: "/underwriting/annuity/payments", label: "Annuity · Due Payments", icon: CreditCard },
+    { path: "/underwriting/annuity/batches", label: "Annuity · Payment Batches", icon: Layers },
+    { path: "/underwriting/annuity/deaths", label: "Annuity · Death & Benefits", icon: Heart },
+    { path: "/underwriting/annuity/products", label: "Annuity · Rules & Factors", icon: Settings },
   ];
 
   // Claims Dropdown Items - Full from ClaimsSidebar
@@ -391,107 +387,34 @@ const Header: React.FC = () => {
           menuOpen ? "translate-x-0" : "translate-x-full"
         }`}
         style={{
-          background: "linear-gradient(180deg, #1a3a5c 0%, #0d1f3c 50%, #1a3a5c 100%)",
+          background: "linear-gradient(180deg, #14325a 0%, #0b1a33 100%)",
         }}
       >
-        {/* Animated Rotating Gradient Background */}
+        {/* Static soft glow */}
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: `conic-gradient(from ${time}deg at 50% 50%, 
-              #1a3a5c, #2563eb, #3b82f6, #60a5fa, #93c5fd, #3b82f6, #1a3a5c)`,
-            opacity: 0.3,
-            filter: 'blur(60px)',
-            transform: 'scale(1.5)',
-          }}
-        />
-
-        {/* Floating Blue Orbs */}
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            width: '300px',
-            height: '300px',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%)',
-            borderRadius: '50%',
-            filter: 'blur(40px)',
-            left: `${30 + Math.sin(time * 0.02) * 20}%`,
-            top: `${20 + Math.cos(time * 0.015) * 30}%`,
-            animation: 'float 8s ease-in-out infinite',
-          }}
-        />
-
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            width: '200px',
-            height: '200px',
-            background: 'radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, transparent 70%)',
-            borderRadius: '50%',
-            filter: 'blur(30px)',
-            right: `${10 + Math.cos(time * 0.025) * 25}%`,
-            bottom: `${15 + Math.sin(time * 0.018) * 35}%`,
-            animation: 'float 6s ease-in-out infinite reverse',
-          }}
-        />
-
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            width: '150px',
-            height: '150px',
-            background: 'radial-gradient(circle, rgba(147, 197, 253, 0.12) 0%, transparent 70%)',
-            borderRadius: '50%',
-            filter: 'blur(25px)',
-            left: `${10 + Math.sin(time * 0.03) * 30}%`,
-            top: `${60 + Math.cos(time * 0.02) * 25}%`,
-            animation: 'float 7s ease-in-out infinite',
-          }}
-        />
-
-        {/* Mouse Following Blue Light */}
-        <div
-          className="absolute pointer-events-none transition-all duration-300"
-          style={{
-            width: '350px',
-            height: '350px',
-            background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.15) 0%, transparent 60%)`,
-            filter: 'blur(50px)',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            opacity: 0.8,
-          }}
-        />
-
-        {/* Shimmer Scan Line */}
-        <div
-          className="absolute inset-0 pointer-events-none overflow-hidden"
-          style={{
-            background: `linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) ${45 + Math.sin(time * 0.03) * 15}%, transparent 100%)`,
-            transform: `skewX(-15deg) translateX(${-100 + (time % 200)}%)`,
-            transition: 'transform 0.05s linear',
-          }}
+          className="absolute inset-x-0 top-0 h-64 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.25) 0%, transparent 70%)" }}
         />
 
         {/* Mobile Sidebar Header */}
         <div className="sticky top-0 z-10 flex justify-between items-center p-5 border-b border-white/10 bg-black/20 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <Link to="/dashboard" className="no-underline" onClick={() => setMenuOpen(false)}>
-              <span className="font-extrabold text-lg text-white tracking-wider ring-2 ring-white/30 px-4 py-2 rounded-lg hover:ring-white/50 transition-all cursor-pointer">
+              <span className="font-extrabold text-base text-white tracking-wide leading-tight cursor-pointer">
                 GIBS-LIFE <span className="text-blue-400">TECHNICAL</span>
               </span>
             </Link>
           </div>
           <button
             onClick={() => setMenuOpen(false)}
-            className="text-white/80 hover:text-white p-1"
+            className="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+            aria-label="Close menu"
           >
             <X size={24} />
           </button>
         </div>
 
-        <nav className="relative z-10 flex flex-col p-4 space-y-1 overflow-y-auto h-[calc(100vh-80px)] scrollbar-hide">
+        <nav className="relative z-10 flex flex-col p-4 space-y-1 overflow-y-auto h-[calc(100vh-76px)] pb-8 scrollbar-hide">
           {visibleNavItems.map((item, index) => (
             <div key={index} className="mb-1">
               {item.hasDropdown ? (
@@ -520,52 +443,59 @@ const Header: React.FC = () => {
                   </button>
 
                   {openDropdown === item.title && !item.disabled && (
-                    <div className="ml-6 border-l-2 border-blue-400/30 pl-3 mt-1 space-y-1 max-h-[400px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                      {item.dropdownItems.map((dropdownItem, idx) => {
-                        const IconComponent = dropdownItem.icon;
-                        return dropdownItem.external ? (
-                          <button
-                            key={idx}
-                            onClick={() => handleExternalLink(dropdownItem.path)}
-                            disabled={dropdownItem.disabled}
-                            className={`relative flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all duration-200 w-full ${
-                              dropdownItem.disabled
-                                ? 'opacity-50 cursor-not-allowed text-white/30'
-                                : 'text-white/60 hover:text-white hover:bg-white/5'
-                            }`}
-                          >
-                            {IconComponent && <IconComponent size={16} className="flex-shrink-0" />}
-                            <span className="truncate">{dropdownItem.label}</span>
-                            <ExternalLink size={12} className="ml-auto text-blue-400 flex-shrink-0" />
-                          </button>
-                        ) : (
-                          <NavLink
-                            key={idx}
-                            to={dropdownItem.path}
-                            onClick={() => {
-                              setMenuOpen(false);
-                              setOpenDropdown(null);
-                            }}
-                            className={({ isActive }) =>
-                              `relative flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                                isActive
-                                  ? 'text-blue-300 bg-blue-500/20 font-medium'
-                                  : 'text-white/60 hover:text-white hover:bg-white/5'
-                              }`
-                            }
-                          >
-                            {({ isActive }) => (
-                              <>
-                                {isActive && (
-                                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-400 rounded-r-full" />
-                                )}
-                                {IconComponent && <IconComponent size={16} className="flex-shrink-0" />}
-                                <span className="truncate">{dropdownItem.label}</span>
-                              </>
-                            )}
-                          </NavLink>
-                        );
-                      })}
+                    <div className="ml-5 border-l border-white/15 pl-3 mt-1 pb-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                      {groupItems(item.dropdownItems).map((group, gi) => (
+                        <div key={gi} className="mb-2">
+                          {group.name && (
+                            <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-blue-300/70">
+                              {group.name}
+                            </div>
+                          )}
+                          <div className="space-y-0.5">
+                            {group.items.map((dropdownItem, idx) => {
+                              const IconComponent = dropdownItem.icon;
+                              return dropdownItem.external ? (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleExternalLink(dropdownItem.path)}
+                                  disabled={dropdownItem.disabled}
+                                  className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 w-full ${dropdownItem.disabled ? "opacity-50 cursor-not-allowed text-white/30" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+                                >
+                                  {IconComponent && <IconComponent size={16} className="flex-shrink-0" />}
+                                  <span className="text-left leading-snug">{dropdownItem.shortLabel}</span>
+                                  <ExternalLink size={12} className="ml-auto text-blue-400 flex-shrink-0" />
+                                </button>
+                              ) : (
+                                <NavLink
+                                  key={idx}
+                                  to={dropdownItem.path}
+                                  onClick={() => {
+                                    setMenuOpen(false);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className={({ isActive }) =>
+                                    `relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                                      isActive
+                                        ? 'text-white bg-blue-500/30 font-medium'
+                                        : 'text-white/70 hover:text-white hover:bg-white/10'
+                                    }`
+                                  }
+                                >
+                                  {({ isActive }) => (
+                                    <>
+                                      {isActive && (
+                                        <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-400 rounded-full" />
+                                      )}
+                                      {IconComponent && <IconComponent size={16} className="flex-shrink-0" />}
+                                      <span className="leading-snug">{dropdownItem.shortLabel}</span>
+                                    </>
+                                  )}
+                                </NavLink>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

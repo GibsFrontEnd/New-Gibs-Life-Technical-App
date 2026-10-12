@@ -19,10 +19,19 @@ import {
   clearMessages,
 } from "../features/reducers/csuReducers/customerSlice"
 import type { CreateCustomerRequest } from "../types/customer"
+import { useToast } from "./UI/use-toast"
 import "./components.customers.css"
+
+const formatApiDate = (dateVal?: string | null): string | null => {
+  if (!dateVal || !dateVal.trim()) return null
+  const clean = dateVal.trim()
+  if (clean.includes("T")) return clean
+  return `${clean}T00:00:00`
+}
 
 export const CreateCustomer = () => {
   const dispatch = useAppDispatch()
+  const { toast } = useToast()
   const { showCreateCustomerDialog } = useAppSelector(selectUiState)
   const { loading, success, error } = useAppSelector(selectCustomers)
 
@@ -43,9 +52,9 @@ export const CreateCustomer = () => {
     password: "",
     cityLGA: "",
     stateID: "",
-    nationality: "",
+    nationality: "Nigeria",
     dateOfBirth: "",
-    kycType: "NOT_AVAILABLE",
+    kycType: "",
     kycNumber: "",
     kycIssueDate: "",
     kycExpiryDate: "",
@@ -77,6 +86,7 @@ export const CreateCustomer = () => {
       if (!formData.orgName.trim()) newErrors.orgName = "Organization name is required"
       if (!formData.orgRegNumber.trim()) newErrors.orgRegNumber = "Registration number is required"
       if (!formData.orgRegDate.trim()) newErrors.orgRegDate = "Registration date is required"
+      if (!formData.nationality.trim()) newErrors.nationality = "Nationality is required"
     } else {
       // Individual validation
       if (!formData.firstName.trim()) newErrors.firstName = "First name is required"
@@ -91,7 +101,9 @@ export const CreateCustomer = () => {
       if (!formData.nextOfKin.lastName.trim()) newErrors.nextOfKinLastName = "Next of kin last name is required"
       if (!formData.nextOfKin.phoneLine1.trim()) newErrors.nextOfKinPhoneLine1 = "Next of kin primary phone is required"
       if (!formData.nextOfKin.address.trim()) newErrors.nextOfKinAddress = "Next of kin address is required"
-      if (formData.nextOfKin.email && !/\S+@\S+\.\S+/.test(formData.nextOfKin.email)) {
+      if (!formData.nextOfKin.email.trim()) {
+        newErrors.nextOfKinEmail = "Next of kin email is required"
+      } else if (!/\S+@\S+\.\S+/.test(formData.nextOfKin.email)) {
         newErrors.nextOfKinEmail = "Please enter a valid next of kin email address"
       }
     }
@@ -101,18 +113,18 @@ export const CreateCustomer = () => {
     if (!formData.phoneLine1.trim()) newErrors.phoneLine1 = "Primary phone is required"
     if (!formData.cityLGA.trim()) newErrors.cityLGA = "City/LGA is required"
     if (!formData.stateID.trim()) newErrors.stateID = "State is required"
+    if (!formData.isOrg && !formData.password.trim()) newErrors.password = "Password is required"
 
     // Email validation (optional but must be valid if provided)
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address"
     }
 
-    // KYC validation
-    if (formData.kycType !== "NOT_AVAILABLE") {
-      if (!formData.kycNumber.trim()) newErrors.kycNumber = "KYC number is required when KYC type is selected"
-      if (!formData.kycIssueDate.trim()) newErrors.kycIssueDate = "KYC issue date is required when KYC type is selected"
-      if (!formData.kycExpiryDate.trim())
-        newErrors.kycExpiryDate = "KYC expiry date is required when KYC type is selected"
+    // KYC validation — only for individuals when a specific KYC type is selected
+    if (!formData.isOrg && formData.kycType && formData.kycType !== "NOT_AVAILABLE") {
+      if (!formData.kycNumber.trim()) newErrors.kycNumber = "KYC number is required"
+      if (!formData.kycIssueDate.trim()) newErrors.kycIssueDate = "KYC issue date is required"
+      if (!formData.kycExpiryDate.trim()) newErrors.kycExpiryDate = "KYC expiry date is required"
     }
 
     // Phone number validation
@@ -124,8 +136,8 @@ export const CreateCustomer = () => {
       newErrors.phoneLine2 = "Please enter a valid phone number"
     }
 
-    // Date validation
-    if (formData.dateOfBirth) {
+    // Date validation for Individual
+    if (!formData.isOrg && formData.dateOfBirth) {
       const birthDate = new Date(formData.dateOfBirth)
       const today = new Date()
       if (birthDate >= today) {
@@ -133,7 +145,7 @@ export const CreateCustomer = () => {
       }
     }
 
-    if (formData.kycIssueDate && formData.kycExpiryDate) {
+    if (formData.kycType && formData.kycType !== "NOT_AVAILABLE" && formData.kycIssueDate && formData.kycExpiryDate) {
       const issueDate = new Date(formData.kycIssueDate)
       const expiryDate = new Date(formData.kycExpiryDate)
       if (issueDate >= expiryDate) {
@@ -146,41 +158,49 @@ export const CreateCustomer = () => {
       return
     }
 
-    // Create payload based on customer type
-    let payload: any = {
-      title: formData.title,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      otherName: formData.otherName,
-      gender: formData.gender,
-      nationality: formData.nationality,
-      dateOfBirth: formData.dateOfBirth,
-      email: formData.email,
-      address: formData.address,
-      phoneLine1: formData.phoneLine1,
-      phoneLine2: formData.phoneLine2,
-      password: formData.password,
-      cityLGA: formData.cityLGA,
-      stateID: formData.stateID,
-      kycType: formData.kycType,
-      kycNumber: formData.kycNumber,
-      kycIssueDate: formData.kycIssueDate,
-      kycExpiryDate: formData.kycExpiryDate,
-      isOrg: formData.isOrg,
-    }
+    const formattedDOB = formData.isOrg ? null : formatApiDate(formData.dateOfBirth)
+    const formattedOrgRegDate = formData.isOrg ? formatApiDate(formData.orgRegDate) : null
+    const formattedKycIssueDate = formData.kycType && formData.kycType !== "NOT_AVAILABLE" ? formatApiDate(formData.kycIssueDate) : null
+    const formattedKycExpiryDate = formData.kycType && formData.kycType !== "NOT_AVAILABLE" ? formatApiDate(formData.kycExpiryDate) : null
+
+    let payload: any
 
     if (formData.isOrg) {
-      // Organization — org fields, no next of kin
+      // Organization payload: exact fields requested
       payload = {
-        ...payload,
-        orgName: formData.orgName,
-        orgRegNumber: formData.orgRegNumber,
-        orgRegDate: formData.orgRegDate,
+        isOrg: true,
+        email: formData.email && formData.email.trim() ? formData.email.trim() : "",
+        address: formData.address || "",
+        phoneLine1: formData.phoneLine1 || "",
+        cityLGA: formData.cityLGA || "",
+        stateID: formData.stateID || "",
+        nationality: formData.nationality?.trim() || "Nigeria",
+        orgName: formData.orgName.trim(),
+        orgRegNumber: formData.orgRegNumber?.trim() || "",
+        orgRegDate: formData.orgRegDate ? formData.orgRegDate.split("T")[0] : "",
       }
     } else {
-      // Individual — include next of kin
+      // Individual payload
       payload = {
-        ...payload,
+        title: formData.title || "",
+        lastName: formData.lastName || "",
+        firstName: formData.firstName || "",
+        otherName: formData.otherName || "",
+        gender: formData.gender || "MALE",
+        address: formData.address || "",
+        phoneLine1: formData.phoneLine1 || "",
+        phoneLine2: formData.phoneLine2 || "",
+        isOrg: false,
+        password: formData.password || "",
+        email: formData.email && formData.email.trim() ? formData.email.trim() : "",
+        cityLGA: formData.cityLGA || "",
+        stateID: formData.stateID || "",
+        nationality: formData.nationality || "",
+        dateOfBirth: formattedDOB,
+        kycType: formData.kycType || "NOT_AVAILABLE",
+        kycNumber: formData.kycNumber || "",
+        kycIssueDate: formattedKycIssueDate,
+        kycExpiryDate: formattedKycExpiryDate,
         nextOfKin: formData.nextOfKin,
       }
     }
@@ -206,9 +226,9 @@ export const CreateCustomer = () => {
       password: "",
       cityLGA: "",
       stateID: "",
-      nationality: "",
+      nationality: "Nigeria",
       dateOfBirth: "",
-      kycType: "NOT_AVAILABLE",
+      kycType: "",
       kycNumber: "",
       kycIssueDate: "",
       kycExpiryDate: "",
@@ -250,10 +270,25 @@ export const CreateCustomer = () => {
 
   useEffect(() => {
     if (success.createCustomer) {
+      toast({
+        title: "Customer Created",
+        description: "New customer record has been created successfully.",
+        variant: "success",
+      })
       handleClose()
       dispatch(clearMessages())
     }
-  }, [success.createCustomer, dispatch])
+  }, [success.createCustomer, dispatch, toast])
+
+  useEffect(() => {
+    if (error.createCustomer) {
+      toast({
+        title: "Creation Failed",
+        description: error.createCustomer,
+        variant: "error",
+      })
+    }
+  }, [error.createCustomer, toast])
 
   return (
     <Dialog open={showCreateCustomerDialog} onOpenChange={handleClose}>
@@ -326,6 +361,17 @@ export const CreateCustomer = () => {
                       className={errors.orgRegDate ? "cc-error" : ""}
                     />
                     {errors.orgRegDate && <span className="cc-error-text">{errors.orgRegDate}</span>}
+                  </div>
+                  <div className="cc-form-field">
+                    <Label htmlFor="nationality">Nationality *</Label>
+                    <Input
+                      id="nationality"
+                      value={formData.nationality}
+                      onChange={(e) => handleInputChange("nationality", e.target.value)}
+                      placeholder="e.g. Nigeria"
+                      className={errors.nationality ? "cc-error" : ""}
+                    />
+                    {errors.nationality && <span className="cc-error-text">{errors.nationality}</span>}
                   </div>
                 </>
               ) : (
@@ -434,18 +480,20 @@ export const CreateCustomer = () => {
                 />
                 {errors.email && <span className="cc-error-text">{errors.email}</span>}
               </div>
-              <div className="cc-form-field">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  placeholder="Enter portal password"
-                  className={errors.password ? "cc-error" : ""}
-                />
-                {errors.password && <span className="cc-error-text">{errors.password}</span>}
-              </div>
+              {!formData.isOrg && (
+                <div className="cc-form-field">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    placeholder="Enter portal password"
+                    className={errors.password ? "cc-error" : ""}
+                  />
+                  {errors.password && <span className="cc-error-text">{errors.password}</span>}
+                </div>
+              )}
               <div className="cc-form-field">
                 <Label htmlFor="phoneLine1">Primary Phone *</Label>
                 <Input
@@ -457,17 +505,19 @@ export const CreateCustomer = () => {
                 />
                 {errors.phoneLine1 && <span className="cc-error-text">{errors.phoneLine1}</span>}
               </div>
-              <div className="cc-form-field">
-                <Label htmlFor="phoneLine2">Secondary Phone</Label>
-                <Input
-                  id="phoneLine2"
-                  value={formData.phoneLine2}
-                  onChange={(e) => handleInputChange("phoneLine2", e.target.value)}
-                  placeholder="Enter secondary phone number"
-                  className={errors.phoneLine2 ? "cc-error" : ""}
-                />
-                {errors.phoneLine2 && <span className="cc-error-text">{errors.phoneLine2}</span>}
-              </div>
+              {!formData.isOrg && (
+                <div className="cc-form-field">
+                  <Label htmlFor="phoneLine2">Secondary Phone</Label>
+                  <Input
+                    id="phoneLine2"
+                    value={formData.phoneLine2}
+                    onChange={(e) => handleInputChange("phoneLine2", e.target.value)}
+                    placeholder="Enter secondary phone number"
+                    className={errors.phoneLine2 ? "cc-error" : ""}
+                  />
+                  {errors.phoneLine2 && <span className="cc-error-text">{errors.phoneLine2}</span>}
+                </div>
+              )}
               <div className="cc-form-field">
                 <Label htmlFor="stateID">State *</Label>
                 <Input
@@ -506,61 +556,64 @@ export const CreateCustomer = () => {
             </div>
           </div>
 
-          {/* KYC Information */}
-          <div className="cc-form-section">
-            <h3 className="cc-section-title">KYC Information</h3>
-            <div className="cc-form-grid">
-              <div className="cc-form-field">
-                <Label htmlFor="kycType">KYC Type</Label>
-                <select
-                  id="kycType"
-                  value={formData.kycType}
-                  onChange={(e) => handleInputChange("kycType", e.target.value)}
-                  className={`cc-select ${errors.kycType ? "cc-error" : ""}`}
-                >
-                  <option value="NOT_AVAILABLE">Not Available</option>
-                  <option value="PASSPORT">Passport</option>
-                  <option value="DRIVERS_LICENSE">Driver's License</option>
-                  <option value="NATIONAL_ID">National ID</option>
-                  <option value="VOTERS_CARD">Voter's Card</option>
-                </select>
-                {errors.kycType && <span className="cc-error-text">{errors.kycType}</span>}
-              </div>
-              <div className="cc-form-field">
-                <Label htmlFor="kycNumber">KYC Number</Label>
-                <Input
-                  id="kycNumber"
-                  value={formData.kycNumber}
-                  onChange={(e) => handleInputChange("kycNumber", e.target.value)}
-                  placeholder="Enter KYC number"
-                  className={errors.kycNumber ? "cc-error" : ""}
-                />
-                {errors.kycNumber && <span className="cc-error-text">{errors.kycNumber}</span>}
-              </div>
-              <div className="cc-form-field">
-                <Label htmlFor="kycIssueDate">KYC Issue Date</Label>
-                <Input
-                  id="kycIssueDate"
-                  type="date"
-                  value={formData.kycIssueDate}
-                  onChange={(e) => handleInputChange("kycIssueDate", e.target.value)}
-                  className={errors.kycIssueDate ? "cc-error" : ""}
-                />
-                {errors.kycIssueDate && <span className="cc-error-text">{errors.kycIssueDate}</span>}
-              </div>
-              <div className="cc-form-field">
-                <Label htmlFor="kycExpiryDate">KYC Expiry Date</Label>
-                <Input
-                  id="kycExpiryDate"
-                  type="date"
-                  value={formData.kycExpiryDate}
-                  onChange={(e) => handleInputChange("kycExpiryDate", e.target.value)}
-                  className={errors.kycExpiryDate ? "cc-error" : ""}
-                />
-                {errors.kycExpiryDate && <span className="cc-error-text">{errors.kycExpiryDate}</span>}
+          {/* KYC Information (individuals only — not applicable to organizations) */}
+          {!formData.isOrg && (
+            <div className="cc-form-section">
+              <h3 className="cc-section-title">KYC Information</h3>
+              <div className="cc-form-grid">
+                <div className="cc-form-field">
+                  <Label htmlFor="kycType">KYC Type *</Label>
+                  <select
+                    id="kycType"
+                    value={formData.kycType}
+                    onChange={(e) => handleInputChange("kycType", e.target.value)}
+                    className={`cc-select ${errors.kycType ? "cc-error" : ""}`}
+                  >
+                    <option value="">Select KYC Type</option>
+                    <option value="NOT_AVAILABLE">Not Available</option>
+                    <option value="PASSPORT">Passport</option>
+                    <option value="DRIVERS_LICENSE">Driver's License</option>
+                    <option value="NATIONAL_ID_CARD">National ID Card</option>
+                    <option value="COMPANY_REG_NO">Company Registration Number</option>
+                  </select>
+                  {errors.kycType && <span className="cc-error-text">{errors.kycType}</span>}
+                </div>
+                <div className="cc-form-field">
+                  <Label htmlFor="kycNumber">KYC Number *</Label>
+                  <Input
+                    id="kycNumber"
+                    value={formData.kycNumber}
+                    onChange={(e) => handleInputChange("kycNumber", e.target.value)}
+                    placeholder="Enter KYC number"
+                    className={errors.kycNumber ? "cc-error" : ""}
+                  />
+                  {errors.kycNumber && <span className="cc-error-text">{errors.kycNumber}</span>}
+                </div>
+                <div className="cc-form-field">
+                  <Label htmlFor="kycIssueDate">KYC Issue Date *</Label>
+                  <Input
+                    id="kycIssueDate"
+                    type="date"
+                    value={formData.kycIssueDate}
+                    onChange={(e) => handleInputChange("kycIssueDate", e.target.value)}
+                    className={errors.kycIssueDate ? "cc-error" : ""}
+                  />
+                  {errors.kycIssueDate && <span className="cc-error-text">{errors.kycIssueDate}</span>}
+                </div>
+                <div className="cc-form-field">
+                  <Label htmlFor="kycExpiryDate">KYC Expiry Date *</Label>
+                  <Input
+                    id="kycExpiryDate"
+                    type="date"
+                    value={formData.kycExpiryDate}
+                    onChange={(e) => handleInputChange("kycExpiryDate", e.target.value)}
+                    className={errors.kycExpiryDate ? "cc-error" : ""}
+                  />
+                  {errors.kycExpiryDate && <span className="cc-error-text">{errors.kycExpiryDate}</span>}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Next of Kin (individuals only — not applicable to organizations) */}
           {!formData.isOrg && (
@@ -627,7 +680,7 @@ export const CreateCustomer = () => {
                   </select>
                 </div>
                 <div className="cc-form-field">
-                  <Label htmlFor="nokEmail">Email</Label>
+                  <Label htmlFor="nokEmail">Email *</Label>
                   <Input
                     id="nokEmail"
                     type="email"
@@ -692,6 +745,7 @@ export const CreateCustomer = () => {
 
 export const EditCustomer = () => {
   const dispatch = useAppDispatch()
+  const { toast } = useToast()
   const { showEditCustomerDialog } = useAppSelector(selectUiState)
   const { currentCustomer, loading, success, error } = useAppSelector(selectCustomers)
 
@@ -735,29 +789,47 @@ export const EditCustomer = () => {
 
   useEffect(() => {
     if (currentCustomer && showEditCustomerDialog) {
+      const rawType = (currentCustomer.clientType || "").trim().toUpperCase()
+      const isOrg =
+        currentCustomer.isOrg === true ||
+        rawType === "CORPORATE" ||
+        rawType === "CORP" ||
+        rawType === "ORGANIZATION" ||
+        rawType === "ORGANISATION"
+
+      const lName = currentCustomer.surName || currentCustomer.lastName || ""
+      let fName = currentCustomer.firstName || ""
+      if (!fName && currentCustomer.fullName) {
+        fName = currentCustomer.fullName.replace(lName, "").trim()
+      }
+
       setFormData({
         title: currentCustomer.title || "",
-        lastName: currentCustomer.lastName || "",
-        firstName: currentCustomer.firstName || "",
-        otherName: currentCustomer.otherName || "",
-        gender: currentCustomer.gender,
-        email: currentCustomer.email || "",
-        address: currentCustomer.address,
-        phoneLine1: currentCustomer.phoneLine1 || "",
-        phoneLine2: currentCustomer.phoneLine2 || "",
-        isOrg: currentCustomer.isOrg,
-        orgName: currentCustomer.orgName,
-        orgRegNumber: currentCustomer.orgRegNumber,
-        orgRegDate: currentCustomer.orgRegDate,
-        taxIdNumber: currentCustomer.taxIdNumber,
-        cityLGA: currentCustomer.cityLGA,
-        stateID: currentCustomer.stateID,
-        nationality: currentCustomer.nationality,
-        dateOfBirth: currentCustomer.dateOfBirth,
-        kycType: currentCustomer.kycType,
-        kycNumber: currentCustomer.kycNumber,
-        kycIssueDate: currentCustomer.kycIssueDate,
-        kycExpiryDate: currentCustomer.kycExpiryDate,
+        lastName: lName,
+        firstName: fName,
+        otherName: currentCustomer.otherNames || currentCustomer.otherName || "",
+        gender: currentCustomer.sex || currentCustomer.gender || "MALE",
+        email: currentCustomer.email && currentCustomer.email.trim() !== "@" ? currentCustomer.email : "",
+        address: currentCustomer.address || "",
+        phoneLine1: currentCustomer.mobilePhone || currentCustomer.phoneLine1 || "",
+        phoneLine2: currentCustomer.landphone || currentCustomer.phoneLine2 || "",
+        isOrg: isOrg,
+        orgName: currentCustomer.orgName || (isOrg ? currentCustomer.fullName || currentCustomer.surName : "") || "",
+        orgRegNumber: isOrg
+          ? (currentCustomer.nationalID || currentCustomer.nationalId || currentCustomer.orgRegNumber || "")
+          : (currentCustomer.orgRegNumber || ""),
+        orgRegDate: isOrg
+          ? (currentCustomer.dateofBirth ? currentCustomer.dateofBirth.split("T")[0] : currentCustomer.dateOfBirth ? currentCustomer.dateOfBirth.split("T")[0] : currentCustomer.orgRegDate ? currentCustomer.orgRegDate.split("T")[0] : "")
+          : (currentCustomer.orgRegDate ? currentCustomer.orgRegDate.split("T")[0] : ""),
+        taxIdNumber: "",
+        cityLGA: currentCustomer.cityLGA || "",
+        stateID: currentCustomer.state || currentCustomer.stateID || "",
+        nationality: currentCustomer.country || currentCustomer.nationality || "Nigeria",
+        dateOfBirth: currentCustomer.dateofBirth ? currentCustomer.dateofBirth.split("T")[0] : currentCustomer.dateOfBirth ? currentCustomer.dateOfBirth.split("T")[0] : "",
+        kycType: currentCustomer.kycType || "NOT_AVAILABLE",
+        kycNumber: currentCustomer.kycNumber || currentCustomer.nationalID || "",
+        kycIssueDate: currentCustomer.kycIssueDate ? currentCustomer.kycIssueDate.split("T")[0] : "",
+        kycExpiryDate: currentCustomer.kycExpiryDate ? currentCustomer.kycExpiryDate.split("T")[0] : "",
         nextOfKin: currentCustomer.nextOfKin || {
           title: "",
           lastName: "",
@@ -785,7 +857,7 @@ export const EditCustomer = () => {
       if (!formData.orgName.trim()) newErrors.orgName = "Organization name is required"
       if (!formData.orgRegNumber.trim()) newErrors.orgRegNumber = "Registration number is required"
       if (!formData.orgRegDate.trim()) newErrors.orgRegDate = "Registration date is required"
-      if (!formData.taxIdNumber.trim()) newErrors.taxIdNumber = "Tax ID number is required"
+      if (!formData.nationality.trim()) newErrors.nationality = "Nationality is required"
     } else {
       // Individual validation
       if (!formData.firstName.trim()) newErrors.firstName = "First name is required"
@@ -808,7 +880,7 @@ export const EditCustomer = () => {
     }
 
     // KYC validation
-    if (formData.kycType !== "NOT_AVAILABLE") {
+    if (!formData.isOrg && formData.kycType !== "NOT_AVAILABLE") {
       if (!formData.kycNumber.trim()) newErrors.kycNumber = "KYC number is required when KYC type is selected"
       if (!formData.kycIssueDate.trim()) newErrors.kycIssueDate = "KYC issue date is required when KYC type is selected"
       if (!formData.kycExpiryDate.trim())
@@ -820,45 +892,66 @@ export const EditCustomer = () => {
       return
     }
 
-    // Create payload based on customer type
-    let payload: any = {
-      title: formData.title,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      otherName: formData.otherName,
-      gender: formData.gender,
-      nationality: formData.nationality,
-      dateOfBirth: formData.dateOfBirth,
-      nextOfKin: formData.nextOfKin,
-      email: formData.email,
-      address: formData.address,
-      phoneLine1: formData.phoneLine1,
-      phoneLine2: formData.phoneLine2,
-      cityLGA: formData.cityLGA,
-      stateID: formData.stateID,
-      kycType: formData.kycType,
-      kycNumber: formData.kycNumber,
-      kycIssueDate: formData.kycIssueDate,
-      kycExpiryDate: formData.kycExpiryDate,
-      isOrg: formData.isOrg,
-    }
+    const customerIdentifier = currentCustomer.insuredID || currentCustomer.customerID
+
+    const formattedDOB = formData.isOrg ? null : formatApiDate(formData.dateOfBirth)
+    const formattedOrgRegDate = formData.isOrg ? formatApiDate(formData.orgRegDate) : null
+    const formattedKycIssueDate = formData.kycType && formData.kycType !== "NOT_AVAILABLE" ? formatApiDate(formData.kycIssueDate) : null
+    const formattedKycExpiryDate = formData.kycType && formData.kycType !== "NOT_AVAILABLE" ? formatApiDate(formData.kycExpiryDate) : null
+
+    let payload: any
 
     if (formData.isOrg) {
-      // Organization fields only
+      // Organization payload: omit individual fields
       payload = {
-        ...payload,
-        orgName: formData.orgName,
-        orgRegNumber: formData.orgRegNumber,
-        orgRegDate: formData.orgRegDate,
-        taxIdNumber: formData.taxIdNumber,
+        insuredID: customerIdentifier,
+        isOrg: true,
+        orgName: formData.orgName.trim(),
+        orgRegNumber: formData.orgRegNumber?.trim() || "",
+        orgRegDate: formattedOrgRegDate,
+        nationality: formData.nationality?.trim() || "Nigerian",
+        address: formData.address || "",
+        phoneLine1: formData.phoneLine1 || "",
+        phoneLine2: formData.phoneLine2 || "",
+        email: formData.email && formData.email.trim() ? formData.email.trim() : "",
+        cityLGA: formData.cityLGA || "",
+        stateID: formData.stateID || "",
+        kycType: formData.kycType || "NOT_AVAILABLE",
+        kycNumber: formData.kycNumber || "",
+        kycIssueDate: formattedKycIssueDate,
+        kycExpiryDate: formattedKycExpiryDate,
+        remarks: currentCustomer.remarks || "",
+        active: currentCustomer.active ?? 1,
       }
     } else {
-      // Individual fields only
+      // Individual payload
       payload = {
-        ...payload      }
+        insuredID: customerIdentifier,
+        title: formData.title || "",
+        lastName: formData.lastName || "",
+        firstName: formData.firstName || "",
+        otherName: formData.otherName || "",
+        gender: formData.gender || "MALE",
+        isOrg: false,
+        address: formData.address || "",
+        phoneLine1: formData.phoneLine1 || "",
+        phoneLine2: formData.phoneLine2 || "",
+        email: formData.email && formData.email.trim() ? formData.email.trim() : "",
+        cityLGA: formData.cityLGA || "",
+        stateID: formData.stateID || "",
+        nationality: formData.nationality || "",
+        dateOfBirth: formattedDOB,
+        kycType: formData.kycType || "NOT_AVAILABLE",
+        kycNumber: formData.kycNumber || "",
+        kycIssueDate: formattedKycIssueDate,
+        kycExpiryDate: formattedKycExpiryDate,
+        nextOfKin: formData.nextOfKin,
+        remarks: currentCustomer.remarks || "",
+        active: currentCustomer.active ?? 1,
+      }
     }
 
-    dispatch(updateCustomer({ customerID: currentCustomer.customerID, customerData: payload }))
+    dispatch(updateCustomer({ customerID: customerIdentifier, customerData: payload }))
   }
 
   const handleClose = () => {
@@ -888,10 +981,25 @@ export const EditCustomer = () => {
 
   useEffect(() => {
     if (success.updateCustomer) {
+      toast({
+        title: "Customer Updated",
+        description: "Customer record has been updated successfully.",
+        variant: "success",
+      })
       handleClose()
       dispatch(clearMessages())
     }
-  }, [success.updateCustomer, dispatch])
+  }, [success.updateCustomer, dispatch, toast])
+
+  useEffect(() => {
+    if (error.updateCustomer) {
+      toast({
+        title: "Update Failed",
+        description: error.updateCustomer,
+        variant: "error",
+      })
+    }
+  }, [error.updateCustomer, toast])
 
   if (!currentCustomer) return null
 
@@ -899,7 +1007,7 @@ export const EditCustomer = () => {
     <Dialog open={showEditCustomerDialog} onOpenChange={handleClose}>
       <DialogContent className="ec-edit-customer-dialog max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Customer - {currentCustomer.customerID}</DialogTitle>
+          <DialogTitle>Edit Customer - {currentCustomer.insuredID || currentCustomer.customerID || "N/A"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="ec-customer-form">
@@ -953,15 +1061,15 @@ export const EditCustomer = () => {
                     {errors.orgRegDate && <span className="ec-error-text">{errors.orgRegDate}</span>}
                   </div>
                   <div className="ec-form-field">
-                    <Label htmlFor="editTaxIdNumber">Tax ID Number *</Label>
+                    <Label htmlFor="editNationality">Nationality *</Label>
                     <Input
-                      id="editTaxIdNumber"
-                      value={formData.taxIdNumber}
-                      onChange={(e) => handleInputChange("taxIdNumber", e.target.value)}
-                      placeholder="Enter tax ID number"
-                      className={errors.taxIdNumber ? "ec-error" : ""}
+                      id="editNationality"
+                      value={formData.nationality}
+                      onChange={(e) => handleInputChange("nationality", e.target.value)}
+                      placeholder="e.g. Nigeria"
+                      className={errors.nationality ? "ec-error" : ""}
                     />
-                    {errors.taxIdNumber && <span className="ec-error-text">{errors.taxIdNumber}</span>}
+                    {errors.nationality && <span className="ec-error-text">{errors.nationality}</span>}
                   </div>
                 </>
               ) : (
@@ -1126,62 +1234,62 @@ export const EditCustomer = () => {
               />
               {errors.address && <span className="ec-error-text">{errors.address}</span>}
             </div>
-          </div>
-
-          {/* KYC Information */}
-          <div className="ec-form-section">
-            <h3 className="ec-section-title">KYC Information</h3>
-            <div className="ec-form-grid">
-              <div className="ec-form-field">
-                <Label htmlFor="editKycType">KYC Type</Label>
-                <select
-                  id="editKycType"
-                  value={formData.kycType}
-                  onChange={(e) => handleInputChange("kycType", e.target.value)}
-                  className="ec-select"
-                >
-                  <option value="NOT_AVAILABLE">Not Available</option>
-                  <option value="PASSPORT">Passport</option>
-                  <option value="DRIVERS_LICENSE">Driver's License</option>
-                  <option value="NATIONAL_ID">National ID</option>
-                  <option value="VOTERS_CARD">Voter's Card</option>
-                </select>
-              </div>
-              <div className="ec-form-field">
-                <Label htmlFor="editKycNumber">KYC Number</Label>
-                <Input
-                  id="editKycNumber"
-                  value={formData.kycNumber}
-                  onChange={(e) => handleInputChange("kycNumber", e.target.value)}
-                  placeholder="Enter KYC number"
-                  className={errors.kycNumber ? "ec-error" : ""}
-                />
-                {errors.kycNumber && <span className="ec-error-text">{errors.kycNumber}</span>}
-              </div>
-              <div className="ec-form-field">
-                <Label htmlFor="editKycIssueDate">KYC Issue Date</Label>
-                <Input
-                  id="editKycIssueDate"
-                  type="date"
-                  value={formData.kycIssueDate}
-                  onChange={(e) => handleInputChange("kycIssueDate", e.target.value)}
-                  className={errors.kycIssueDate ? "ec-error" : ""}
-                />
-                {errors.kycIssueDate && <span className="ec-error-text">{errors.kycIssueDate}</span>}
-              </div>
-              <div className="ec-form-field">
-                <Label htmlFor="editKycExpiryDate">KYC Expiry Date</Label>
-                <Input
-                  id="editKycExpiryDate"
-                  type="date"
-                  value={formData.kycExpiryDate}
-                  onChange={(e) => handleInputChange("kycExpiryDate", e.target.value)}
-                  className={errors.kycExpiryDate ? "ec-error" : ""}
-                />
-                {errors.kycExpiryDate && <span className="ec-error-text">{errors.kycExpiryDate}</span>}
+          </div>          {/* KYC Information (individuals only — not applicable to organizations) */}
+          {!formData.isOrg && (
+            <div className="ec-form-section">
+              <h3 className="ec-section-title">KYC Information</h3>
+              <div className="ec-form-grid">
+                <div className="ec-form-field">
+                  <Label htmlFor="editKycType">KYC Type</Label>
+                  <select
+                    id="editKycType"
+                    value={formData.kycType}
+                    onChange={(e) => handleInputChange("kycType", e.target.value)}
+                    className="ec-select"
+                  >
+                    <option value="NOT_AVAILABLE">Not Available</option>
+                    <option value="PASSPORT">Passport</option>
+                    <option value="DRIVERS_LICENSE">Driver's License</option>
+                    <option value="NATIONAL_ID_CARD">National ID Card</option>
+                    <option value="COMPANY_REG_NO">Company Registration Number</option>
+                  </select>
+                </div>
+                <div className="cc-form-field">
+                  <Label htmlFor="editKycNumber">KYC Number</Label>
+                  <Input
+                    id="editKycNumber"
+                    value={formData.kycNumber}
+                    onChange={(e) => handleInputChange("kycNumber", e.target.value)}
+                    placeholder="Enter KYC number"
+                    className={errors.kycNumber ? "ec-error" : ""}
+                  />
+                  {errors.kycNumber && <span className="ec-error-text">{errors.kycNumber}</span>}
+                </div>
+                <div className="ec-form-field">
+                  <Label htmlFor="editKycIssueDate">KYC Issue Date</Label>
+                  <Input
+                    id="editKycIssueDate"
+                    type="date"
+                    value={formData.kycIssueDate}
+                    onChange={(e) => handleInputChange("kycIssueDate", e.target.value)}
+                    className={errors.kycIssueDate ? "ec-error" : ""}
+                  />
+                  {errors.kycIssueDate && <span className="ec-error-text">{errors.kycIssueDate}</span>}
+                </div>
+                <div className="ec-form-field">
+                  <Label htmlFor="editKycExpiryDate">KYC Expiry Date</Label>
+                  <Input
+                    id="editKycExpiryDate"
+                    type="date"
+                    value={formData.kycExpiryDate}
+                    onChange={(e) => handleInputChange("kycExpiryDate", e.target.value)}
+                    className={errors.kycExpiryDate ? "ec-error" : ""}
+                  />
+                  {errors.kycExpiryDate && <span className="ec-error-text">{errors.kycExpiryDate}</span>}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {error.updateCustomer && <div className="ec-error-message">{error.updateCustomer}</div>}
 
@@ -1227,10 +1335,22 @@ export const CustomerDetails = () => {
     }).format(amount)
   }
 
+  const rawType = (currentCustomer.clientType || "").trim().toUpperCase()
+  const isOrg =
+    currentCustomer.isOrg === true ||
+    rawType === "CORPORATE" ||
+    rawType === "CORP" ||
+    rawType === "ORGANIZATION" ||
+    rawType === "ORGANISATION"
+
+  const clientTypeDisplay = isOrg ? "Organization" : "Individual"
+
   const getCustomerDisplayName = () => {
+    if (isOrg && currentCustomer.orgName) return currentCustomer.orgName
     return (
       currentCustomer.fullName ||
-      `${currentCustomer.surName || ""} ${currentCustomer.otherNames || ""}`.trim() ||
+      `${currentCustomer.title ? currentCustomer.title + " " : ""}${currentCustomer.surName || ""} ${currentCustomer.otherNames || ""}`.trim() ||
+      currentCustomer.orgName ||
       "Unknown"
     )
   }
@@ -1239,7 +1359,7 @@ export const CustomerDetails = () => {
     <Dialog open={showCustomerDetailsDialog} onOpenChange={handleClose}>
       <DialogContent className="cd-customer-details-dialog max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Customer Details - {currentCustomer.customerID}</DialogTitle>
+          <DialogTitle>Customer Details - {currentCustomer.insuredID || currentCustomer.customerID || "N/A"}</DialogTitle>
         </DialogHeader>
 
         <div className="cd-customer-content">
@@ -1254,10 +1374,10 @@ export const CustomerDetails = () => {
             <div className="cd-customer-info">
               <h2 className="cd-customer-name">{getCustomerDisplayName()}</h2>
               <div className="cd-customer-meta">
-                <span className="cd-type-badge cd-individual">
-                  {currentCustomer.clientType || "N/A"}
+                <span className={`cd-type-badge ${isOrg ? "cd-org" : "cd-individual"}`}>
+                  {clientTypeDisplay}
                 </span>
-                <span className="cd-customer-id">ID: {currentCustomer.insuredID}</span>
+                <span className="cd-customer-id">ID: {currentCustomer.insuredID || "N/A"}</span>
               </div>
             </div>
           </div>
@@ -1265,50 +1385,87 @@ export const CustomerDetails = () => {
           {loading.getCustomer ? (
             <div className="cd-loading-state">
               <div className="cd-loading-spinner"></div>
-              <p>Loading customer...</p>
+              <p>Loading customer details...</p>
             </div>
           ) : (
             <>
               {/* Basic Information */}
               <div className="cd-section">
-                <h3 className="cd-section-title">Basic Information</h3>
+                <h3 className="cd-section-title">{isOrg ? "Organization Information" : "Basic Information"}</h3>
                 <div className="cd-info-grid">
-                  <div className="cd-info-item">
-                    <span className="cd-label">Title:</span>
-                    <span className="cd-value">{currentCustomer.title || "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Surname:</span>
-                    <span className="cd-value">{currentCustomer.surName || "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Other Names:</span>
-                    <span className="cd-value">{currentCustomer.otherNames || "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Gender:</span>
-                    <span className="cd-value">{currentCustomer.sex || "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Date of Birth:</span>
-                    <span className="cd-value">{formatDate(currentCustomer.dateofBirth)}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Age:</span>
-                    <span className="cd-value">{currentCustomer.age ?? "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Marital Status:</span>
-                    <span className="cd-value">{currentCustomer.maritalStatus || "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">Occupation:</span>
-                    <span className="cd-value">{currentCustomer.occupation || "N/A"}</span>
-                  </div>
-                  <div className="cd-info-item">
-                    <span className="cd-label">National ID:</span>
-                    <span className="cd-value">{currentCustomer.nationalID || "N/A"}</span>
-                  </div>
+                  {isOrg ? (
+                    <>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Organization Name:</span>
+                        <span className="cd-value">{getCustomerDisplayName()}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Client Type:</span>
+                        <span className="cd-value">Organization</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">State:</span>
+                        <span className="cd-value">{currentCustomer.state || "N/A"}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Country:</span>
+                        <span className="cd-value">{currentCustomer.country || "N/A"}</span>
+                      </div>
+                      {(currentCustomer.orgRegNumber || (currentCustomer.isOrg && currentCustomer.nationalID)) && (
+                        <div className="cd-info-item">
+                          <span className="cd-label">Registration Number:</span>
+                          <span className="cd-value">{currentCustomer.orgRegNumber || currentCustomer.nationalID}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Title:</span>
+                        <span className="cd-value">{currentCustomer.title || "N/A"}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Surname:</span>
+                        <span className="cd-value">{currentCustomer.surName || "N/A"}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Other Names:</span>
+                        <span className="cd-value">{currentCustomer.otherNames || "N/A"}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Full Name:</span>
+                        <span className="cd-value">{currentCustomer.fullName || getCustomerDisplayName()}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Gender / Sex:</span>
+                        <span className="cd-value">{currentCustomer.sex || currentCustomer.gender || "N/A"}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Date of Birth:</span>
+                        <span className="cd-value">{formatDate(currentCustomer.dateofBirth || currentCustomer.dateOfBirth)}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Age:</span>
+                        <span className="cd-value">{currentCustomer.age ?? "N/A"}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Marital Status:</span>
+                        <span className="cd-value">{currentCustomer.maritalStatus || "N/A"}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Occupation:</span>
+                        <span className="cd-value">{currentCustomer.occupation || "N/A"}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">National ID:</span>
+                        <span className="cd-value">{currentCustomer.nationalID || "N/A"}</span>
+                      </div>
+                      <div className="cd-info-item">
+                        <span className="cd-label">Country:</span>
+                        <span className="cd-value">{currentCustomer.country || "N/A"}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1326,11 +1483,11 @@ export const CustomerDetails = () => {
                   </div>
                   <div className="cd-info-item">
                     <span className="cd-label">Mobile Phone:</span>
-                    <span className="cd-value">{currentCustomer.mobilePhone || "N/A"}</span>
+                    <span className="cd-value">{currentCustomer.mobilePhone || currentCustomer.phoneLine1 || "N/A"}</span>
                   </div>
                   <div className="cd-info-item">
                     <span className="cd-label">Land Phone:</span>
-                    <span className="cd-value">{currentCustomer.landphone || "N/A"}</span>
+                    <span className="cd-value">{currentCustomer.landphone || currentCustomer.phoneLine2 || "N/A"}</span>
                   </div>
                   <div className="cd-info-item">
                     <span className="cd-label">State:</span>
@@ -1341,7 +1498,7 @@ export const CustomerDetails = () => {
                     <span className="cd-value">{currentCustomer.country || "N/A"}</span>
                   </div>
                 </div>
-                <div className="cd-info-item cd-full-width">
+                <div className="cd-info-item cd-full-width" style={{ marginTop: "1rem" }}>
                   <span className="cd-label">Address:</span>
                   <span className="cd-value">{currentCustomer.address || "N/A"}</span>
                 </div>
@@ -1359,6 +1516,12 @@ export const CustomerDetails = () => {
                     <span className="cd-label">Remarks:</span>
                     <span className="cd-value">{currentCustomer.remarks || "N/A"}</span>
                   </div>
+                  {currentCustomer.reinBalance != null && (
+                    <div className="cd-info-item">
+                      <span className="cd-label">Reinsurance Balance:</span>
+                      <span className="cd-value">{formatCurrency(currentCustomer.reinBalance)}</span>
+                    </div>
+                  )}
                   <div className="cd-info-item">
                     <span className="cd-label">Submitted By:</span>
                     <span className="cd-value">{currentCustomer.submittedBy || "N/A"}</span>

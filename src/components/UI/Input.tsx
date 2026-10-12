@@ -1,40 +1,32 @@
 import React from 'react'
 import './Input.css'
 
-interface InputProps {
-  type?: 'text' | 'email' | 'password' | 'number' | 'tel'
-  placeholder?: string
-  value?: string
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
-  disabled?: boolean
-  required?: boolean
-  className?: string
-  name?: string
-  id?: string
-}
+// Any native <input> attribute is passed through (min/max/step/list/onFocus/autoComplete...);
+// the old explicit prop list silently dropped them.
+type InputProps = React.InputHTMLAttributes<HTMLInputElement>
 
 const Input: React.FC<InputProps> = ({
   type = 'text',
-  placeholder,
-  value,
-  onChange,
+  className = '',
   disabled = false,
   required = false,
-  className = '',
-  name,
-  id
+  onFocus,
+  ...rest
 }) => {
+  // Number boxes usually hold a default like 0: select it on focus so typing replaces it
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (type === 'number') e.target.select()
+    onFocus?.(e)
+  }
+
   return (
     <input
+      {...rest}
       type={type}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
       disabled={disabled}
       required={required}
+      onFocus={handleFocus}
       className={`input ${className}`}
-      name={name}
-      id={id}
     />
   )
 }
