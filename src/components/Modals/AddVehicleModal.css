@@ -1,0 +1,132 @@
+.add-vehicle-modal {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.add-vehicle-modal .modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+}
+
+.add-vehicle-modal .form-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: var(--card);
+}
+
+.add-vehicle-modal .form-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.add-vehicle-modal .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.add-vehicle-modal .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.add-vehicle-modal .form-field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.add-vehicle-modal .form-field input,
+.add-vehicle-modal .form-field select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 14px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.add-vehicle-modal .form-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 14px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.add-vehicle-modal .adjustment-item {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--muted);
+}
+
+.add-vehicle-modal .adjustment-grid {
+  /* display: grid; */
+  /* grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px; */
+  align-items: flex-end;
+}
+
+.add-vehicle-modal .calculation-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.add-vehicle-modal .calculation-results {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 12px;
+  background: var(--muted);
+  margin-top: 12px;
+}
+
+.add-vehicle-modal .calculation-results h5 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.add-vehicle-modal .result-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.add-vehicle-modal .result-row:last-child {
+  border-bottom: none;
+}
+
+.add-vehicle-modal .result-row.highlight {
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-foreground);
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.add-vehicle-modal .modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.add-vehicle-modal .remove-btn {
+  white-space: nowrap;
+}

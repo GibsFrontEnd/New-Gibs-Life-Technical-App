@@ -1,0 +1,131 @@
+.pc-tabs-container {
+    background: #ffffff;
+    padding: 0 2rem;
+    border-bottom: 1px solid #e2e8f0;
+    /* Static positioning for Island Layout */
+    width: 100%;
+}
+
+.pc-tabs-list {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Space between tabs */
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    height: 60px;
+    /* Fixed height for consistency */
+}
+
+.pc-tab-item {
+    font-family: 'Inter', sans-serif;
+    background: transparent;
+    border: none;
+    padding: 0 16px;
+    height: 60px;
+    /* Full height of container */
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #64748b;
+    /* Slate 500 */
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    position: relative;
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid transparent;
+}
+
+.pc-tab-item svg {
+    margin-right: 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.pc-tab-item:hover:not(:disabled) {
+    color: #1e293b;
+    background-color: #f8fafc;
+    /* Subtle hover bg */
+}
+
+.pc-tab-item:hover:not(:disabled) svg {
+    opacity: 1;
+}
+
+.pc-tab-item.active {
+    color: #2563eb;
+    /* Indigo 600 */
+    font-weight: 600;
+}
+
+.pc-tab-item.active svg {
+    opacity: 1;
+    color: #2563eb;
+}
+
+.pc-tab-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #2563eb;
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+}
+
+.pc-tab-item:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    color: #94a3b8;
+}
+
+/* Divider for structural separation */
+.pc-tab-divider {
+    width: 1px;
+    height: 24px;
+    background-color: #e2e8f0;
+    margin: 0 8px;
+}
+
+/* Badge for "Soon" items */
+.pc-badge-soon {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    margin-left: 8px;
+    border-radius: 999px;
+    background-color: #f1f5f9;
+    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid #e2e8f0;
+}
+
+.pc-tab-item:hover .pc-badge-soon {
+    background-color: #e2e8f0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .pc-tabs-container {
+        overflow-x: auto;
+        padding-bottom: 0px;
+    }
+
+    .pc-tabs-list {
+        padding: 0 1rem;
+        gap: 0;
+        width: 100%;
+        min-width: max-content;
+    }
+
+    .pc-tab-text {
+        display: none;
+    }
+}

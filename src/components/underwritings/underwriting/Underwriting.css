@@ -1,0 +1,222 @@
+/* Google Fonts Import - can be moved to index.html/App.css */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --uw-primary: #4f46e5;
+  /* Indigo 600 */
+  --uw-primary-hover: #4338ca;
+  /* Indigo 700 */
+  --uw-secondary: #f3f4f6;
+  /* Gray 100 */
+  --uw-surface: #ffffff;
+  --uw-bg: #f9fafb;
+  /* Gray 50 */
+  --uw-text-primary: #111827;
+  /* Gray 900 */
+  --uw-text-secondary: #4b5563;
+  /* Gray 600 */
+  --uw-border: #e5e7eb;
+  /* Gray 200 */
+  --uw-success: #10b981;
+  --uw-warning: #f59e0b;
+  --uw-danger: #ef4444;
+  --uw-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --uw-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --uw-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --uw-radius: 12px;
+}
+
+.uw-container {
+  padding: 32px;
+  max-width: 100%;
+  background-color: var(--uw-bg);
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+  color: var(--uw-text-primary);
+}
+
+.uw-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.uw-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--uw-text-primary);
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+
+.uw-create-policy-btn {
+  background-color: var(--uw-primary);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--uw-shadow-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uw-create-policy-btn:hover {
+  background-color: var(--uw-primary-hover);
+  box-shadow: var(--uw-shadow);
+  transform: translateY(-1px);
+}
+
+/* Control Panel / Filter Area */
+.uw-controls {
+  background: var(--uw-surface);
+  border-radius: var(--uw-radius);
+  padding: 0;
+  /* Let inner content handle padding */
+  box-shadow: var(--uw-shadow-sm);
+  border: 1px solid var(--uw-border);
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+
+/* Collapsible wrapper styles */
+.uw-controls .border.rounded-lg.mb-6.bg-gray-50 {
+  border: none !important;
+  margin-bottom: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.uw-controls .flex.items-center.justify-between.p-4 {
+  padding: 16px 24px !important;
+  background: #f8fafc;
+  /* Slightly darker header for filter */
+  border-bottom: 1px solid var(--uw-border);
+}
+
+.uw-controls .grid {
+  padding-top: 24px;
+}
+
+/* Table Container */
+.uw-table-container {
+  background: var(--uw-surface);
+  border-radius: var(--uw-radius);
+  box-shadow: var(--uw-shadow);
+  border: 1px solid var(--uw-border);
+  overflow: hidden;
+}
+
+.uw-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.uw-table-container thead {
+  background-color: #f9fafb;
+}
+
+.uw-table-container th {
+  padding: 16px 24px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--uw-text-secondary);
+  border-bottom: 1px solid var(--uw-border);
+}
+
+.uw-table-container td {
+  padding: 16px 24px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--uw-border);
+  font-size: 14px;
+  color: var(--uw-text-primary);
+}
+
+.uw-table-container tr:last-child td {
+  border-bottom: none;
+}
+
+.uw-table-container tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Status Badges */
+.uw-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.uw-status-pending {
+  background-color: #fffbeb;
+  color: #d97706;
+  /* Amber 600 */
+}
+
+.uw-status-calculated {
+  background-color: #eff6ff;
+  color: #2563eb;
+  /* Blue 600 */
+}
+
+.uw-status-converted {
+  background-color: #ecfdf5;
+  color: #059669;
+  /* Emerald 600 */
+}
+
+/* Action Buttons in Table */
+.uw-table-container td .flex {
+  gap: 8px;
+}
+
+.uw-table-container Button {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+/* Pagination */
+.uw-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid var(--uw-border);
+  background: var(--uw-surface);
+  border-bottom-left-radius: var(--uw-radius);
+  border-bottom-right-radius: var(--uw-radius);
+}
+
+.uw-pagination-info {
+  font-size: 13px;
+  color: var(--uw-text-secondary);
+}
+
+/* Empty State */
+.uw-no-policies {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px;
+  text-align: center;
+}
+
+.uw-no-policies p {
+  color: var(--uw-text-secondary);
+  margin-bottom: 16px;
+  font-size: 16px;
+}

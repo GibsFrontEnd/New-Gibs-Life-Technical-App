@@ -1,0 +1,249 @@
+.create-proposal-container {
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: #f8fafc;
+  min-height: 100vh;
+  margin-bottom: 4rem;
+}
+
+.create-proposal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 36px;
+}
+
+.create-proposal-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.create-proposal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Modern validation error styling */
+.validation-errors {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1.5px solid #fecaca;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);
+}
+
+.validation-errors h4 {
+  color: #dc2626;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 14px 0;
+  letter-spacing: -0.01em;
+}
+
+.validation-errors ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.validation-errors li {
+  color: #dc2626;
+  font-size: 14px;
+  margin-bottom: 8px;
+  padding-left: 24px;
+  position: relative;
+  font-weight: 500;
+}
+
+.validation-errors li::before {
+  content: "•";
+  position: absolute;
+  left: 8px;
+  font-weight: 700;
+}
+
+.error-message {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1.5px solid #fecaca;
+  color: #dc2626;
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);
+}
+
+/* Modern card-style sections with better shadows */
+.form-section {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.form-section h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 24px 0;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+  letter-spacing: -0.01em;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-field-full {
+  grid-column: 1 / -1;
+}
+
+.form-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  letter-spacing: -0.01em;
+}
+
+/* Modern input styling with better focus states */
+.form-field input,
+.form-select,
+.form-textarea {
+  padding: 12px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: white;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.footer-actions{
+  display: flex;
+  justify-content: space-around;
+  width:fit-content;
+  gap: 2rem;
+  margin: 0px auto;
+  margin-bottom: 2rem;
+}
+
+.form-field input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-field input::placeholder,
+.form-textarea::placeholder {
+  color: #94a3b8;
+}
+
+.form-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 40px;
+}
+
+.form-textarea {
+  resize: vertical;
+  font-family: inherit;
+  min-height: 100px;
+  line-height: 1.6;
+}
+
+.insured-type-toggle {
+  margin-bottom: 24px;
+}
+
+/* Modern toggle button design */
+.toggle-buttons {
+  display: flex;
+  gap: 0;
+  margin-top: 10px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.toggle-btn:hover:not(.active) {
+  color: #334155;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.toggle-btn.active {
+  background: white;
+  color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  .create-proposal-container {
+    padding: 20px;
+  }
+
+  .create-proposal-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .create-proposal-header h1 {
+    font-size: 26px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-field-full {
+    grid-column: 1;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .header-actions button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,254 @@
+/* EditPolicy.css */
+
+/* Re-declaring for standalone support, but prefer global variables.css */
+:root {
+  --uw-primary: #4f46e5;
+  --uw-primary-hover: #4338ca;
+  --uw-surface: #ffffff;
+  --uw-bg: #f9fafb;
+  --uw-text-primary: #111827;
+  --uw-text-secondary: #4b5563;
+  --uw-border: #e2e8f0;
+  --uw-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --uw-radius: 12px;
+}
+
+.edit-policy-container {
+  padding: 40px;
+  width: 100%;
+  background-color: var(--uw-bg);
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--uw-text-primary);
+  padding-bottom: 80px;
+}
+
+.edit-policy-container .edit-policy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.edit-policy-container .edit-policy-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--uw-text-primary);
+  margin: 0;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.edit-policy-container .policy-number {
+  font-size: 14px;
+  color: var(--uw-text-secondary);
+  font-family: monospace;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.edit-policy-container .header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.edit-policy-container .edit-policy-content {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.edit-policy-container .edit-policy-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  font-size: 16px;
+  color: var(--uw-text-secondary);
+}
+
+/* Form Sections */
+.edit-policy-container .form-section {
+  background: var(--uw-surface);
+  border-radius: var(--uw-radius);
+  padding: 32px;
+  box-shadow: var(--uw-shadow);
+  border: 1px solid var(--uw-border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Subtle hover effect for sections to feel 'alive' */
+.edit-policy-container .form-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.edit-policy-container .form-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--uw-text-primary);
+  margin: 0 0 24px 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--uw-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-policy-container .readonly-section {
+  background: linear-gradient(to bottom right, #ffffff, #f8fafc);
+  border-left: 4px solid var(--uw-primary);
+}
+
+.edit-policy-container .info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.edit-policy-container .info-item {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.edit-policy-container .info-item label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.edit-policy-container .info-value {
+  font-size: 15px;
+  color: #0f172a;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+/* Status Badges */
+.edit-policy-container .status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.edit-policy-container .status-PENDING {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.edit-policy-container .status-CALCULATED {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.edit-policy-container .status-CONVERTED {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+/* Grid Layout */
+.edit-policy-container .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.edit-policy-container .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-policy-container .form-field-full {
+  grid-column: 1 / -1;
+}
+
+.edit-policy-container .form-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--uw-text-secondary);
+}
+
+/* Inputs & Textareas */
+.edit-policy-container .form-field input,
+.edit-policy-container .form-textarea {
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: #fff;
+  color: #0f172a;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.edit-policy-container .form-field input:focus,
+.edit-policy-container .form-textarea:focus {
+  outline: none;
+  border-color: var(--uw-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.edit-policy-container .form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+/* Respond to smaller screens */
+@media (max-width: 768px) {
+  .edit-policy-container {
+    padding: 20px;
+  }
+
+  .edit-policy-container .form-grid,
+  .edit-policy-container .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-policy-container .header-actions {
+    width: 100%;
+  }
+
+  .edit-policy-container .header-actions button {
+    flex: 1;
+  }
+}
+/* Custom Scrollbar for tables */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

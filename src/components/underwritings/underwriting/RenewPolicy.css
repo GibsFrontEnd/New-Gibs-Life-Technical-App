@@ -1,0 +1,224 @@
+/* RenewPolicy.css */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --rn-primary: #4f46e5;
+  --rn-primary-hover: #4338ca;
+  --rn-surface: #ffffff;
+  --rn-bg: #f9fafb;
+  --rn-text-primary: #111827;
+  --rn-text-secondary: #4b5563;
+  --rn-border: #e5e7eb;
+  --rn-radius: 12px;
+  --rn-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --rn-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.renew-policy-container {
+  padding: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: var(--rn-bg);
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+  color: var(--rn-text-primary);
+  padding-bottom: 80px;
+}
+
+.renew-policy-container .renew-policy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.renew-policy-container .renew-policy-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--rn-text-primary);
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+
+.renew-policy-container .header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.renew-policy-container .renew-policy-form {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Form Sections */
+.renew-policy-container .form-section {
+  background: var(--rn-surface);
+  border-radius: var(--rn-radius);
+  padding: 32px;
+  box-shadow: var(--rn-shadow);
+  border: 1px solid var(--rn-border);
+}
+
+.renew-policy-container .form-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--rn-text-primary);
+  margin: 0 0 24px 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rn-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.renew-policy-container .form-section h3::before {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 18px;
+  background: var(--rn-primary);
+  border-radius: 2px;
+}
+
+.renew-policy-container .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.renew-policy-container .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.renew-policy-container .form-field-full {
+  grid-column: 1 / -1;
+}
+
+.renew-policy-container .form-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rn-text-secondary);
+}
+
+/* Inputs */
+.renew-policy-container .form-field input,
+.renew-policy-container .form-select,
+.renew-policy-container .form-textarea {
+  padding: 10px 14px;
+  border: 1px solid var(--rn-border);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: #fff;
+  color: var(--rn-text-primary);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.renew-policy-container .form-field input:hover,
+.renew-policy-container .form-select:hover,
+.renew-policy-container .form-textarea:hover {
+  border-color: #d1d5db;
+}
+
+.renew-policy-container .form-field input:focus,
+.renew-policy-container .form-select:focus,
+.renew-policy-container .form-textarea:focus {
+  outline: none;
+  border-color: var(--rn-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.renew-policy-container .form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Toggle Buttons */
+.insured-type-toggle {
+  margin-bottom: 24px;
+}
+
+.toggle-buttons {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.toggle-btn {
+  padding: 8px 20px;
+  background: transparent;
+  border: none;
+  color: var(--rn-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: white;
+  color: var(--rn-primary);
+  font-weight: 600;
+  box-shadow: var(--rn-shadow-sm);
+}
+
+/* Validation Errors */
+.validation-errors {
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: var(--rn-radius);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.validation-errors h4 {
+  color: #ef4444;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+
+.validation-errors ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.validation-errors li {
+  margin-bottom: 4px;
+}
+
+/* Footer Actions */
+.renew-policy-footer {
+  background: var(--rn-surface);
+  border-radius: var(--rn-radius);
+  padding: 24px 32px;
+  box-shadow: var(--rn-shadow);
+  border: 1px solid var(--rn-border);
+  display: flex;
+  justify-content:space-around;
+  gap: 16px;
+  margin: auto;
+  margin-top: 32px;
+  width:fit-content;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .renew-policy-container {
+    padding: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,267 @@
+.motor-qc-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    /* padding: 24px; */
+    background: var(--background);
+    min-height: 100vh;
+    margin-bottom: 40px;
+}
+
+.motor-qc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    padding: 20px;
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.motor-qc-header h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--foreground);
+}
+
+.motor-qc-proposal-info {
+    margin: 8px 0 0 0;
+    font-size: 14px;
+    color: var(--muted-foreground);
+}
+
+.motor-qc-header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.motor-qc-error-message {
+    padding: 12px 16px;
+    background: var(--destructive);
+    color: var(--destructive-foreground);
+    border-radius: var(--radius);
+    font-size: 14px;
+}
+
+.motor-qc-success-message {
+    padding: 12px 16px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border-radius: var(--radius);
+    font-size: 14px;
+}
+
+.motor-qc-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.motor-qc-vehicles-panel,
+.motor-qc-adjustments-panel,
+.motor-qc-calculation-results {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+}
+
+.motor-qc-vehicles-panel h3,
+.motor-qc-adjustments-panel h3,
+.motor-qc-calculation-results h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.motor-qc-vehicles-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.motor-qc-vehicles-header h3 {
+    margin: 0;
+}
+
+.motor-qc-no-vehicles {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted-foreground);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+}
+
+.motor-qc-vehicles-table-wrap {
+    overflow-x: auto;
+}
+
+.motor-qc-vehicles-table,
+.motor-qc-breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.motor-qc-vehicles-table thead,
+.motor-qc-breakdown-table thead {
+    background: var(--muted);
+    border-bottom: 2px solid var(--border);
+}
+
+.motor-qc-vehicles-table th,
+.motor-qc-breakdown-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.motor-qc-vehicles-table td,
+.motor-qc-breakdown-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--foreground);
+}
+
+.motor-qc-vehicles-table tbody tr:hover,
+.motor-qc-breakdown-table tbody tr:hover {
+    background: var(--muted);
+}
+
+.motor-qc-vehicles-table td:last-child,
+.motor-qc-breakdown-table td:last-child {
+    text-align: right;
+}
+
+.motor-qc-delete-btn {
+    color: var(--destructive);
+}
+
+.motor-qc-adjustments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.motor-qc-adjustment-section {
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+    padding: 16px;
+    background: var(--muted);
+}
+
+.motor-qc-adjustment-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.motor-qc-adjustment-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.motor-qc-adjustment-field:last-child {
+    margin-bottom: 0;
+}
+
+.motor-qc-adjustment-field label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--foreground);
+}
+
+.motor-qc-adjustment-field input {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 4px);
+    font-size: 14px;
+    background: var(--background);
+    color: var(--foreground);
+}
+
+.motor-qc-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.motor-qc-result-item {
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+    padding: 16px;
+    background: var(--muted);
+}
+
+.motor-qc-result-item label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    margin-bottom: 8px;
+}
+
+.motor-qc-result-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.motor-qc-result-value.highlight {
+    color: var(--primary);
+}
+
+.motor-qc-vehicles-breakdown {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+.motor-qc-vehicles-breakdown h4 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.motor-qc-breakdown-table-wrap {
+    overflow-x: auto;
+}
+
+.motor-qc-breakdown-table td.highlight {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+@media (max-width: 768px) {
+    .motor-qc-container {
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .motor-qc-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .motor-qc-header-actions {
+        width: 100%;
+    }
+
+    .motor-qc-adjustments-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .motor-qc-results-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+}

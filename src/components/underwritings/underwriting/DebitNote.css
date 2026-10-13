@@ -1,0 +1,482 @@
+/* DebitNote.css */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+    /* Modern Professional Palette */
+    --dn-primary: #2563eb;
+    /* Royal Blue */
+    --dn-primary-hover: #1d4ed8;
+    --dn-primary-light: #eff6ff;
+
+    --dn-success: #10b981;
+    --dn-warning: #f59e0b;
+    --dn-danger: #ef4444;
+
+    --dn-bg: #f8fafc;
+    /* Slate 50 */
+    --dn-surface: #ffffff;
+
+    --dn-text-main: #0f172a;
+    /* Slate 900 */
+    --dn-text-muted: #64748b;
+    /* Slate 500 */
+    --dn-text-light: #94a3b8;
+    /* Slate 400 */
+
+    --dn-border: #e2e8f0;
+    /* Slate 200 */
+    --dn-border-focus: #3b82f6;
+
+    /* Shadows for Depth */
+    --dn-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --dn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    --dn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+
+    --dn-radius: 10px;
+}
+
+body {
+    background-color: var(--dn-bg);
+}
+
+.debit-note-container {
+    padding: 2rem 1rem 6rem;
+    max-width: 1600px;
+    margin: 0 auto;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: var(--dn-text-main);
+    min-height: 100vh;
+}
+
+/* Header Section */
+.debit-note-container .debit-note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    /* Align to bottom for better visual flow */
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--dn-border);
+}
+
+.debit-note-container .debit-note-header h1 {
+    font-size: 1.875rem;
+    /* 30px */
+    font-weight: 700;
+    color: var(--dn-text-main);
+    letter-spacing: -0.03em;
+    margin: 0;
+}
+
+.debit-note-container .header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+/* Button Overrides/Enhancements */
+.debit-note-container button {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.debit-note-container button:active {
+    transform: scale(0.98);
+}
+
+/* Form Layout */
+.debit-note-container .debit-note-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Sections */
+.debit-note-container .form-section {
+    background: var(--dn-surface);
+    border-radius: var(--dn-radius);
+    border: 1px solid var(--dn-border);
+    box-shadow: var(--dn-shadow-sm);
+    /* overflow: hidden; Removed to allow dropdowns to overflow */
+    /* For collapse animation containment */
+    transition: box-shadow 0.3s ease;
+}
+
+.debit-note-container .form-section:hover {
+    box-shadow: var(--dn-shadow-md);
+}
+
+.debit-note-container .form-section-header {
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(to right, #ffffff, #f8fafc);
+    border-bottom: 1px solid var(--dn-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s ease;
+}
+
+.debit-note-container .form-section-header:hover {
+    background: #f1f5f9;
+}
+
+.debit-note-container .form-section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--dn-text-main);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.debit-note-container .form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    /* 4 columns for modern wide screens */
+    gap: 1.5rem;
+    padding: 2rem;
+    background: var(--dn-surface);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Inputs & Fields */
+.debit-note-container .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.debit-note-container .form-field-full {
+    grid-column: 1 / -1;
+}
+
+.debit-note-container .form-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dn-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.debit-note-container input,
+.debit-note-container select,
+.debit-note-container textarea {
+    height: 46px;
+    padding: 0 1rem;
+    border: 1px solid var(--dn-border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--dn-text-main);
+    background: #fff;
+    transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* React Select Overrides */
+/* React Select Overrides */
+.debit-note-container .react-select__control {
+    min-height: 46px !important;
+    height: 46px !important;
+    border: 1px solid var(--dn-border) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.debit-note-container .react-select__value-container {
+    padding: 0 1rem !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.debit-note-container .react-select__placeholder {
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #94a3b8 !important;
+    margin: 0 !important;
+}
+
+.debit-note-container .react-select__single-value {
+    position: relative !important;
+    top: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    color: var(--dn-text-main) !important;
+}
+
+.debit-note-container input:hover {
+    border-color: #cbd5e1;
+}
+
+.debit-note-container .react-select__control:hover {
+    border-color: #cbd5e1 !important;
+}
+
+.debit-note-container input:focus,
+.debit-note-container textarea:focus {
+    outline: none;
+    border-color: var(--dn-primary);
+    box-shadow: 0 0 0 4px var(--dn-primary-light);
+}
+
+.debit-note-container .react-select__control--is-focused {
+    border-color: var(--dn-primary) !important;
+    box-shadow: 0 0 0 4px var(--dn-primary-light) !important;
+}
+
+/* Soft blue ring */
+
+
+.debit-note-container input:disabled {
+    background-color: #f8fafc;
+    color: var(--dn-text-light);
+    border-color: #e2e8f0;
+    cursor: default;
+}
+
+/* Table Styling - Premium Look */
+/* Table-specific Select Overrides */
+.debit-note-container .dn-table-select .react-select__control {
+    min-height: 36px !important;
+    height: 36px !important;
+    font-size: 0.875rem !important;
+}
+
+.debit-note-container .dn-table-select .react-select__value-container {
+    height: 36px !important;
+    padding: 0 8px !important;
+}
+
+.debit-note-container .dn-table-select .react-select__indicators {
+    height: 36px !important;
+}
+
+.debit-note-container .dn-table-select .react-select__dropdown-indicator {
+    padding: 4px !important;
+}
+
+.debit-note-list-content {
+    background: var(--dn-surface);
+    border-radius: var(--dn-radius);
+    border: 1px solid var(--dn-border);
+    box-shadow: var(--dn-shadow-md);
+    overflow: hidden;
+}
+
+.dn-table-wrap {
+    margin: 1.5rem;
+    /* Indent tables inside forms */
+    border: 1px solid var(--dn-border);
+    border-radius: 8px;
+    overflow-x: auto;
+    /* Enable horizontal scrolling for wide tables */
+}
+
+.dn-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.dn-table th {
+    background: #f8fafc;
+    color: var(--dn-text-muted);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1rem 1.5rem;
+    border-bottom: 2px solid var(--dn-border);
+    text-align: left;
+}
+
+.dn-table td {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--dn-border);
+    font-size: 0.95rem;
+    color: var(--dn-text-main);
+}
+
+.dn-table tr:last-child td {
+    border-bottom: none;
+}
+
+.dn-table tbody tr {
+    transition: background-color 0.1s ease;
+}
+
+.dn-table tbody tr:hover {
+    background-color: #f1f5f9;
+}
+
+/* Status Badges */
+.debit-note-container .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.debit-note-container .status-badge.approved {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.debit-note-container .status-badge.pending {
+    background-color: #fef9c3;
+    color: #854d0e;
+}
+
+.debit-note-container .footer-actions {
+    background: var(--dn-surface);
+    padding: 1.5rem;
+    border-radius: var(--dn-radius);
+    border: 1px solid var(--dn-border);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    box-shadow: var(--dn-shadow-lg);
+    /* Slightly lifted footer */
+    bottom: 20px;
+}
+
+/* React Select Overrides for consistency */
+.debit-note-container .react-select__control {
+    min-height: 46px;
+    border: 1px solid var(--dn-border) !important;
+    box-shadow: none !important;
+}
+
+.debit-note-container .react-select__control--is-focused {
+    border-color: var(--dn-primary) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+.debit-note-container .react-select__menu {
+    border-radius: 8px !important;
+    box-shadow: var(--dn-shadow-lg) !important;
+    border: 1px solid var(--dn-border) !important;
+    z-index: 50 !important;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .debit-note-container .form-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .debit-note-container .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .debit-note-container {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .debit-note-container .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   VIEW MODE STYLES
+   ============================================ */
+
+.debit-note-view {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+/* Reusing EditPolicy.css styles structure */
+.debit-note-view .form-section.readonly-section {
+    background: linear-gradient(to bottom right, #ffffff, #f8fafc);
+    border-left: 4px solid var(--dn-primary);
+    border-radius: var(--dn-radius);
+    padding: 32px;
+    box-shadow: var(--dn-shadow-md);
+    border-top: 1px solid var(--dn-border);
+    border-right: 1px solid var(--dn-border);
+    border-bottom: 1px solid var(--dn-border);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.debit-note-view .form-section.readonly-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.debit-note-view .form-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--dn-text-main);
+    margin: 0 0 24px 0;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--dn-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.debit-note-container .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.debit-note-container .info-item {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #f1f5f9;
+}
+
+.debit-note-container .info-item label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+}
+
+@media (max-width: 900px) {
+    .debit-note-container .info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .debit-note-container .info-grid {
+        grid-template-columns: 1fr;
+    }
+}

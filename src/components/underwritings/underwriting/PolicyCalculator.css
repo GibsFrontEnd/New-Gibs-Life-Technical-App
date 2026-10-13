@@ -1,0 +1,535 @@
+/* PolicyCalculator.css */
+
+/* Animation */
+@keyframes pc-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Variables & Base */
+.pc-container {
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f8fafc;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --destructive: #ef4444;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --radius: 0.5rem;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+
+  font-family: var(--font-sans, system-ui, -apple-system, blinkmacsystemfont, "Segoe UI", roboto, "Helvetica Neue", sans-serif);
+  color: #1e293b;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 2rem;
+  margin-bottom: 4rem;
+  animation: pc-fade-in 0.4s ease-out;
+}
+
+/* Header */
+.pc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.pc-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+}
+
+.pc-policy-info {
+  color: var(--muted-foreground);
+  font-size: 0.95rem;
+}
+
+.pc-header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Loading State */
+.pc-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+/* Messages */
+.pc-error-message,
+.pc-success-message {
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pc-error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.pc-success-message {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+/* Content Layout (Stacked) */
+.pc-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* SECTIONS PANEL */
+.pc-sections-panel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.pc-sections-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.pc-sections-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.pc-no-sections {
+  text-align: center;
+  padding: 3rem;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+  margin-bottom: 1.5rem;
+}
+
+/* Table Styling */
+.pc-sections-table-wrap,
+.pc-items-table {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+}
+
+.pc-sections-table,
+.pc-items-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.925rem;
+}
+
+.pc-sections-table th,
+.pc-items-table th {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.pc-sections-table td,
+.pc-items-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: #334155;
+}
+
+.pc-sections-table tbody tr:hover,
+.pc-items-table tbody tr:hover {
+  background-color: var(--accent);
+}
+
+.pc-sections-table tbody tr:last-child td,
+.pc-items-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Sections table: compact cells, figures on one line, and the Actions column pinned to
+   the right edge so Edit/Delete never need a horizontal scroll to reach. */
+.pc-sections-table th,
+.pc-sections-table td {
+  padding: 0.6rem 0.75rem;
+}
+
+.pc-sections-table td.pc-num {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.pc-sections-table th.pc-num {
+  text-align: right;
+}
+
+.pc-sections-table th:last-child,
+.pc-sections-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  box-shadow: -8px 0 8px -8px rgba(15, 23, 42, 0.25);
+}
+
+.pc-sections-table th:last-child {
+  background: var(--secondary);
+}
+
+.pc-sections-table td:last-child {
+  background: white;
+}
+
+.pc-sections-table tbody tr:hover td:last-child {
+  background-color: var(--accent);
+}
+
+.pc-delete-btn {
+  color: var(--destructive);
+  border-color: var(--destructive);
+  background: transparent;
+}
+
+.pc-delete-btn:hover {
+  background: var(--destructive);
+  color: white;
+}
+
+/* Sections Summary Footer */
+.pc-sections-summary {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.pc-sections-summary h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* ADJUSTMENTS PANEL */
+.pc-adjustments-panel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.pc-adjustments-panel h3 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0f172a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius);
+  transition: background-color 0.2s;
+}
+
+.link-btn:hover {
+  background-color: #eff6ff;
+}
+
+.pc-adjustment-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  letter-spacing: 0.05em;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.pc-adjustments-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .pc-adjustments-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Inputs */
+.pc-adjustment-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.pc-container input[type="number"],
+.pc-container input[type="text"],
+.pc-container textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--input);
+  background-color: transparent;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.pc-container input:focus,
+.pc-container textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* Results Cards */
+.pc-proposal-adjustments-card,
+.pc-pro-rata-card {
+  margin-top: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.pc-proposal-adjustments-card {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.pc-pro-rata-card {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.pc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.pc-card-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.pc-badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.pc-badge.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pc-badge.info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.pc-badge.muted {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.pc-summary-row,
+.pc-pr-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.pc-label,
+.pc-pr-label {
+  color: #64748b;
+}
+
+.pc-value,
+.pc-pr-value {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.pc-highlight {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.pc-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 1rem 0;
+}
+
+/* BOTTOM RESULTS PANEL */
+.pc-calculation-results {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  box-shadow: var(--shadow);
+}
+
+.pc-results-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.pc-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.pc-result-item {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pc-result-item label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.pc-result-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+}
+
+/* Detailed Breakdown */
+.pc-detailed-breakdown {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 2rem;
+}
+
+.pc-breakdown-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  background: #fafafa;
+}
+
+.pc-breakdown-section h4 {
+  margin: 0 0 1rem 0;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.pc-items-breakdown h5 {
+  margin: 1rem 0 0.5rem 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+}
+
+/* Policy Header Grid */
+.pc-policy-header-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 0 0.25rem;
+}
+
+.pc-policy-header-item label {
+  font-size: 0.75rem;
+  /* text-xs */
+  color: var(--muted-foreground);
+  margin-bottom: 0.375rem;
+  /* mb-1.5 */
+  display: block;
+}
+
+.pc-policy-header-item input {
+  height: 2.25rem;
+  /* h-9 */
+  background-color: rgba(249, 250, 251, 0.5);
+  /* bg-gray-50/50 */
+  border: 1px solid #e5e7eb;
+  /* border-gray-200 */
+  color: #374151;
+  /* text-gray-700 */
+}
+
+/* Dynamic Field Overrides to appear brighter/active */
+.pc-dynamic-input {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}

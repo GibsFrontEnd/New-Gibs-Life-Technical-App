@@ -1,0 +1,225 @@
+/* Inheriting variables from Underwriting.css via :root if loaded together, 
+   but ensuring local definitions for standalone validity */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --uw-primary: #4f46e5;
+  --uw-primary-hover: #4338ca;
+  --uw-surface: #ffffff;
+  --uw-bg: #f9fafb;
+  --uw-text-primary: #111827;
+  --uw-text-secondary: #4b5563;
+  --uw-border: #e5e7eb;
+  --uw-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --uw-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --uw-radius: 12px;
+}
+
+.create-policy-container {
+  padding: 40px;
+  max-width: 1400px;
+  /* Constrain width for better readability */
+  margin: 0 auto;
+  background-color: var(--uw-bg);
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+  color: var(--uw-text-primary);
+  padding-bottom: 80px;
+  /* Space for footer */
+}
+
+.create-policy-container .create-policy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.create-policy-container .create-policy-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--uw-text-primary);
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+
+.create-policy-container .header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.create-policy-container .create-policy-form {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Form Sections */
+.create-policy-container .form-section {
+  background: var(--uw-surface);
+  border-radius: var(--uw-radius);
+  padding: 32px;
+  box-shadow: var(--uw-shadow);
+  border: 1px solid var(--uw-border);
+}
+
+.create-policy-container .form-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--uw-text-primary);
+  margin: 0 0 24px 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--uw-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-policy-container .form-section h3::before {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 18px;
+  background: var(--uw-primary);
+  border-radius: 2px;
+}
+
+.create-policy-container .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  /* 2 Column layout */
+  gap: 24px;
+}
+
+.create-policy-container .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.create-policy-container .form-field-full {
+  grid-column: 1 / -1;
+}
+
+.create-policy-container .form-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--uw-text-secondary);
+}
+
+/* Inputs */
+.create-policy-container .form-field input,
+.create-policy-container .form-select,
+.create-policy-container .form-textarea {
+  padding: 10px 14px;
+  border: 1px solid var(--uw-border);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: #fff;
+  color: var(--uw-text-primary);
+  width: 100%;
+  /* Ensure full width */
+  box-sizing: border-box;
+  /* Handle padding correctly */
+}
+
+.create-policy-container .form-field input:hover,
+.create-policy-container .form-select:hover,
+.create-policy-container .form-textarea:hover {
+  border-color: #d1d5db;
+}
+
+.create-policy-container .form-field input:focus,
+.create-policy-container .form-select:focus,
+.create-policy-container .form-textarea:focus {
+  outline: none;
+  border-color: var(--uw-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.create-policy-container .form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Toggle Buttons */
+.insured-type-toggle {
+  margin-bottom: 24px;
+}
+
+.toggle-buttons {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.toggle-btn {
+  padding: 8px 20px;
+  background: transparent;
+  border: none;
+  color: var(--uw-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: white;
+  color: var(--uw-primary);
+  font-weight: 600;
+  box-shadow: var(--uw-shadow-sm);
+}
+
+/* Validation Errors */
+.validation-errors {
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: var(--uw-radius);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.validation-errors h4 {
+  color: #ef4444;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+
+.validation-errors ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.validation-errors li {
+  margin-bottom: 4px;
+}
+
+/* Footer Actions */
+.footer-actions {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--uw-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .create-policy-container {
+    padding: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

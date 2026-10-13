@@ -1,0 +1,224 @@
+/* EndorsementPolicy.css - Copied from RenewPolicy.css with namespace change */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --ep-primary: #4f46e5;
+  --ep-primary-hover: #4338ca;
+  --ep-surface: #ffffff;
+  --ep-bg: #f9fafb;
+  --ep-text-primary: #111827;
+  --ep-text-secondary: #4b5563;
+  --ep-border: #e5e7eb;
+  --ep-radius: 12px;
+  --ep-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --ep-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.endorsement-policy-container {
+  padding: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: var(--ep-bg);
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+  color: var(--ep-text-primary);
+  padding-bottom: 80px;
+}
+
+.endorsement-policy-container .endorsement-policy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.endorsement-policy-container .endorsement-policy-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ep-text-primary);
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+
+.endorsement-policy-container .header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.endorsement-policy-container .endorsement-policy-form {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Form Sections */
+.endorsement-policy-container .form-section {
+  background: var(--ep-surface);
+  border-radius: var(--ep-radius);
+  padding: 32px;
+  box-shadow: var(--ep-shadow);
+  border: 1px solid var(--ep-border);
+}
+
+.endorsement-policy-container .form-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ep-text-primary);
+  margin: 0 0 24px 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ep-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.endorsement-policy-container .form-section h3::before {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 18px;
+  background: var(--ep-primary);
+  border-radius: 2px;
+}
+
+.endorsement-policy-container .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.endorsement-policy-container .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.endorsement-policy-container .form-field-full {
+  grid-column: 1 / -1;
+}
+
+.endorsement-policy-container .form-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ep-text-secondary);
+}
+
+/* Inputs */
+.endorsement-policy-container .form-field input,
+.endorsement-policy-container .form-select,
+.endorsement-policy-container .form-textarea {
+  padding: 10px 14px;
+  border: 1px solid var(--ep-border);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: #fff;
+  color: var(--ep-text-primary);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.endorsement-policy-container .form-field input:hover,
+.endorsement-policy-container .form-select:hover,
+.endorsement-policy-container .form-textarea:hover {
+  border-color: #d1d5db;
+}
+
+.endorsement-policy-container .form-field input:focus,
+.endorsement-policy-container .form-select:focus,
+.endorsement-policy-container .form-textarea:focus {
+  outline: none;
+  border-color: var(--ep-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.endorsement-policy-container .form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Toggle Buttons */
+.insured-type-toggle {
+  margin-bottom: 24px;
+}
+
+.toggle-buttons {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.toggle-btn {
+  padding: 8px 20px;
+  background: transparent;
+  border: none;
+  color: var(--ep-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: white;
+  color: var(--ep-primary);
+  font-weight: 600;
+  box-shadow: var(--ep-shadow-sm);
+}
+
+/* Validation Errors */
+.validation-errors {
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: var(--ep-radius);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.validation-errors h4 {
+  color: #ef4444;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+
+.validation-errors ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.validation-errors li {
+  margin-bottom: 4px;
+}
+
+/* Footer Actions */
+.endorsement-policy-footer {
+  background: var(--ep-surface);
+  border-radius: var(--ep-radius);
+  padding: 24px 32px;
+  box-shadow: var(--ep-shadow);
+  border: 1px solid var(--ep-border);
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+  margin: auto;
+  margin-top: 32px;
+  width: fit-content;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .endorsement-policy-container {
+    padding: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

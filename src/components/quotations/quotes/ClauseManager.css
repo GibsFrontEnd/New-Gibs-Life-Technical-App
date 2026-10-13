@@ -1,0 +1,556 @@
+.clause-manager-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.clause-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.clause-manager-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.proposal-info {
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.clause-manager-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.clause-manager-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  font-size: 1.125rem;
+  color: #6b7280;
+}
+
+/* Existing Clauses Section */
+.existing-clauses-section {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.existing-clauses-section h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 1.5rem 0;
+}
+
+.clauses-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.clause-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.clause-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.clause-card-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.clause-card-body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.clause-field {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.clause-field strong {
+  color: #1f2937;
+  font-weight: 500;
+}
+
+/* Add Clauses Section */
+.add-clauses-section {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.clause-forms {
+  display: grid;
+  gap: 2rem;
+}
+
+.clause-form {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1.5rem;
+}
+
+.clause-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.clause-form-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-field-full {
+  grid-column: 1 / -1;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Messages */
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.success-message {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .clause-manager-container {
+    padding: 1rem;
+  }
+
+  .clause-manager-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions button {
+    flex: 1;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-field-full {
+    grid-column: 1;
+  }
+}
+
+.clause-manager-container {
+  max-width: 1100px;
+  margin: 24px auto;
+  padding: 20px;
+  box-sizing: border-box;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #111827;
+}
+
+.clause-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.clause-manager-header h1 {
+  margin: 0 0 6px 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.proposal-info {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* header actions wrapper — leaves space for your Button components */
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* content area */
+.clause-manager-content {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+/* messages */
+.error-message {
+  background: #fff1f2;
+  color: #991b1b;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+
+.success-message {
+  background: #ecfdf5;
+  color: #065f46;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+
+/* Existing saved clauses (cards) */
+.existing-clauses-section {
+  margin-bottom: 18px;
+}
+
+.clauses-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.clause-card {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.03);
+}
+
+.clause-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.clause-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.clause-card-body {
+  font-size: 0.92rem;
+  color: #374151;
+}
+
+.clause-field {
+  margin-bottom: 6px;
+}
+
+/* Add clauses section */
+.add-clauses-section {
+  margin-top: 6px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Form layout */
+.clause-forms {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clause-form {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.clause-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+/* Fields that should take full width in grid */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.form-field-full {
+  grid-column: 1 / -1;
+}
+
+/* Inputs / Textareas */
+.form-textarea {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+input[type="text"],
+input[type="number"],
+.select-container,
+textarea,
+.form-textarea {
+  box-sizing: border-box;
+}
+
+/* Truncate long details in table */
+.truncate-cell {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Staged table */
+.staged-clauses-section {
+  margin: 25px 0;
+}
+
+.staged-table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  margin-top: 8px;
+}
+
+.staged-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 820px;
+  font-size: 0.95rem;
+}
+
+.staged-table th,
+.staged-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+  vertical-align: top;
+}
+
+.staged-table thead th {
+  background: #fbfbfb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.staged-table tbody tr:hover {
+  background: rgba(99, 102, 241, 0.04); /* subtle hover */
+}
+
+/* muted helper */
+.muted {
+  color: #6b7280;
+  font-size: 0.95rem;
+  padding: 10px 0;
+}
+
+/* Buttons inside table — keep them compact */
+.staged-table button {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+/* Small screens: stack grid into single column */
+@media (max-width: 880px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staged-table {
+    min-width: 700px;
+  }
+
+  .clauses-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Very small screens: allow full width */
+@media (max-width: 420px) {
+  .clause-manager-container {
+    padding: 12px;
+    margin: 12px;
+  }
+
+  .staged-table {
+    font-size: 0.9rem;
+  }
+}
+
+/* Saved clauses table (looks similar but visually unique from staged) */
+.saved-clauses-section {
+  margin-bottom: 12px;
+}
+
+.saved-table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  margin-top: 8px;
+  background: #fffaf0; /* subtle warm tint to differentiate */
+}
+
+.saved-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 820px;
+  font-size: 0.95rem;
+}
+
+.saved-table th,
+.saved-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+  vertical-align: top;
+}
+
+.saved-table thead th {
+  background: linear-gradient(180deg, #fff7ed 0%, #fffaf0 100%);
+  font-weight: 700;
+  color: #92400e;
+}
+
+.saved-table tbody tr:hover {
+  background: rgba(245, 158, 11, 0.04);
+}
+
+/* Slightly different button visuals for saved table rows (if you want) */
+.saved-table button {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}

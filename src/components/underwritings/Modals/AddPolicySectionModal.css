@@ -1,0 +1,165 @@
+/* Policy section modal: one scroll area (the body) between a fixed header and a fixed
+   footer, so Save/Cancel are always visible. Scoped so the shared AddSectionModal.css
+   used by other modals is unaffected. */
+
+.policy-section-modal.add-section-modal {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%; /* width comes from the Dialog (900px) */
+  max-height: 90vh;
+  overflow: hidden;
+  padding: 0;
+}
+
+.policy-section-modal .dialog-header {
+  flex: none;
+  padding-bottom: 8px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #e6edf3;
+}
+
+.policy-section-modal .modal-content.policy-section-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+}
+
+/* footer */
+.policy-section-modal .section-modal-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-top: 1px solid #e6edf3;
+  background: #fff;
+  border-radius: 0 0 8px 8px;
+  flex-wrap: wrap;
+}
+
+.policy-section-modal .footer-net {
+  display: flex;
+  flex-direction: column;
+}
+
+.policy-section-modal .footer-net-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.policy-section-modal .footer-net-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0b4a6f;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.policy-section-modal .footer-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* Add Item / Calculate All, under the items */
+.policy-section-modal .items-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+/* loading feedback */
+.policy-section-modal .updating-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4f46e5;
+}
+
+.policy-section-modal .summary-section.is-updating .summary-value {
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+
+/* item-level discounts/loadings */
+.policy-section-modal .item-adjustments {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #e6edf3;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.policy-section-modal .item-adjustments-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.policy-section-modal .item-adjustments-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  align-items: flex-start;
+}
+
+.policy-section-modal .item-adjustments-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.policy-section-modal .item-adjustment-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 2fr) minmax(80px, 1fr) minmax(130px, 1.2fr) minmax(90px, auto) 32px;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.policy-section-modal .item-adjustment-amount {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0b4a6f;
+  white-space: nowrap;
+}
+
+.policy-section-modal .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  background: #fff;
+}
+
+.policy-section-modal .icon-btn:hover {
+  background: #fef2f2;
+}
+
+@media (max-width: 720px) {
+  .policy-section-modal .item-adjustment-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .policy-section-modal .section-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .policy-section-modal .footer-buttons {
+    justify-content: flex-end;
+  }
+}
