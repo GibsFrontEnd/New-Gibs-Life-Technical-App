@@ -265,3 +265,53 @@ export const Pager = ({
     </div>
   );
 };
+
+const HTML_ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" };
+const escHtml = (v: any): string => String(v ?? "").replace(/[&<>"]/g, (c: string) => HTML_ESC[c] ?? c);
+
+/**
+ * Opens a clean, print-ready payment schedule in a new window and starts the print dialog.
+ * `rows` need: paymentNo, dueDate, grossBenefit, taxAmount, netBenefit (and optionally paymentStatus).
+ */
+export const printSchedule = (opts: {
+  title: string;
+  reference: string;
+  customer?: string;
+  product?: string;
+  frequency?: string;
+  rows: any[];
+  note?: string;
+}) => {
+  const w = window.open("", "_blank");
+  if (!w) {
+    alert("Please allow pop-ups to print the payment schedule.");
+    return;
+  }
+  const hasStatus = opts.rows.some((r) => r.paymentStatus);
+  const body = opts.rows
+    .map(
+      (r) =>
+        `<tr><td>${escHtml(r.paymentNo)}</td><td>${escHtml(fmtDate(r.dueDate))}</td><td class="n">${escHtml(money(r.grossBenefit))}</td><td class="n">${escHtml(
+          money(r.taxAmount)
+        )}</td><td class="n">${escHtml(money(r.netBenefit))}</td>${hasStatus ? `<td>${escHtml(r.paymentStatus)}</td>` : ""}</tr>`
+    )
+    .join("");
+  const total = opts.rows.reduce((a, r) => a + Number(r.netBenefit || 0), 0);
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escHtml(opts.title)} ${escHtml(opts.reference)}</title>
+<style>body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}p{margin:2px 0;font-size:12px}
+table{border-collapse:collapse;width:100%;margin-top:12px;font-size:12px}th,td{border:1px solid #bbb;padding:4px 8px;text-align:left}th{background:#eef2f7}td.n,th.n{text-align:right}
+tfoot td{font-weight:bold}.note{margin-top:12px;font-size:11px;color:#555}</style></head><body>
+<h1>${escHtml(opts.title)}</h1><p><b>Reference:</b> ${escHtml(opts.reference)}</p>
+${opts.customer ? `<p><b>Customer:</b> ${escHtml(opts.customer)}</p>` : ""}${opts.product ? `<p><b>Product:</b> ${escHtml(opts.product)}</p>` : ""}${
+    opts.frequency ? `<p><b>Frequency:</b> ${escHtml(opts.frequency)}</p>` : ""
+  }
+<table><thead><tr><th>#</th><th>Due date</th><th class="n">Gross benefit</th><th class="n">Tax</th><th class="n">Net benefit</th>${hasStatus ? "<th>Status</th>" : ""}</tr></thead>
+<tbody>${body}</tbody><tfoot><tr><td colspan="4">Total net benefit (${opts.rows.length} payments)</td><td class="n">${escHtml(money(total))}</td>${
+    hasStatus ? "<td></td>" : ""
+  }</tr></tfoot></table>
+${opts.note ? `<p class="note">${escHtml(opts.note)}</p>` : ""}
+<p class="note">Printed ${escHtml(new Date().toLocaleString())}</p></body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
+};

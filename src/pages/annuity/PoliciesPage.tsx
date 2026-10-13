@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useCallback, useEffect, useState } from "react";
 import { annuityApi } from "@/api/annuity";
-import { Banner, Btn, Card, Field, KV, Modal, Pager, StatusBadge, Table, errMsg, fmtDate, inputCls, isoDate, money, pct } from "@/components/annuity/ui";
+import { Banner, Btn, Card, Field, KV, Modal, Pager, StatusBadge, Table, errMsg, fmtDate, inputCls, isoDate, money, pct, printSchedule } from "@/components/annuity/ui";
 import { useModalParam, useUrlPage, useUrlParam } from "@/components/annuity/useUrlState";
 
 const PAGE_SIZE = 20;
@@ -240,6 +240,12 @@ const PoliciesPage = () => {
 
               {tab === "schedule" && (
                 <>
+                  <div className="mb-2 flex justify-end">
+                    <Btn size="sm" variant="secondary" disabled={active.length === 0}
+                      onClick={() => printSchedule({ title: "Annuity payment schedule", reference: openNo, customer: detail?.policy?.fullName, product: detail?.policy?.covertype, frequency: detail?.policy?.fop, rows: active })}>
+                      Print schedule
+                    </Btn>
+                  </div>
                   <Table head={["#", "Period", "Due date", "Gross", "Tax", "Net", "Status", "Reference", ""]} empty={active.length === 0 ? "No schedule generated." : undefined}>
                     {visibleSched.map((s) => (
                       <tr key={s.paymentID}>
