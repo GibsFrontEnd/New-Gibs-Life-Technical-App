@@ -1,6 +1,8 @@
 import React from "react";
 import { useSelector } from "react-redux";
 import Header from "./Header";
+import AppSidebar from "./AppSidebar";
+import TopBar from "./TopBar";
 import { Outlet } from "react-router-dom";
 import CustomerLayout from "../../pages/customer/CustomerLayout";
 
@@ -39,12 +41,15 @@ const Layout: React.FC = () => {
 
   // For agents/admins, show the regular layout with Header
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <header className="flex-shrink-0 z-[100]">
+    <div className="flex flex-col h-screen overflow-hidden lg:pl-64">
+      {/* Phones and tablets: the header with its slide-out menu. Desktop: the left menu and the top bar. */}
+      <header className="flex-shrink-0 z-[100] lg:hidden">
         <Header />
       </header>
-      
-      <main className="flex-1 overflow-y-auto bg-[#f0f8ff]">
+      <AppSidebar />
+      <TopBar />
+
+      <main id="main-content" className="flex-1 min-h-0 overflow-y-auto bg-[#f0f8ff]">
         <Outlet />
       </main>
     </div>

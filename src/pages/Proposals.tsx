@@ -16,8 +16,8 @@ const Proposals = () => {
 
   return (
     <div className="w-full flex h-full">
-      <ProposalsSidebar />
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:ml-52 max-md:ml-15">
+      <div className="hidden"><ProposalsSidebar /></div>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
         <Outlet />
       </div>
     </div>

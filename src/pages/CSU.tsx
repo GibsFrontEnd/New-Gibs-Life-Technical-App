@@ -14,8 +14,8 @@ const CSU = () => {
 
   return (
     <div className="w-full flex h-full">
-      <CSUSidebar />
-     <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:ml-52 md:p-6">
+      <div className="hidden"><CSUSidebar /></div>
+     <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
                 <Outlet />
       </div>
     </div>

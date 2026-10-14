@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { z } from "zod";
+import { standInToken } from "../utils/sessionStore";
 import { Button } from "../components/UI/new-button";
 import { Card, CardContent } from "../components/UI/card";
 import {
@@ -21,7 +22,7 @@ import { store } from "../features/store";
 import { setTokenExpired } from "../features/reducers/authReducers/authSlice";
 import { SERVER_URL } from "../utils/constants";
 import { encryptData } from "../utils/encrypt-utils";
-import dashImage from "../assets/dash_image.png";
+import AuthShell from "../components/Auth/AuthShell";
 import { Link } from "react-router-dom";
 import {
   FaUser,
@@ -153,14 +154,13 @@ const LoginPage = () => {
     try {
       
 
-      const loginUrl = `${API_BASE_URL}/Auth/login?username=${encodeURIComponent(
-        data.username,
-      )}&password=${encodeURIComponent(data.password)}`;
+      const loginUrl = `${API_BASE_URL}/Auth/login`;
       
 
       const response = await axios.post(
         loginUrl,
-        {},
+        { username: data.username, password: data.password }, // in the body, not the URL
+
         {
           headers: {
             accept: "*/*",
@@ -173,8 +173,8 @@ const LoginPage = () => {
       if (response.status === 200) {
         const responseData = response.data;
 
-        if (responseData.token) {
-          const token = responseData.token;
+        if (responseData.token || responseData.claims) {
+          const token = standInToken(responseData); // the real token is in the HttpOnly cookie
 
           // SMART ROLE DETECTION BASED ON userType
           let userRole = "agent"; // default
@@ -233,7 +233,7 @@ const LoginPage = () => {
 
             // Also store the agent name - try from response data first, then from JWT token
             let agentName =
-              responseData.agent.agent || responseData.agent.description || "";
+              responseData.agent.agentName || responseData.agent.agent || responseData.agent.description || "";
             if (!agentName) {
               try {
                 const tokenPayload = JSON.parse(atob(token.split(".")[1]));
@@ -623,21 +623,12 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="w-full flex flex-col md:flex-row justify-center items-center min-h-screen gap-12 px-10 md:px-20 py-5 bg-white overflow-auto animate-slideDown">
-      <div className="md:flex-1 flex flex-col justify-center items-center">
-        <h1 className="font-sans text-left text-3xl lg:text-5xl leading-tight lg:leading-[1.2] mb-4 max-w-5xl mx-auto">
-          <span
-            style={{
-              background: "linear-gradient(to right, #4c58ea, #7b3aec)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            Welcome to Technical Portal
-          </span>
+    <AuthShell backTo={null}>
+      <div className="w-full">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 [@media(max-height:760px)]:text-2xl">
+          {isForgotPassword ? "Reset your password" : isCustomerSetup ? "Set up your account" : "Welcome back"}
         </h1>
-        <p className="mt-2 text-left text-gray-600">
+        <p className="mt-1.5 text-left text-sm text-slate-500">
           {isForgotPassword
             ? forgotPasswordStep === "email"
               ? "Enter your email to receive a password reset code."
@@ -658,7 +649,7 @@ const LoginPage = () => {
               type="button"
               onClick={() => setIsCustomerSetup(false)}
               className="flex items-center gap-2 text-white border-0"
-              style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
+              style={{ background: "#155dfd" }}
             >
               <FaArrowLeft />
               Back to Sign In
@@ -679,7 +670,7 @@ const LoginPage = () => {
                 setError("");
               }}
               className="flex items-center gap-2 text-white border-0"
-              style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
+              style={{ background: "#155dfd" }}
             >
               <FaArrowLeft />
               Back to Sign In
@@ -747,7 +738,7 @@ const LoginPage = () => {
                 // @ts-ignore
                 type="submit"
                 className="w-full text-white border-0"
-                style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
+                style={{ background: "#155dfd" }}
                 loading={isLoading}
                 disabled={isLoading}
               >
@@ -763,7 +754,7 @@ const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => setIsForgotPassword(true)}
-                  className="text-sm text-purple-600 hover:text-purple-700 hover:underline"
+                  className="text-sm text-[#155dfd] hover:text-[#0f4bd1] hover:underline"
                 >
                   Forgot Password?
                 </button>
@@ -865,7 +856,7 @@ const LoginPage = () => {
                 // @ts-ignore
                 type="submit"
                 className="w-full text-white border-0"
-                style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
+                style={{ background: "#155dfd" }}
                 loading={isLoading}
                 disabled={isLoading}
               >
@@ -912,7 +903,7 @@ const LoginPage = () => {
                 // @ts-ignore
                 type="submit"
                 className="w-full text-white border-0"
-                style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
+                style={{ background: "#155dfd" }}
                 loading={isLoading}
                 disabled={isLoading}
               >
@@ -956,7 +947,7 @@ const LoginPage = () => {
                   // @ts-ignore
                   type="submit"
                   className="flex-1 text-white border-0"
-                  style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
+                  style={{ background: "#155dfd" }}
                   loading={isLoading}
                   disabled={isLoading}
                 >
@@ -1034,7 +1025,7 @@ const LoginPage = () => {
                 // @ts-ignore
                 type="submit"
                 className="w-full text-white border-0"
-                style={{ background: "linear-gradient(to right, #4c58ea, #7b3aec)" }}
+                style={{ background: "#155dfd" }}
                 loading={isLoading}
                 disabled={isLoading}
               >
@@ -1050,32 +1041,6 @@ const LoginPage = () => {
         )}
       </div>
 
-      <div className="md:flex-1">
-        <div className="bg-gray-50 shadow-lg hidden md:block p-6 rounded-lg border border-gray-200 animate-fadeInUp">
-          <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
-            WHAT'S NEW
-          </span>
-          <div className="border relative overflow-hidden rounded-md mt-6">
-            <img
-              src={dashImage}
-              className="rounded-lg relative z-10 w-full h-auto"
-              alt="Dashboard Preview"
-            />
-          </div>
-          <p className="mt-4 text-gray-700">
-            GIBS Enterprise is now live!{" "}
-            {isCustomerSetup
-              ? "Access your personalized customer dashboard to view your policies and account information."
-              : "Streamline your insurance operations with powerful quotation tools and professional proposal management."}
-          </p>
-          <Link
-            to="/"
-            className="mt-4 inline-block text-blue-600 font-semibold hover:underline"
-          >
-            Learn More →
-          </Link>
-        </div>
-      </div>
 
       <style>{`
         @keyframes fadeInUp {
@@ -1121,7 +1086,7 @@ const LoginPage = () => {
           animation: fadeIn 1.2s ease-out forwards;
         }
       `}</style>
-    </div>
+    </AuthShell>
   );
 };
 

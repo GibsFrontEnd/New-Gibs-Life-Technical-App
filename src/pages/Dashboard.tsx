@@ -129,18 +129,29 @@ const Dashboard = () => {
 
   if (userRole === "customer") return <CustomerDashboard />;
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const userName = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("unEncryptedUser") || localStorage.getItem("user") || "{}") || {};
+      return u.name || u.fullName || [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || u.userName || "";
+    } catch {
+      return "";
+    }
+  })();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50/50 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div className="min-h-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="w-full px-4 py-6 sm:px-6 lg:px-8 space-y-8">
 
         {/* ===== HEADER ===== */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-in fade-in slide-in-from-left-4 duration-700 delay-100">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
-            <p className="text-sm text-gray-400 mt-1 flex items-center gap-2">
-              <Calendar className="w-3.5 h-3.5" />
-              {today}
-            </p>
+            <p className="text-sm font-medium text-[#155dfd]">{today}</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              {greeting}
+              {userName ? `, ${userName}` : ""}
+            </h1>
           </div>
         </div>
 

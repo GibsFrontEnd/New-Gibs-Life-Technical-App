@@ -6,6 +6,7 @@ import { decryptData } from "./encrypt-utils";
 const apiCall = axios.create({
   baseURL: SERVER_URL,
   timeout: 60000,
+  withCredentials: true, // the session cookie
 });
 
 // Check if we're in development mode
@@ -53,7 +54,8 @@ apiCall.interceptors.request.use(
         }
 
         if (token && token !== "null" && token !== "undefined") {
-          config.headers.Authorization = `Bearer ${token}`;
+          // the stand-in token (see sessionStore.ts) is not sent: the session cookie does the job
+          if (!token.endsWith(".cookie-session")) config.headers.Authorization = `Bearer ${token}`;
           if (isDevelopment) {
             console.log("✅ Authorization header set");
           }

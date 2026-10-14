@@ -95,6 +95,9 @@ body {
   min-height: 100vh;
 }
 
+/* Legacy utility classes sit in the components layer, below Tailwind's own utilities. Left
+   unlayered they beat every Tailwind class, so e.g. "flex lg:hidden" could never hide. */
+@layer components {
 /* Utility classes */
 .flex {
   display: flex;
@@ -333,6 +336,7 @@ body {
   .md\:hidden {
     display: none;
   }
+}
 }
 
 /* Print Styles for Quotation Details */
