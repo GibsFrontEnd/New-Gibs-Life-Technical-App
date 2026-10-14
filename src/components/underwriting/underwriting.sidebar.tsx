@@ -21,11 +21,7 @@ import {
   Bell,
   RotateCcw,
   Calculator,
-  FolderOpen,
-  Building2,
-  Bus,
-  Flame,
-  Car
+  FolderOpen
 } from "lucide-react";
 
 const SIDEBAR_BG = "#0d47a1";        // Dark blue

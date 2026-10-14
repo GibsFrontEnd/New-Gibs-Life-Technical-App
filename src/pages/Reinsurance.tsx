@@ -1,7 +1,7 @@
 //@ts-nocheck
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import ReinsuranceSidebar from "../components/reinsurance/reinsurance.sidebar";
+import ReinsuranceSidebar from "../components/Reinsurance/reinsurance.sidebar";
 
 const Reinsurance = () => {
   const location = useLocation();

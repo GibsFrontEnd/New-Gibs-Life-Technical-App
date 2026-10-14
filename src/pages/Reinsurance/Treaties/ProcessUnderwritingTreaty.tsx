@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import RIDistribution from './RIDistribution';
 import FinalRIDistribution from './FinalRIDistribution';
-import DebitNoteViewEdit, { DebitNote, getApprovalLabel, getApprovalStyle } from '../../../components/reinsurance/DebitNoteViewEdit';
+import DebitNoteViewEdit, { DebitNote, getApprovalLabel, getApprovalStyle } from '../../../components/Reinsurance/DebitNoteViewEdit';
 import { SERVER_URL } from '../../../utils/constants';
 
 const TABS = [

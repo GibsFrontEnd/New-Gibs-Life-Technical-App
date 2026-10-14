@@ -1,4 +1,4 @@
-// src/components/reinsurance/ReinsuranceTable.tsx
+// src/components/Reinsurance/ReinsuranceTable.tsx
 import React from 'react';
 import { FacultativeInwardPolicy } from '../../types/reinsurance';
 

@@ -1,4 +1,4 @@
-// src/components/reinsurance/ReinsuranceEnquiries.tsx
+// src/components/Reinsurance/ReinsuranceEnquiries.tsx
 import React from "react";
 import CSUEnquiries from "../../pages/csu/csu-page.enquiries"; // Adjust path as needed
 

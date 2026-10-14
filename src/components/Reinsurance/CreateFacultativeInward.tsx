@@ -1,4 +1,4 @@
-// src/components/reinsurance/CreateFacultativeInward.tsx
+// src/components/Reinsurance/CreateFacultativeInward.tsx
 //@ts-nocheck
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';

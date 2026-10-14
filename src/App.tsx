@@ -36,37 +36,37 @@ import ClaimsOverview from "./pages/claims/claims-page.overview";
 import ClaimsSubPage from "./pages/claims/claims-page.subpage";
 import Reinsurance from "./pages/Reinsurance";
 // Import all reinsurance components from Technical app
-import ReinsuranceFacultativeInwards from "./pages/reinsurance/Reinsurance-facultative-inwards";
-import CreateFacultativeInward from "./components/reinsurance/CreateFacultativeInward";
-import FacultativeInwardDetail from "./components/reinsurance/FacultativeInwardDetail";
-import ReinsuranceEnquiries from "./components/reinsurance/ReinsuranceEnquiries";
+import ReinsuranceFacultativeInwards from "./pages/Reinsurance/Reinsurance-facultative-inwards";
+import CreateFacultativeInward from "./components/Reinsurance/CreateFacultativeInward";
+import FacultativeInwardDetail from "./components/Reinsurance/FacultativeInwardDetail";
+import ReinsuranceEnquiries from "./components/Reinsurance/ReinsuranceEnquiries";
 
 // ── Reinsurance — Treaties ──
-import ProcessUnderwritingTreaty from "./pages/reinsurance/Treaties/ProcessUnderwritingTreaty";
-import RIDistribution from "./pages/reinsurance/Treaties/RIDistribution";
-import FinalRIDistribution from "./pages/reinsurance/Treaties/FinalRIDistribution";
-import ProcessClaimsPaid from "./pages/reinsurance/Treaties/ProcessClaimsPaid";
-import ClaimsPaidRecoveries from "./pages/reinsurance/Treaties/ClaimsPaidRecoveries";
-import ProcessOutstandingClaims from "./pages/reinsurance/Treaties/ProcessOutstandingClaims";
-import OutstandingClaimsRecoveries from "./pages/reinsurance/Treaties/OutstandingClaimsRecoveries";
-import PremiumLossesSummary from "./pages/reinsurance/Treaties/PremiumLossesSummary";
-import PremiumAdjustmentProfitCommission from "./pages/reinsurance/Treaties/PremiumAdjustmentProfitCommission";
+import ProcessUnderwritingTreaty from "./pages/Reinsurance/Treaties/ProcessUnderwritingTreaty";
+import RIDistribution from "./pages/Reinsurance/Treaties/RIDistribution";
+import FinalRIDistribution from "./pages/Reinsurance/Treaties/FinalRIDistribution";
+import ProcessClaimsPaid from "./pages/Reinsurance/Treaties/ProcessClaimsPaid";
+import ClaimsPaidRecoveries from "./pages/Reinsurance/Treaties/ClaimsPaidRecoveries";
+import ProcessOutstandingClaims from "./pages/Reinsurance/Treaties/ProcessOutstandingClaims";
+import OutstandingClaimsRecoveries from "./pages/Reinsurance/Treaties/OutstandingClaimsRecoveries";
+import PremiumLossesSummary from "./pages/Reinsurance/Treaties/PremiumLossesSummary";
+import PremiumAdjustmentProfitCommission from "./pages/Reinsurance/Treaties/PremiumAdjustmentProfitCommission";
 
 // ── Reinsurance — Maintenance ──
-import TreatyDistribution from "./pages/reinsurance/Maintenance/TreatyDistribution";
-import BondQuotaShareRates from "./pages/reinsurance/Maintenance/BondQuotaShareRates";
-import RiskProfileRanges from "./pages/reinsurance/Maintenance/RiskProfileRanges";
-import TreatyProportionRules from "./pages/reinsurance/Maintenance/TreatyProportionRules";
-import NewTreatyProportionRates from "./components/reinsurance/NewTreatyProportionRates";
-import ExcessOfLossTreatyRules from "./pages/reinsurance/Maintenance/ExcessOfLossTreatyRules";
-import ExcessOfLossTreatyRulesForm from "./components/reinsurance/NewExcessOfLossTreatyRulesForm";
-import LossRatioRange from "./pages/reinsurance/Maintenance/LossRatioRange";
-import RiskClassification from "./pages/reinsurance/Maintenance/RiskClassification";
-import NewTreatyDistribution from "./components/reinsurance/NewTreatyDistribution";
-import ReinsuranceOverview from "./pages/reinsurance/reinsurance-page.overview";
+import TreatyDistribution from "./pages/Reinsurance/Maintenance/TreatyDistribution";
+import BondQuotaShareRates from "./pages/Reinsurance/Maintenance/BondQuotaShareRates";
+import RiskProfileRanges from "./pages/Reinsurance/Maintenance/RiskProfileRanges";
+import TreatyProportionRules from "./pages/Reinsurance/Maintenance/TreatyProportionRules";
+import NewTreatyProportionRates from "./components/Reinsurance/NewTreatyProportionRates";
+import ExcessOfLossTreatyRules from "./pages/Reinsurance/Maintenance/ExcessOfLossTreatyRules";
+import ExcessOfLossTreatyRulesForm from "./components/Reinsurance/NewExcessOfLossTreatyRulesForm";
+import LossRatioRange from "./pages/Reinsurance/Maintenance/LossRatioRange";
+import RiskClassification from "./pages/Reinsurance/Maintenance/RiskClassification";
+import NewTreatyDistribution from "./components/Reinsurance/NewTreatyDistribution";
+import ReinsuranceOverview from "./pages/Reinsurance/reinsurance-page.overview";
 
 // ── Reinsurance Sidebar ──
-import ReinsuranceSidebar from "./components/reinsurance/Reinsurance.sidebar";
+import ReinsuranceSidebar from "./components/Reinsurance/Reinsurance.sidebar";
 
 // ── Layout Components ──
 import { Outlet } from "react-router-dom";
@@ -371,6 +371,7 @@ const App: React.FC = () => {
               <Route index element={<PolicyCalculator />} />
             </Route>
             
+            <Route path="credit-life/general-bus" element={<UnderwritingSubPage />} />
             <Route path="credit-life/package-bus" element={<UnderwritingSubPage />} />
           </Route>
 
