@@ -1,144 +1,184 @@
 // @ts-nocheck
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "./toast"
 import { useToast } from "./use-toast"
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from "lucide-react"
+import { X, CheckCircle2, AlertCircle, AlertTriangle, Info } from "lucide-react"
 
-const ToastIcons = {
-  default: Info,
-  success: CheckCircle,
-  error: AlertCircle,
-  warning: AlertTriangle,
-  destructive: AlertCircle,
-}
+const DEFAULT_DURATION = 4000
 
-const ToastColors = {
-  default: "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-700/80",
-  success: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800",
-  error: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
-  warning: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
-  destructive: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
+const variants = {
+  default: {
+    icon: Info,
+    accent: "bg-blue-500",
+    chip: "bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400",
+    surface: "bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-800",
+    anim: "toast-icon-pop",
+  },
+  success: {
+    icon: CheckCircle2,
+    accent: "bg-emerald-500",
+    chip: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400",
+    surface: "bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-800",
+    anim: "toast-icon-pop",
+  },
+  error: {
+    icon: AlertCircle,
+    accent: "bg-red-500",
+    chip: "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400",
+    surface: "bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-800",
+    anim: "toast-icon-shake",
+  },
+  warning: {
+    icon: AlertTriangle,
+    accent: "bg-amber-500",
+    chip: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400",
+    surface: "bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-800",
+    anim: "toast-icon-pop",
+  },
 }
+variants.destructive = variants.error
 
-const IconColors = {
-  default: "text-blue-500",
-  success: "text-emerald-500",
-  error: "text-red-500",
-  warning: "text-amber-500",
-  destructive: "text-red-500",
-}
+const toastStyles = `
+  /* Entrance: slides in from the right with a soft spring */
+  @keyframes toast-in {
+    0%   { opacity: 0; transform: translateX(28px) scale(0.94); }
+    60%  { opacity: 1; transform: translateX(-3px) scale(1.01); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  /* Exit: quick slide out and fade */
+  @keyframes toast-out {
+    0%   { opacity: 1; transform: translateX(0) scale(1); }
+    100% { opacity: 0; transform: translateX(32px) scale(0.95); }
+  }
+  /* Icon pop */
+  @keyframes toast-icon-pop {
+    0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+    65%  { transform: scale(1.18) rotate(3deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  /* Error icon: pop, then a small shake */
+  @keyframes toast-icon-shake {
+    0%   { transform: scale(0.4); opacity: 0; }
+    40%  { transform: scale(1.12); opacity: 1; }
+    55%  { transform: translateX(-3px); }
+    70%  { transform: translateX(3px); }
+    85%  { transform: translateX(-2px); }
+    100% { transform: translateX(0) scale(1); }
+  }
+  /* Progress bar */
+  @keyframes toast-progress {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); }
+  }
+  /* Accent bar grows down on entry */
+  @keyframes toast-accent {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
 
-const TextColors = {
-  default: "text-gray-900 dark:text-white",
-  success: "text-emerald-900 dark:text-emerald-100",
-  error: "text-red-900 dark:text-red-100",
-  warning: "text-amber-900 dark:text-amber-100",
-  destructive: "text-red-900 dark:text-red-100",
-}
+  .toast-root.toast-root[data-state="open"] {
+    animation: toast-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .toast-root.toast-root[data-state="closed"] {
+    animation: toast-out 220ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+  .toast-root[data-swipe="move"] {
+    transform: translateX(var(--radix-toast-swipe-move-x));
+    transition: none;
+    animation: none;
+  }
+  .toast-root[data-swipe="cancel"] {
+    transform: translateX(0);
+    transition: transform 200ms ease-out;
+  }
+  .toast-root[data-swipe="end"] {
+    animation: toast-out 160ms ease-out forwards;
+  }
 
-const DescriptionColors = {
-  default: "text-gray-600 dark:text-gray-400",
-  success: "text-emerald-700 dark:text-emerald-300",
-  error: "text-red-700 dark:text-red-300",
-  warning: "text-amber-700 dark:text-amber-300",
-  destructive: "text-red-700 dark:text-red-300",
-}
+  .toast-accent   { transform-origin: top; animation: toast-accent 420ms 120ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .toast-icon-pop { animation: toast-icon-pop 520ms 140ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .toast-icon-shake { animation: toast-icon-shake 600ms 140ms ease-out both; }
+  .toast-progress {
+    transform-origin: left;
+    animation: toast-progress var(--toast-duration, 4000ms) linear forwards;
+  }
+  /* Pause the progress bar while hovering, matching Radix's timer pause */
+  .toast-root:hover .toast-progress { animation-play-state: paused; }
 
-const AccentColors = {
-  default: "from-blue-400 to-blue-600",
-  success: "from-emerald-400 to-emerald-600",
-  error: "from-red-400 to-red-600",
-  warning: "from-amber-400 to-amber-600",
-  destructive: "from-red-400 to-red-600",
-}
-
-const ProgressColors = {
-  default: "bg-blue-500",
-  success: "bg-emerald-500",
-  error: "bg-red-500",
-  warning: "bg-amber-500",
-  destructive: "bg-red-500",
-}
+  @media (prefers-reduced-motion: reduce) {
+    .toast-root.toast-root[data-state="open"],
+    .toast-root.toast-root[data-state="closed"],
+    .toast-accent, .toast-icon-pop, .toast-icon-shake {
+      animation-duration: 1ms !important;
+      animation-delay: 0ms !important;
+    }
+  }
+`
 
 export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider duration={4000}>
-      {toasts.map(function ({ id, title, description, action, variant = "default", ...props }) {
-        const Icon = ToastIcons[variant as keyof typeof ToastIcons] || ToastIcons.default
-        const iconColor = IconColors[variant as keyof typeof IconColors] || IconColors.default
-        const toastColor = ToastColors[variant as keyof typeof ToastColors] || ToastColors.default
-        const textColor = TextColors[variant as keyof typeof TextColors] || TextColors.default
-        const descriptionColor = DescriptionColors[variant as keyof typeof DescriptionColors] || DescriptionColors.default
-        const accentColor = AccentColors[variant as keyof typeof AccentColors] || AccentColors.default
-        const progressColor = ProgressColors[variant as keyof typeof ProgressColors] || ProgressColors.default
+    <ToastProvider duration={DEFAULT_DURATION}>
+      <style>{toastStyles}</style>
+
+      {toasts.map(function ({ id, title, description, action, variant = "default", duration, ...props }) {
+        const v = variants[variant as keyof typeof variants] || variants.default
+        const Icon = v.icon
+        const ms = duration ?? DEFAULT_DURATION
 
         return (
-          <Toast 
-            key={id} 
-            {...props} 
+          <Toast
+            key={id}
+            duration={ms}
+            {...props}
+            style={{ "--toast-duration": `${ms}ms` } as React.CSSProperties}
             className={`
-              group
-              relative w-full max-w-sm rounded-xl
-              ${toastColor}
-              shadow-lg
-              border
-              transition-all duration-300 ease-out
-              hover:shadow-xl hover:scale-[1.02]
-              data-[state=open]:animate-in data-[state=closed]:animate-out
-              data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full
-              data-[state=open]:sm:slide-in-from-bottom-full
-              py-3.5 px-4
-              pointer-events-auto
-              overflow-hidden
+              toast-root group relative pointer-events-auto overflow-hidden
+              w-full max-w-[340px] rounded-lg border ${v.surface}
+              py-2.5 pl-4 pr-3
+              shadow-[0_4px_16px_-4px_rgba(15,23,42,0.18),0_1px_3px_rgba(15,23,42,0.08)]
+              transition-shadow duration-200
+              hover:shadow-[0_8px_24px_-6px_rgba(15,23,42,0.24),0_2px_4px_rgba(15,23,42,0.08)]
             `}
           >
-            {/* Gradient accent bar */}
-            <div className={`
-              absolute top-0 left-0 w-1.5 h-full
-              bg-gradient-to-b ${accentColor}
-            `} />
+            {/* Status accent */}
+            <span className={`toast-accent absolute left-0 top-0 h-full w-[3px] ${v.accent}`} />
 
-            <div className="flex items-start gap-3 pl-2">
-              <div className="flex-shrink-0 mt-0.5">
-                <Icon className={`h-5 w-5 ${iconColor}`} />
-              </div>
-              
-              <div className="flex-1 min-w-0">
+            <div className="flex items-start gap-2.5">
+              <span className={`${v.anim} mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${v.chip}`}>
+                <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
+              </span>
+
+              <div className="min-w-0 flex-1 py-0.5">
                 {title && (
-                  <ToastTitle className={`text-sm font-semibold text-black leading-tight`}>
+                  <ToastTitle className="text-[13px] font-semibold leading-snug text-gray-900 dark:text-gray-50">
                     {title}
                   </ToastTitle>
                 )}
                 {description && (
-                  <ToastDescription className={`text-sm text-black mt-0.5 leading-relaxed`}>
+                  <ToastDescription className="mt-0.5 text-xs leading-relaxed text-gray-600 dark:text-gray-400">
                     {description}
                   </ToastDescription>
                 )}
-                {action && (
-                  <div className="mt-2">
-                    {action}
-                  </div>
-                )}
+                {action && <div className="mt-2">{action}</div>}
               </div>
-              
-              <ToastClose className={`flex-shrink-0 rounded-full p-1.5 ${textColor} hover:bg-black/5 dark:hover:bg-white/10 transition-colors opacity-60 hover:opacity-100`}>
-                <X className="h-4 w-4" />
+
+              <ToastClose
+                className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              >
+                <X className="h-3.5 w-3.5" />
               </ToastClose>
             </div>
 
-            {/* Progress bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5 dark:bg-white/5">
-              <div className={`
-                h-full transition-all duration-[4000ms] ease-linear
-                ${progressColor}
-                animate-[shrink_4s_linear_forwards]
-              `} />
-            </div>
+            {/* Time remaining */}
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-100 dark:bg-gray-800">
+              <span className={`toast-progress block h-full w-full ${v.accent} opacity-70`} />
+            </span>
           </Toast>
         )
       })}
-      <ToastViewport className="fixed top-20 right-4 flex flex-col gap-3 w-full max-w-sm p-4 z-[9999] pointer-events-none" />
+
+      <ToastViewport className="fixed right-4 top-20 z-[9999] flex w-full max-w-[340px] flex-col gap-2 p-0 pointer-events-none" />
     </ToastProvider>
   )
 }

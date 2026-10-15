@@ -34,7 +34,7 @@ const links = [
 
 const ProposalsOverview = () => {
   return (
-    <div className="max-w-[1200px] mx-auto space-y-8 p-6 animate-slideDown">
+    <div className="max-w-[1200px] mx-auto space-y-8 p-6 animate-in fade-in duration-900">
       <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 p-12 bg-gradient-to-bl from-purple-100 to-transparent rounded-bl-full opacity-60 pointer-events-none" />
         <h1 className="text-3xl font-bold text-gray-800 m-0">Proposals Dashboard</h1>

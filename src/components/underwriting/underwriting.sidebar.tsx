@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { 
@@ -22,10 +23,6 @@ import {
   RotateCcw,
   Calculator,
   FolderOpen,
-  Building2,
-  Bus,
-  Flame,
-  Car
 } from "lucide-react";
 
 const SIDEBAR_BG = "#0d47a1";        // Dark blue

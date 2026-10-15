@@ -10,7 +10,12 @@ const HIGHLIGHTS = [
 
 // A light illustration for the left panel: a shield, a document card and a small chart.
 const Illustration = () => (
-  <svg viewBox="0 0 420 220" className="h-[clamp(6rem,29vh,20rem)] w-auto max-w-full" role="img" aria-label="Shield, document and chart">
+<svg
+  viewBox="0 0 420 220"
+  className="h-[clamp(6rem,29vh,20rem)] w-auto max-w-full animate-float-bounce"
+  role="img"
+  aria-label="Shield, document and chart"
+>
     <ellipse cx="210" cy="205" rx="170" ry="10" fill="#000" opacity="0.25" />
     <path d="M70 70 L120 52 L170 70 V130 C170 160 148 178 120 190 C92 178 70 160 70 130 Z" fill="#3b82f6" />
     <path d="M70 70 L120 52 V190 C92 178 70 160 70 130 Z" fill="#2563eb" />
