@@ -285,19 +285,35 @@ const fetchDetail = async () => {
     const data = await response.json();
     setDetailData(data);
     
-    const detailItem: PolicyDetailItem = {
-      detailID: data.detailID,
-      policyNo: data.policyNo || policyNo,
-      endorsementNo: data.endorsementNo || "[AUTO]",
-      certOrDocNo: data.certOrDocNo || "N/A",
-      insuredName: data.insuredName || formData?.clientName || "N/A",
-      created: data.created || false,
-      // ✅ Use actual API data
-      sumInsured: data.sumInsured || 0,
-      premium: data.grossPremium || data.netPremium || 0,
-      transDate: data.effectiveDate || data.submittedOn || formData?.transactionDate || new Date().toISOString(),
-    };
-    setPolicyDetails([detailItem]);
+    const toItem = (d: any): PolicyDetailItem => ({
+      detailID: d.detailID,
+      policyNo: d.policyNo || policyNo,
+      endorsementNo: d.endorsementNo || "[AUTO]",
+      certOrDocNo: d.certOrDocNo || "N/A",
+      insuredName: d.insuredName || formData?.clientName || "N/A",
+      created: d.created || false,
+      sumInsured: d.sumInsured || 0,
+      premium: d.grossPremium || d.netPremium || 0,
+      transDate: d.effectiveDate || d.submittedOn || formData?.transactionDate || new Date().toISOString(),
+      endorsementType: d.endorsementType,
+      completionStatus: d.completionStatus,
+    });
+
+    // List every endorsement so a renewed (EXPIRED) source and its new RENEWAL row both show.
+    let items: PolicyDetailItem[] = [toItem(data)];
+    try {
+      const listRes = await fetch(
+        `${SERVER_URL}/grouplife/policies/details?policyNo=${encodeURIComponent(policyNo)}`,
+        { headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" } }
+      );
+      if (listRes.ok) {
+        const list = await listRes.json();
+        if (Array.isArray(list) && list.length > 0) items = list.map(toItem);
+      }
+    } catch (e) {
+      console.error("Error fetching endorsement list:", e);
+    }
+    setPolicyDetails(items);
     
     if (data.members) {
       setMembers(data.members);
@@ -411,10 +427,11 @@ const fetchDetail = async () => {
       const encodedPolicyNo = encodeURIComponent(createdEndorsement.policyNo);
      
       
-      // Clear processing state
+      // Clear processing state and reload so the renewed source row shows as Expired
       setProcessingEndorsement(null);
+      fetchDetail();
     }
-    
+
     if (endorsementError) {
       // Close dialog if open
       setEndorsementDialogOpen(false);
@@ -742,15 +759,21 @@ const fetchDetail = async () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={item.created ? "default" : "secondary"}
-                            className={item.created 
-                              ? "bg-green-100 text-green-800 hover:bg-green-200" 
-                              : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                            }
-                          >
-                            {item.created ? "Active" : "Pending"}
-                          </Badge>
+                          {item.endorsementType?.toUpperCase() === "EXPIRED" ? (
+                            <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-200">
+                              Expired
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant={item.created ? "default" : "secondary"}
+                              className={item.created
+                                ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                              }
+                            >
+                              {item.created ? "Active" : "Pending"}
+                            </Badge>
+                          )}
                         </TableCell>
                         {/* ==================== ACTIONS PER ROW ==================== */}
                         <TableCell>
@@ -762,7 +785,7 @@ const fetchDetail = async () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleRenew(item)}
-                                disabled={isItemProcessing || endorsementLoading}
+                                disabled={isItemProcessing || endorsementLoading || item.endorsementType?.toUpperCase() === "EXPIRED"}
                                 className={`h-7 px-2 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800 text-xs ${
                                   isItemProcessing ? 'opacity-50 cursor-not-allowed' : ''
                                 }`}
