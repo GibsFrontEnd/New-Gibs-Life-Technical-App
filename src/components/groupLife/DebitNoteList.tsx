@@ -393,17 +393,46 @@ const DebitNoteList = ({
     }
   };
 
-  // Handle Do CoInsurance Note
-  const handleDoCoinsuranceNote = () => {
-    const selectedList = debitNoteList.filter((note: any) => {
-      const dncnNo = note.debitNoteNo || note.dncnNo || note.id;
-      return selectedNotes.has(dncnNo);
-    });
-    console.log("Do CoInsurance Note clicked for notes:", selectedList.length > 0 ? selectedList : debitNoteList);
-    toast.info(selectedNotes.size > 0
-      ? `Do CoInsurance Note triggered for ${selectedNotes.size} selected note(s). API will be connected shortly.`
-      : `Do CoInsurance Note triggered for policy ${policyNo}. API will be connected shortly.`);
-  };
+// Handle Do CoInsurance Note — navigate to the Create Credit Note (New) page
+const handleDoCoinsuranceNote = () => {
+  const selectedList = debitNoteList.filter((note: any, i: number) => {
+    const dncnNo = note.debitNoteNo || note.dncnNo || note.id || i;
+    return selectedNotes.has(dncnNo);
+  });
+
+  if (selectedList.length === 0) {
+    toast.error('Please select at least one debit note');
+    return;
+  }
+
+  if (selectedList.length > 1) {
+    toast.error('Please select only one debit note for a co-insurance / credit note');
+    return;
+  }
+
+  const note = selectedList[0];
+  const dncnNo = note.debitNoteNo || note.dncnNo || note.id;
+  const policyNumber = note.policyNo || policyNo;
+
+  if (!dncnNo) {
+    toast.error('Debit note number is missing');
+    return;
+  }
+  if (!policyNumber) {
+    toast.error('Policy number is missing');
+    return;
+  }
+
+  navigate(`/underwriting/group-life-quotations/coinsurance-credit-note/${dncnNo}/new`, {
+    state: {
+      refDebitNoteNo: dncnNo,
+      type: "CN",
+      debitNoteData: note,
+      policyNo: policyNumber,
+      mode: 'add'
+    }
+  });
+};
 
   // Helper to fetch subRiskId from PolicyAdmin API or grouplife policies API
   const fetchSubRiskIdForPolicy = async (targetPolicyNo: string, token: string | null, baseApi: string): Promise<string> => {

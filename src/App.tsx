@@ -2,11 +2,12 @@
 import React from "react";
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import Layout from "./components/Layout/Layout";
+
 import "./styles/global.css";
 import { useAuth } from "./hooks/use-auth";
 import { useSelector } from "react-redux";
 import type { RootState } from "./features/store";
-import { Toaster } from "./components/UI/toaster";
+
 // Some screens (motor calculator, vehicle upload, renewals, debit/credit notes) toast through sonner
 import { Toaster as SonnerToaster } from "./components/UI/sonner";
 import HomePage from "./pages/Home";
@@ -191,8 +192,8 @@ const App: React.FC = () => {
   
   return (
     <>
-      <Toaster />
-      <SonnerToaster position="top-right" richColors closeButton />
+      
+      <SonnerToaster />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />

@@ -24,6 +24,37 @@ import {
 } from "../features/reducers/csuReducers/agentSlice"
 import type { CreateAgentRequest } from "../types/agent"
 import "./components.agents.css"
+import {Eye, EyeOff} from "lucide-react"
+
+const PasswordInput = ({ value, onChange, placeholder, className }: {
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  placeholder?: string
+  className?: string
+}) => {
+  const [show, setShow] = useState(false)
+
+  return (
+    <div className="relative">
+      <Input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`pr-10 ${className || ""}`}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+        aria-label={show ? "Hide password" : "Show password"}
+        tabIndex={-1}
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  )
+}
 
 const emptyAgentForm: CreateAgentRequest = {
   UnitId: "",
@@ -319,17 +350,15 @@ export const CreateAgent = () => {
                 />
               </div>
               <div className="ca-form-field">
-                <Label htmlFor="password">Password *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.Password}
-                  onChange={(e) => handleInputChange("Password", e.target.value)}
-                  placeholder="Enter portal password"
-                  className={errors.Password ? "ca-error" : ""}
-                />
-                {errors.Password && <span className="ca-error-text">{errors.Password}</span>}
-              </div>
+  <Label htmlFor="password">Password *</Label>
+  <PasswordInput
+    value={formData.Password}
+    onChange={(e) => handleInputChange("Password", e.target.value)}
+    placeholder="Enter portal password"
+    className={errors.Password ? "ca-error" : ""}
+  />
+  {errors.Password && <span className="ca-error-text">{errors.Password}</span>}
+</div>
             </div>
 
             <div className="ca-form-field">
@@ -693,15 +722,13 @@ export const EditAgent = () => {
                 />
               </div>
               <div className="ea-form-field">
-                <Label htmlFor="editPasswords">New Password</Label>
-                <Input
-                  id="editPasswords"
-                  type="password"
-                  value={formData.passwords}
-                  onChange={(e) => handleInputChange("passwords", e.target.value)}
-                  placeholder="Leave blank to keep current password"
-                />
-              </div>
+  <Label htmlFor="editPasswords">New Password</Label>
+  <PasswordInput
+    value={formData.passwords}
+    onChange={(e) => handleInputChange("passwords", e.target.value)}
+    placeholder="Leave blank to keep current password"
+  />
+</div>
             </div>
 
             <div className="ea-form-field">
