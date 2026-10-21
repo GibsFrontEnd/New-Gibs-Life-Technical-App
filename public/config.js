@@ -5,4 +5,5 @@ window.APP_CONFIG = {
   API_BASE_URL: "https://lifetechnicalapi.newgibsonline.com/api",
   ROOT_URL: "https://lifetechnicalapi.newgibsonline.com/",
   QUOTATIONS_URL: "https://lifequotes.newgibsonline.com",
+  REPORTS_API_URL: "https://lifereportapi.newgibsonline.com",
 };

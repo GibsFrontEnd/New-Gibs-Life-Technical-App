@@ -3,26 +3,31 @@
 // A section with `reports` opens a second dropdown; a section without one is a single link.
 // A report's `items` are the individual reports, listed on its page rather than in the menu;
 // `{ group, items }` puts a few of them under a heading ("Outstanding Premium Reports").
+// A section's `api` is its endpoint on the report server; report names are matched to the
+// server's list, and `{ title, api }` gives the server's name where they can't be matched.
 export const reportSections = [
   {
     slug: "individual",
     title: "Individual",
-    blurb: "Active policy registers, policy production and premium collections for individual life.",
+    api: "underwriting",
+    blurb: "Active policy registers, policy production, premium collections and proposals for individual life.",
     reports: [
       {
         slug: "active-policy-registers",
         title: "Active Policy Registers Reports",
         items: [
-          "Active Policy Registers Reports",
           "All Matured Policy Registers",
-          "All Policy Registers By Plan",
           "All Policy Registers",
+          "All Policy Registers By Plan",
           "All Surrendered Policy Registers",
+          "Lapse Policy Register",
+          "Lapse Policy Reminder Notice",
           "Maturity Policy Registers",
           "Policy Register by Financial Planners",
           "Policy Registers (TRADITIONAL)",
           "Policy Registers Traditional Options",
           "Policy Registers-Investment Schemes",
+          "Schedule of Reducing Sum Assured register",
         ],
       },
       {
@@ -44,11 +49,20 @@ export const reportSections = [
         slug: "premium-production-collection",
         title: "Premium Production - Collection Reports",
         items: [
-          "Premium Production - Collection Reports",
           "Comprehensive collection report",
+          "Policy Production Report",
           "Premium Production by branch",
+          "Premium Production Report",
           "Premium production summary by product",
           "Summary collection report by branch",
+        ],
+      },
+      {
+        slug: "proposals",
+        title: "Proposals",
+        items: [
+          "All NATA Proposals",
+          "All Traditional Proposal",
         ],
       },
     ],
@@ -56,7 +70,8 @@ export const reportSections = [
   {
     slug: "group-life",
     title: "Group Life",
-    blurb: "Group life production, premium collections, claims, renewals and credit control.",
+    api: "grouplife",
+    blurb: "Group life production, premium collections, claims, renewals, credit control, policy documents and validation.",
     reports: [
       {
         slug: "production-collection",
@@ -91,10 +106,36 @@ export const reportSections = [
           {
             group: "Outstanding Premium Reports",
             items: [
-              "Outstanding Balances Details",
+              { title: "Outstanding Balances Details", api: "Oustanding Balances Details" },
               "Outstanding Summary (All Brokers)",
             ],
           },
+        ],
+      },
+      {
+        slug: "policy-documents",
+        title: "Policy Document Reports",
+        items: [
+          { title: "All Uploaded Clients", api: "All Uploaded Client" },
+          "All Uploaded Members By Scheme",
+          "Client Quote Report",
+          "Group Life Assurance Certificate",
+          { title: "Group Life Quotation Schedule", api: "Grplife_QuotationSchedule" },
+          { title: "Group Life Quotation Schedule (Option)", api: "Grplife_QuotationSchedule Option" },
+          "Policy Registers - Group Life Schemes",
+        ],
+      },
+      {
+        slug: "validation",
+        title: "Validation Reports",
+        items: [
+          "All Agency Details",
+          "All Parties",
+          "Debit Notes Validation Report (Entry Date)",
+          "Enquiry (All Transactions)",
+          "Enquiry (Brokers Option)",
+          "Enquiry (Debit Credit Note)",
+          "Enquiry (Insured Option)",
         ],
       },
     ],
@@ -202,9 +243,11 @@ export const reportSections = [
 export const slugify = (text: string) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+const asItem = (it: any) => (typeof it === "string" ? { title: it } : it);
+
 /** A report's items as one list, each with the heading it sits under (if any). */
 export const flattenItems = (items: any[] = []) =>
-  items.flatMap((it) => (typeof it === "string" ? [{ title: it, group: null }] : it.items.map((title) => ({ title, group: it.group }))));
+  items.flatMap((it) => (it.items ? it.items.map((x) => ({ ...asItem(x), group: it.group })) : [{ ...asItem(it), group: null }]));
 
 export const reportPath = (section: string, report?: string) =>
   report ? `/reports/${section}/${report}` : `/reports/${section}`;

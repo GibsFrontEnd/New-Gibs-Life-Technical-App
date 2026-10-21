@@ -1,19 +1,29 @@
 // @ts-nocheck
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
-import { CalendarRange, Clock, Eye, FileSpreadsheet, FileText, MousePointerClick, Play } from "lucide-react";
+import { AlertCircle, CalendarRange, CheckCircle2, Clock, FileSpreadsheet, FileText, FileType, Loader2, MousePointerClick, Play } from "lucide-react";
 import { EmptyState, PageHeader, PageShell, Panel, SearchField, Segmented, btnPrimary, inputBase } from "../../components/page/PageKit";
 import { findReport, flattenItems, reportPath, slugify } from "./reportsCatalog";
+import { exportReport, fetchParameters, loadLookup, lookupFor, paramKey, paramLabel, resolveApiName } from "./reportsApi";
 
 const countLabel = (n: number) => `${n} report${n === 1 ? "" : "s"}`;
-const today = () => new Date().toISOString().slice(0, 10);
+const pad = (n: number) => String(n).padStart(2, "0");
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 const startOfYear = () => `${new Date().getFullYear()}-01-01`;
 
 const formats = [
-  { value: "screen", label: "On screen", icon: Eye },
   { value: "pdf", label: "PDF", icon: FileText },
+  { value: "word", label: "Word", icon: FileType },
   { value: "excel", label: "Excel", icon: FileSpreadsheet },
 ];
+
+const isDate = (p: any) => p.type === "DateTimeParameter";
+// Report-heading text (Organization, ReportRange, Tag ...) is the only kind without the "@".
+const isHeading = (p: any) => !isDate(p) && !String(p.name).startsWith("@");
+const startingValue = (p: any) => (!isDate(p) ? "" : /period1$/i.test(paramKey(p.name)) ? startOfYear() : today());
 
 /** Switches between the reports of one section ("Individual") without going back to the menu. */
 const SectionTabs = ({ section, current }: any) => (
@@ -37,38 +47,187 @@ const SectionTabs = ({ section, current }: any) => (
   </nav>
 );
 
-/** The chosen report's parameters. Not wired to the reports server yet, so Run stays disabled. */
-const RunPanel = ({ title }: { title: string }) => {
-  const [from, setFrom] = useState(startOfYear());
-  const [to, setTo] = useState(today());
-  const [format, setFormat] = useState("screen");
+/** One report parameter: a date, a code picked from a list (or typed), or free text. */
+const ParamField = ({ param, value, onChange, min, max }: any) => {
+  const key = paramKey(param.name);
+  const kind = lookupFor(param.name);
+  const [options, setOptions] = useState<any[]>([]);
+  useEffect(() => {
+    let live = true;
+    if (kind) loadLookup(kind).then((list) => live && setOptions(list));
+    return () => {
+      live = false;
+    };
+  }, [kind]);
 
+  const listId = options.length ? `report-${key}-options` : undefined;
   return (
-    <Panel title={title} description="Set the period and output, then run the report.">
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-slate-700">
+        {paramLabel(param.name)}
+        {isDate(param) && <span className="text-rose-500"> *</span>}
+      </span>
+      {isDate(param) ? (
+        <input type="date" required value={value} min={min} max={max} onChange={(e) => onChange(e.target.value)} className={inputBase} />
+      ) : (
+        <>
+          <input
+            type="text"
+            list={listId}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={options.length ? "Pick from the list or type a code" : "Optional"}
+            className={inputBase}
+          />
+          {listId && (
+            <datalist id={listId}>
+              {options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </datalist>
+          )}
+        </>
+      )}
+    </label>
+  );
+};
+
+/** Shows a PDF in the tab the click already opened (so it isn't blocked); other formats download. */
+const deliver = ({ blob, filename }: any, tab: Window | null) => {
+  const url = URL.createObjectURL(blob);
+  if (tab) {
+    tab.location.href = url;
+  } else {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+};
+
+/** The chosen report's parameters, as the report server lists them, and the Run button. */
+const RunPanel = ({ title, endpoint, apiName }: { title: string; endpoint?: string; apiName?: string }) => {
+  const [state, setState] = useState<{ loading: boolean; error?: string; report?: string; params: any[] }>({ loading: !!endpoint, params: [] });
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [format, setFormat] = useState("pdf");
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!endpoint) return;
+    let live = true;
+    (async () => {
+      try {
+        const report = await resolveApiName(endpoint, title, apiName);
+        const params = await fetchParameters(endpoint, report);
+        if (!live) return;
+        setValues(Object.fromEntries(params.map((p) => [paramKey(p.name), startingValue(p)])));
+        setState({ loading: false, report, params });
+      } catch (e) {
+        if (live) setState({ loading: false, error: e.message, params: [] });
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [endpoint, title, apiName]);
+
+  const set = (key: string) => (v: string) => setValues((old) => ({ ...old, [key]: v }));
+  const main = state.params.filter((p) => !isHeading(p));
+  const heading = state.params.filter(isHeading);
+  const missing = state.params.filter((p) => isDate(p) && !values[paramKey(p.name)]);
+  const backwards = values.Period1 && values.Period2 && values.Period1 > values.Period2;
+  const canRun = !!state.report && !missing.length && !backwards && !running;
+
+  const run = async () => {
+    setRunning(true);
+    setResult(null);
+    const tab = format === "pdf" ? window.open("", "_blank") : null;
+    try {
+      const file = await exportReport(endpoint, state.report, format, values);
+      deliver(file, tab);
+      setResult({ ok: true, text: format === "pdf" ? `Opened ${file.filename} in a new tab.` : `Downloaded ${file.filename}.` });
+    } catch (e) {
+      tab?.close();
+      setResult({ ok: false, text: e.message });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  // Each period bounds the other, so Period 1 can't be after Period 2.
+  const bounds = (p: any) => {
+    const key = paramKey(p.name);
+    if (key === "Period1") return { max: values.Period2 || undefined };
+    if (key === "Period2") return { min: values.Period1 || undefined };
+    return {};
+  };
+
+  let body;
+  if (!endpoint) {
+    body = <EmptyState icon={Clock} title="Not connected yet" description="This group of reports isn't on the report server yet." />;
+  } else if (state.loading) {
+    body = (
+      <div className="flex items-center justify-center gap-2 py-14 text-sm text-slate-500">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading this report's options…
+      </div>
+    );
+  } else if (state.error) {
+    body = <EmptyState icon={AlertCircle} title="Can't load this report" description={state.error} />;
+  } else {
+    body = (
       <div className="space-y-5">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">From</span>
-            <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className={inputBase} />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">To</span>
-            <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={inputBase} />
-          </label>
-        </div>
+        {main.length ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {main.map((p) => (
+              <ParamField key={p.name} param={p} value={values[paramKey(p.name)] ?? ""} onChange={set(paramKey(p.name))} {...bounds(p)} />
+            ))}
+          </div>
+        ) : (
+          !heading.length && <p className="text-sm text-slate-500">This report has no options. Pick the output and run it.</p>
+        )}
+        {backwards && <p className="text-sm text-rose-600">Period 1 must be on or before Period 2.</p>}
+
+        {heading.length > 0 && (
+          <fieldset className="rounded-xl border border-slate-200 p-4">
+            <legend className="px-1 text-sm font-medium text-slate-700">Report heading (optional)</legend>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {heading.map((p) => (
+                <ParamField key={p.name} param={p} value={values[paramKey(p.name)] ?? ""} onChange={set(paramKey(p.name))} />
+              ))}
+            </div>
+          </fieldset>
+        )}
+
         <div>
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Output</span>
           <Segmented options={formats} value={format} onChange={setFormat} />
         </div>
+
         <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
-          <button type="button" className={btnPrimary} disabled title="Not connected to the reports server yet">
-            <Play className="h-4 w-4" /> Run report
+          <button type="button" className={btnPrimary} disabled={!canRun} onClick={run}>
+            {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            {running ? "Running…" : "Run report"}
           </button>
-          <span className="inline-flex items-center gap-1.5 text-sm text-slate-500">
-            <Clock className="h-4 w-4" /> Not connected to the reports server yet.
-          </span>
+          {result && (
+            <span role="status" className={`inline-flex items-center gap-1.5 text-sm ${result.ok ? "text-emerald-600" : "text-rose-600"}`}>
+              {result.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+              {result.text}
+            </span>
+          )}
         </div>
       </div>
+    );
+  }
+
+  return (
+    <Panel title={title} description={endpoint && !state.error ? "Fill in the options, choose the output and run the report." : undefined}>
+      {body}
     </Panel>
   );
 };
@@ -95,7 +254,7 @@ const ReportPage = () => {
       <PageHeader
         eyebrow={`Reports · ${hit.section.title}`}
         title={hit.report?.title ?? hit.section.title}
-        description={items.length ? `${countLabel(items.length)}. Pick one to set its period and output.` : undefined}
+        description={items.length ? `${countLabel(items.length)}. Pick one to set its options and run it.` : undefined}
         backTo="/reports/overview"
         backLabel="All reports"
       />
@@ -145,10 +304,10 @@ const ReportPage = () => {
           </Panel>
 
           {selected ? (
-            <RunPanel key={selected.slug} title={selected.title} />
+            <RunPanel key={selected.slug} title={selected.title} endpoint={hit.section.api} apiName={selected.api} />
           ) : (
             <Panel>
-              <EmptyState icon={MousePointerClick} title="Pick a report" description="Choose a report from the list to set its period and output." />
+              <EmptyState icon={MousePointerClick} title="Pick a report" description="Choose a report from the list to set its options and run it." />
             </Panel>
           )}
         </div>

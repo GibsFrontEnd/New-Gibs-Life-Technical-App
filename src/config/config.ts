@@ -7,6 +7,7 @@ declare global {
       API_BASE_URL?: string;
       ROOT_URL?: string;
       QUOTATIONS_URL?: string;
+      REPORTS_API_URL?: string;
     };
   }
 }
@@ -14,6 +15,7 @@ declare global {
 export const SERVER_URL = window.APP_CONFIG?.API_BASE_URL || "";
 export const ROOT_URL = window.APP_CONFIG?.ROOT_URL || "";
 export const QUOTATIONS_URL = window.APP_CONFIG?.QUOTATIONS_URL || "";
+export const REPORTS_API_URL = window.APP_CONFIG?.REPORTS_API_URL || "https://lifereportapi.newgibsonline.com";
 
 // Log warnings if config is missing
 if (!window.APP_CONFIG?.API_BASE_URL) {
