@@ -15,18 +15,24 @@ const baseOf = (link: string) => "/" + (link.split("/")[1] ?? "");
 const isUnder = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
 
 // "Individual · Policy Admin" becomes the section "Individual" with the link "Policy Admin".
+// Links and sections keep the order they have in the menu config.
 const toMenu = (list: any[]) => {
-  const flat: any[] = [];
-  const sections = new Map<string, any[]>();
+  const entries: any[] = [];
+  const sections = new Map<string, any>();
   for (const it of list) {
     const [head, ...rest] = String(it.label).split(" · ");
-    if (rest.length) {
-      sections.set(head, [...(sections.get(head) ?? []), { ...it, label: rest.join(" · ") }]);
-    } else {
-      flat.push(it);
+    if (!rest.length) {
+      entries.push({ link: it });
+      continue;
     }
+    if (!sections.has(head)) {
+      const section = { title: head, items: [] };
+      sections.set(head, section);
+      entries.push({ section });
+    }
+    sections.get(head).items.push({ ...it, label: rest.join(" · ") });
   }
-  return { flat, sections: [...sections.entries()].map(([title, items]) => ({ title, items })) };
+  return entries;
 };
 
 const SubLink = ({ to, children }: any) => (
@@ -88,21 +94,22 @@ const Group = ({ item, open, onToggle }: any) => {
       </button>
       {open && (
         <div className="ml-[1.35rem] mt-1 space-y-0.5 border-l border-white/10 pl-3">
-          {menu.flat.map((l: any) =>
-            l.external ? (
-              <a key={l.path} href={l.path} target="_blank" rel="noopener noreferrer" className="block truncate rounded-md px-3 py-1.5 text-[13px] text-blue-100/70 hover:text-white">
-                {l.label}
-              </a>
-            ) : (
-              <SubLink key={l.path} to={l.path}>
-                {l.label}
-              </SubLink>
-            ),
-          )}
           <ul className="space-y-0.5">
-            {menu.sections.map((section) => (
-              <Section key={section.title} section={section} />
-            ))}
+            {menu.map(({ link: l, section }) =>
+              section ? (
+                <Section key={section.title} section={section} />
+              ) : (
+                <li key={l.path}>
+                  {l.external ? (
+                    <a href={l.path} target="_blank" rel="noopener noreferrer" className="block truncate rounded-md px-3 py-1.5 text-[13px] text-blue-100/70 hover:text-white">
+                      {l.label}
+                    </a>
+                  ) : (
+                    <SubLink to={l.path}>{l.label}</SubLink>
+                  )}
+                </li>
+              ),
+            )}
           </ul>
         </div>
       )}

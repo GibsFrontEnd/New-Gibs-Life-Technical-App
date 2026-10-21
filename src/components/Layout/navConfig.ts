@@ -1,7 +1,8 @@
 // @ts-nocheck
 // The menus, in one place: the header's slide-out menu and the sidebar both read these.
-import { LayoutDashboard, User, Handshake, TrendingUp, FileCheck, FilePen, RefreshCw, Settings, Shield, Building2, Bus, BarChart, GitBranch, GitPullRequest, CreditCard, HeartHandshake, Crosshair, FileX, FileMinus, ClipboardList, BadgeCheck, HelpCircle, Skull, Building, Lock, Grid, Layers, Package, FileText, Users, Percent, Heart, Circle, Hospital, Home, PenTool, Scale, UserCog } from "lucide-react";
+import { LayoutDashboard, User, Handshake, TrendingUp, FileCheck, FilePen, RefreshCw, Settings, Shield, Building2, Bus, BarChart, GitBranch, GitPullRequest, CreditCard, HeartHandshake, Crosshair, FileX, FileMinus, ClipboardList, BadgeCheck, HelpCircle, Skull, Building, Lock, Grid, Layers, Package, FileText, Users, Percent, Heart, Circle, Hospital, Home, PenTool, Scale, UserCog, FileBarChart } from "lucide-react";
 import { QUOTATIONS_URL } from "../../config/config";
+import { reportPath, reportSections } from "../../pages/reports/reportsCatalog";
 
 export const getNavConfig = () => {
   // CSU Dropdown Items
@@ -90,6 +91,16 @@ export const getNavConfig = () => {
     { path: "/reinsurance/authorization", label: "Authorization", icon: Shield },
   ];
 
+  // Reports: a section with reports becomes its own dropdown ("Individual · Active Policy Registers Reports")
+  const reportsItems = [
+    { path: "/reports/overview", label: "Overview", icon: LayoutDashboard },
+    ...reportSections.flatMap((s) =>
+      s.reports
+        ? s.reports.map((r) => ({ path: reportPath(s.slug, r.slug), label: `${s.title} · ${r.title}`, icon: FileText }))
+        : [{ path: reportPath(s.slug), label: s.title, icon: FileText }],
+    ),
+  ];
+
   // Admin Dropdown Items - Full from AdminSidebar
   const adminItems = [
     { path: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -165,6 +176,15 @@ export const getNavConfig = () => {
       hasDropdown: true,
       dropdownItems: reinsuranceItems,
       icon: RefreshCw,
+    },
+    {
+      title: "Reports",
+      link: "/reports",
+      hidden: false,
+      roles: ["admin", "agent", "user"],
+      hasDropdown: true,
+      dropdownItems: reportsItems,
+      icon: FileBarChart,
     },
     {
       title: "Admin",

@@ -66,6 +66,9 @@ import LossRatioRange from "./pages/Reinsurance/Maintenance/LossRatioRange";
 import RiskClassification from "./pages/Reinsurance/Maintenance/RiskClassification";
 import NewTreatyDistribution from "./components/Reinsurance/NewTreatyDistribution";
 import ReinsuranceOverview from "./pages/Reinsurance/reinsurance-page.overview";
+import Reports from "./pages/Reports";
+import ReportsOverview from "./pages/reports/ReportsOverview";
+import ReportPage from "./pages/reports/ReportPage";
 
 // ── Reinsurance Sidebar ──
 import ReinsuranceSidebar from "./components/Reinsurance/Reinsurance.sidebar";
@@ -578,6 +581,14 @@ const App: React.FC = () => {
   />
 </Route>
           {/* END ReinsuranceLayout */}
+
+          {/* ── REPORTS ── */}
+          <Route path="/reports" element={<Reports />}>
+            <Route index element={<Navigate to="overview" replace />} />
+            <Route path="overview" element={<ReportsOverview />} />
+            <Route path=":section" element={<ReportPage />} />
+            <Route path=":section/:report" element={<ReportPage />} />
+          </Route>
 
 
 
