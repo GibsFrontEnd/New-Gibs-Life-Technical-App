@@ -80,6 +80,14 @@ export const getNavConfig = () => {
   // Reinsurance Dropdown Items - Full from ReinsuranceSidebar
   const reinsuranceItems = [
     { path: "/reinsurance/overview", label: "Overview", icon: LayoutDashboard },
+    { path: "/reinsurance/facultative-inwards", label: "Facultative", icon: FileCheck },
+    // Treaties > Family Treaties, as in the legacy menu
+    { path: "/reinsurance/treaties/process-underwriting-treaty?class=group", label: "Treaties · Group Life Underwriting Treaty", icon: FileText },
+    { path: "/reinsurance/treaties/process-underwriting-treaty?class=individual", label: "Treaties · Individual Life Underwriting Treaty", icon: FileText },
+    { path: "/reinsurance/treaties/ri-distribution", label: "Treaties · RI Distribution", icon: FileText },
+    { path: "/reinsurance/maintenance/treaty-distribution", label: "Maintenance", icon: Settings },
+    { path: "/reinsurance/treaties/claims-paid-recoveries", label: "Recoveries", icon: CreditCard },
+    { path: "/reinsurance/authorization", label: "Authorization", icon: Shield },
   ];
 
   // Admin Dropdown Items - Full from AdminSidebar

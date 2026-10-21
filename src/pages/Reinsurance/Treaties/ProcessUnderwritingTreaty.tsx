@@ -1,6 +1,7 @@
 // pages/Reinsurance/Maintenance/ProcessUnderwritingTreaty.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import GroupLifeTreatyDebitNotes from './GroupLifeTreatyDebitNotes';
 import RIDistribution from './RIDistribution';
 import FinalRIDistribution from './FinalRIDistribution';
 import DebitNoteViewEdit, { DebitNote, getApprovalLabel, getApprovalStyle } from '../../../components/Reinsurance/DebitNoteViewEdit';
@@ -82,7 +83,12 @@ const Toast = ({
 // ── Root tabs ─────────────────────────────────────────────────────────────────
 const ProcessUnderwritingTreaty: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(0);
+  const isGroupLife = searchParams.get('class') === 'group';
+
+  // Group Life Underwriting Treaty is its own screen: RI Distribution and Final RI Distribution have their own menu items
+  if (isGroupLife) return <GroupLifeTreatyDebitNotes />;
 
   return (
     <div className="max-w-6xl mx-auto">
