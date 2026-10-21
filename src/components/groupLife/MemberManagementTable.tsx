@@ -321,8 +321,11 @@ export default function MemberManagementTable({
     if (isNaN(birthDate.getTime())) return 0;
     const parsedStart = coverStartDate ? new Date(coverStartDate) : new Date();
     const asOf = isNaN(parsedStart.getTime()) ? new Date() : parsedStart;
-    const yearsDiff = asOf.getFullYear() - birthDate.getFullYear();
-    return birthDate.getMonth() <= asOf.getMonth() ? yearsDiff + 1 : yearsDiff;
+    // Age last birthday at the cover start, plus one (matches the API).
+    let age = asOf.getFullYear() - birthDate.getFullYear();
+    const birthdayThisYear = new Date(asOf.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+    if (asOf < birthdayThisYear) age -= 1;
+    return age + 1;
   };
 
   const getFullName = (member: GroupLifeMember) =>
@@ -389,7 +392,8 @@ export default function MemberManagementTable({
         totalEmolument: member.totalEmolument || member.tEmolument || 0,
         policyNo: member.policyNo || activePolicyNo,
         endorsementNo: member.endorsementNo || activeEndorsementNo,
-        numberType: member.numberType || "AUTO",
+        // An existing member keeps its stored number; AUTO would mint a new one and insert a duplicate.
+        numberType: member.numberType || (member.membersNo ? "MANUAL" : "AUTO"),
         serialNo: member.serialNo || "",
         freqOfPayment: member.freqOfPayment || member.field7 || "Monthly",
         duration: member.duration || member.a1 || 12,

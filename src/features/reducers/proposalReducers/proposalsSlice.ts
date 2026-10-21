@@ -163,6 +163,8 @@ interface ProposalsState {
   totalCount: number;
   schemeTotalCount: number;
   quotationTotalCount: number;
+  /** The newest policy-list request; an older response that arrives later is ignored. */
+  itemsRequestId?: string | null;
   loading: boolean;
   schemeLoading: boolean;
   quotationLoading: boolean;
@@ -212,11 +214,16 @@ const initialState: ProposalsState = {
 export const fetchInvestmentProposals = createAsyncThunk(
   "proposals/fetchInvestmentProposals",
   async ({ 
+    tag = "",
     page = 1, 
     pageSize = 20,
     policyNo = "",
     assuredCode = "",
-    surname = ""
+    surname = "",
+    coverCode = "",
+    status = "",
+    fromDate = "",
+    toDate = ""
   }: { 
     tag?: string; 
     page?: number; 
@@ -224,15 +231,24 @@ export const fetchInvestmentProposals = createAsyncThunk(
     policyNo?: string;
     assuredCode?: string;
     surname?: string;
+    coverCode?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
   } = {}, { rejectWithValue }) => {
     try {
       // Build query parameters
       const params = new URLSearchParams();
       params.append('page', page.toString());
       params.append('pageSize', pageSize.toString());
+      if (tag) params.append('tag', tag);
       if (policyNo) params.append('policyNo', policyNo);
       if (assuredCode) params.append('assuredCode', assuredCode);
       if (surname) params.append('surname', surname);
+      if (coverCode) params.append('coverCode', coverCode);
+      if (status) params.append('status', status);
+      if (fromDate) params.append('fromDate', fromDate);
+      if (toDate) params.append('toDate', toDate);
       
       // Use the correct /policies endpoint
       const url = `/v1/lifepolicyAdmin/policies?${params.toString()}`;
@@ -449,17 +465,20 @@ const proposalsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // ✅ UPDATED: fetchInvestmentProposals
-      .addCase(fetchInvestmentProposals.pending, (state) => {
+      .addCase(fetchInvestmentProposals.pending, (state, action) => {
         state.loading = true;
         state.error = null;
+        state.itemsRequestId = action.meta.requestId;
       })
       .addCase(fetchInvestmentProposals.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.itemsRequestId) return;
         state.loading = false;
         const data = action.payload;
         state.items = data?.items ?? (Array.isArray(data) ? data : []);
         state.totalCount = data?.totalCount ?? state.items.length;
       })
       .addCase(fetchInvestmentProposals.rejected, (state, action) => {
+        if (action.meta.requestId !== state.itemsRequestId) return;
         state.loading = false;
         state.error = action.payload as string;
       })

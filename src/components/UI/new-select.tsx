@@ -65,8 +65,8 @@ export function SelectTrigger({ children, id, name, className, disabled }: Selec
       type="button"
       disabled={disabled}
       onClick={() => setIsOpen(!isOpen)}
-      // className="flex items-center justify-between w-full px-4 py-2 border rounded bg-white"
-      className={cn("flex items-center justify-between w-full px-4 py-2 border rounded bg-white", className)}
+      // className="flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors hover:border-slate-300 focus:border-[#155dfd] focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+      className={cn("flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors hover:border-slate-300 focus:border-[#155dfd] focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50", className)}
     >
       {children}
       {isOpen ? <MdKeyboardArrowUp /> : <MdKeyboardArrowDown />}
@@ -111,7 +111,7 @@ export function SelectContent({ children }: SelectContentProps) {
 
   return (
     isOpen && (
-      <div className="absolute text-sm left-0 z-50 mt-2 w-full bg-white border rounded shadow">
+      <div className="absolute left-0 z-50 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-lg">
         {children}
       </div>
     )
@@ -142,7 +142,7 @@ export function SelectItem({ value, children }: SelectItemProps) {
     <button
       type="button"
       onClick={handleSelect}
-      className="block w-full px-4 py-2 text-left hover:bg-gray-100"
+      className="block w-full rounded-lg px-3 py-2 text-left text-slate-700 hover:bg-blue-50 hover:text-[#155dfd]"
     >
       {children}
     </button>

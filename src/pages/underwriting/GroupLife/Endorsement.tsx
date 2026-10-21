@@ -55,6 +55,8 @@ import {
   DialogSubTitle,
 } from "../../../components/UI/dialog";
 import { useAppDispatch, useAppSelector } from "../../../hooks/use-apps";
+import { useGroupLifeList } from "../../../components/groupLife/useGroupLifeList";
+import GroupLifeListFilters from "../../../components/groupLife/GroupLifeListFilters";
 import {
   selectGroupLifePolicies,
   setCurrentQuotation,
@@ -93,15 +95,6 @@ export default function Endorsement() {
 
   const [isMobile, setIsMobile] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filterCriteria, setFilterCriteria] = useState({
-    searchField: "companyName",
-    searchValue: "",
-    startDate: "",
-    endDate: "",
-    status: "all",
-    subRiskId: "all",
-    tag: "GL",
-  });
 
   const [selectedPolicies, setSelectedPolicies] = useState<Set<string>>(new Set());
   const [isAllSelected, setIsAllSelected] = useState(false);
@@ -111,8 +104,16 @@ export default function Endorsement() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
+  // search, filters and paging (server-side, every page) - see useGroupLifeList
+  const list = useGroupLifeList({
+    pageSize,
+    onReset: () => {
+      setSelectedPolicies(new Set());
+      setIsAllSelected(false);
+    },
+  });
+  const { filterCriteria, currentPage, setCurrentPage, clearAllFilters, hasActiveFilters } = list;
 
   // Endorsement Dialog state
   const [showEndorsementDialog, setShowEndorsementDialog] = useState(false);
@@ -127,13 +128,6 @@ export default function Endorsement() {
   const [bulkEndorsementReason, setBulkEndorsementReason] = useState("");
 
   // Fetch policies
-  useEffect(() => {
-    dispatch(fetchGroupLifePolicies({
-      page: currentPage,
-      pageSize: pageSize,
-      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-    }));
-  }, [dispatch, currentPage, pageSize, filterCriteria.subRiskId]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -201,85 +195,15 @@ export default function Endorsement() {
   navigate(`/underwriting/group-life-quotations/${encodeURIComponent(policyNumber)}?source=endorsements`);
 };
 
-  const applyFilters = () => {
-    setCurrentPage(1);
-    setSelectedPolicies(new Set());
-    setIsAllSelected(false);
 
-    dispatch(fetchGroupLifePolicies({
-      page: 1,
-      pageSize: pageSize,
-      search: filterCriteria.searchValue || undefined,
-      status: filterCriteria.status !== 'all' ? filterCriteria.status.toUpperCase() : undefined,
-      fromDate: filterCriteria.startDate || undefined,
-      toDate: filterCriteria.endDate || undefined,
-      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-    }));
-  };
-
-  const clearAllFilters = () => {
-    setFilterCriteria({
-      searchField: "companyName",
-      searchValue: "",
-      startDate: "",
-      endDate: "",
-      status: "all",
-      subRiskId: "all",
-      tag: "GL",
-    });
-    setCurrentPage(1);
-    setSelectedPolicies(new Set());
-    setIsAllSelected(false);
-
-    dispatch(fetchGroupLifePolicies({
-      page: 1,
-      pageSize: pageSize,
-    }));
-  };
 
   const getDisplayPolicies = () => {
     let filtered = policies || [];
 
-    if (filterCriteria.searchValue) {
-      const searchLower = filterCriteria.searchValue.toLowerCase();
-      filtered = filtered.filter((policy: any) => {
-        if (filterCriteria.searchField === "companyName") {
-          return getCompanyName(policy)?.toLowerCase().includes(searchLower);
-        } else {
-          return getPolicyNumber(policy)?.toLowerCase().includes(searchLower);
-        }
-      });
-    }
-
-    if (filterCriteria.status !== "all") {
-      filtered = filtered.filter((policy: any) => {
-        const status = policy.status?.toUpperCase() || policy.transSTATUS?.toUpperCase();
-        return status === filterCriteria.status.toUpperCase();
-      });
-    }
-
-    if (filterCriteria.startDate) {
-      filtered = filtered.filter((policy: any) => {
-        const date = policy.effectiveDate || policy.startDate || policy.transactionDate;
-        return date && date >= filterCriteria.startDate;
-      });
-    }
-
-    if (filterCriteria.endDate) {
-      filtered = filtered.filter((policy: any) => {
-        const date = policy.effectiveDate || policy.startDate || policy.transactionDate;
-        return date && date <= filterCriteria.endDate;
-      });
-    }
-
+    // search, status and dates are applied by the server across every page
     return filtered;
   };
 
-  const hasActiveFilters =
-    filterCriteria.searchValue ||
-    filterCriteria.startDate ||
-    filterCriteria.endDate ||
-    filterCriteria.status !== "all";
 
   const itemsForDisplay = getDisplayPolicies();
   const effectiveTotalCount = totalCount || itemsForDisplay.length;
@@ -293,11 +217,6 @@ export default function Endorsement() {
       setCurrentPage(page);
       setSelectedPolicies(new Set());
       setIsAllSelected(false);
-      dispatch(fetchGroupLifePolicies({
-        page: page,
-        pageSize: pageSize,
-        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-      }));
     }
   };
 
@@ -325,8 +244,8 @@ export default function Endorsement() {
 };
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto">
+    <div className="min-h-full">
+      <div className="mx-auto w-full max-w-[1400px]">
         <div className="rounded-lg">
           {/* SUCCESS TOAST */}
           {showSuccessToast && (
@@ -370,20 +289,20 @@ export default function Endorsement() {
           )}
 
           {/* Header Card */}
-          <Card className="bg-gradient-to-r from-gray-200 to-gray-200 border-white-200 mb-6">
-            <div className="p-4 pb-0">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <FilePen className="w-5 h-5 text-blue-600" />
+          <Card className="mb-6 border-0 bg-transparent shadow-none">
+            <div className="p-0">
+              <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                <FilePen className="h-10 w-10 shrink-0 rounded-xl bg-blue-50 p-2.5 text-[#155dfd]" />
                 Group Life Endorsements
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="mt-1.5 text-sm text-slate-500 sm:text-base">
                 Process reversal and additional endorsements for group life insurance policies
               </p>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="mt-1 text-xs text-slate-400">
                 Select policies to process endorsements. Choose between reversal or additional endorsement types.
               </p>
             </div>
-            <CardContent className="p-3 sm:p-4">
+            <CardContent className="px-0 pb-0 pt-4">
               <div className="flex flex-wrap gap-2 sm:gap-3">
                 {selectedPolicies.size > 0 && (
                   <Button
@@ -410,167 +329,10 @@ export default function Endorsement() {
             </CardContent>
           </Card>
 
-          {/* Filters Section */}
-          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <div className="border rounded-lg mb-6 bg-gray-50">
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 cursor-pointer">
-                  <div className="flex items-center space-x-2">
-                    <Filter className="h-4 w-4" />
-                    <span className="text-sm font-medium">Search Filter</span>
-                    {hasActiveFilters && (
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                        {[
-                          filterCriteria.searchValue,
-                          filterCriteria.startDate,
-                          filterCriteria.endDate,
-                          filterCriteria.status !== "all" ? filterCriteria.status : null,
-                        ].filter(Boolean).length} active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {hasActiveFilters && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          clearAllFilters();
-                        }}
-                        className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        Clear
-                      </Button>
-                    )}
-                    <Checkbox checked={filtersOpen} />
-                  </div>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-4 pb-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Search by
-                      </label>
-                      <Select
-                        value={filterCriteria.searchField}
-                        onValueChange={(value) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            searchField: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select field" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="companyName">Company Name</SelectItem>
-                          <SelectItem value="quotationNumber">Policy Number</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Search text
-                      </label>
-                      <Input
-                        value={filterCriteria.searchValue}
-                        onChange={(e) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            searchValue: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter search text"
-                      />
-                    </div>
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Start Date
-                      </label>
-                      <Input
-                        type="date"
-                        value={filterCriteria.startDate}
-                        onChange={(e) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            startDate: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        End Date
-                      </label>
-                      <Input
-                        type="date"
-                        value={filterCriteria.endDate}
-                        onChange={(e) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            endDate: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="lg:col-span-1 flex items-end">
-                      <Button
-                        className="w-full bg-primary hover:bg-primary-blue"
-                        onClick={applyFilters}
-                      >
-                        <Search className="w-4 h-4 mr-2" />
-                        Apply
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Status
-                      </label>
-                      <Select
-                        value={filterCriteria.status}
-                        onValueChange={(value) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            status: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All statuses" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Statuses</SelectItem>
-                          <SelectItem value="prospect">Prospect</SelectItem>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-end">
-                      <Button
-                        variant="outline"
-                        className="w-full bg-transparent"
-                        onClick={clearAllFilters}
-                      >
-                        Clear Filters
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
+          <GroupLifeListFilters list={list} total={totalCount} loading={isLoading} />
 
           {/* Data Display Area */}
-          <div className="border border-border rounded-lg min-h-96 bg-white">
+          <div className="min-h-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
@@ -615,23 +377,23 @@ export default function Endorsement() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="table-fixed">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-12">
+                          <TableHead className="w-11 pr-0">
                             <Checkbox
                               checked={isAllSelected}
                               onCheckedChange={handleSelectAll}
                               className="h-4 w-4"
                             />
                           </TableHead>
-                          <TableHead>Policy No.</TableHead>
-                          <TableHead>Company Name</TableHead>
-                          <TableHead className="text-right">Sum Assured</TableHead>
-                          <TableHead className="text-right">Premium</TableHead>
-                          <TableHead>Effective Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead>Scheme</TableHead>
+                          <TableHead className="w-[160px] text-right">Sum assured</TableHead>
+                          <TableHead className="hidden w-[130px] @3xl:table-cell">Effective</TableHead>
+                          <TableHead className="w-[110px]">Status</TableHead>
+                          <TableHead className="w-[120px] text-right">
+                            <span className="sr-only">Actions</span>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -657,26 +419,26 @@ export default function Endorsement() {
                                   />
                                 </div>
                               </TableCell>
-                              <TableCell className="font-medium">
-                                <div className="text-sm font-medium">
-                                  {getPolicyNumber(policy)}
-                                </div>
-                              </TableCell>
                               <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                                  <span className="font-medium text-gray-900">
-                                    {getCompanyName(policy)}
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-600 @4xl:grid">
+                                    <Building2 className="h-4 w-4" />
                                   </span>
+                                  <div className="min-w-0">
+                                    <div className="truncate font-semibold text-slate-900" title={getCompanyName(policy)}>
+                                      {getCompanyName(policy) || "—"}
+                                    </div>
+                                    <div className="truncate text-xs text-slate-500">{getPolicyNumber(policy)}</div>
+                                  </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-right font-medium text-blue-900">
-                                {formatCurrency(policy.totalSumInsured || policy.sumAssured || policy.sumInsured)}
+                              <TableCell className="text-right">
+                                <div className="truncate font-semibold text-slate-900">
+                                  {formatCurrency(policy.totalSumInsured || policy.sumAssured || policy.sumInsured)}
+                                </div>
+                                <div className="truncate text-xs text-slate-500">{formatCurrency(policy.totalPremium || policy.grossPremium)} premium</div>
                               </TableCell>
-                              <TableCell className="text-right font-medium text-blue-900">
-                                {formatCurrency(policy.totalPremium || policy.grossPremium)}
-                              </TableCell>
-                              <TableCell>{formatDate(policy.effectiveDate || policy.startDate || policy.transactionDate)}</TableCell>
+                              <TableCell className="hidden truncate @3xl:table-cell">{formatDate(policy.effectiveDate || policy.startDate || policy.transactionDate)}</TableCell>
                               <TableCell>{getStatusBadge(policy.status || policy.transSTATUS)}</TableCell>
                               <TableCell>
                                 <div className="flex justify-end gap-2">
@@ -684,7 +446,7 @@ export default function Endorsement() {
                                   <Button
                                     variant="default"
                                     size="sm"
-                                    className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                                    className="h-8 rounded-lg px-3"
                                     onClick={() => handleViewPolicy(policy)}
                                     
                                   >
@@ -707,8 +469,8 @@ export default function Endorsement() {
 
                 {/* Pagination */}
                 {totalPagesCount > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
-                    <div className="text-sm text-muted-foreground order-2 sm:order-1">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 px-5 py-3">
+                    <div className="text-sm text-slate-500 order-2 sm:order-1">
                       Showing {startItem + 1} to {endItem} of {effectiveTotalCount} entries | Page {currentPage} of {totalPagesCount}
                       {selectedPolicies.size > 0 && ` | ${selectedPolicies.size} selected`}
                     </div>

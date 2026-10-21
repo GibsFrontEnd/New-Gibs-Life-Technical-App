@@ -111,6 +111,29 @@ interface EndorsementTypeInfo {
   bgColor: string;
 }
 
+// What kind of section a row is (PolicyDetails.BizOption, delivered as endorsementType).
+const TYPE_LABELS: Record<string, string> = {
+  NEW: "New",
+  RENEWAL: "Renewal",
+  ADDITIONAL: "Additional",
+  REVERSAL: "Reversal",
+  RETURN: "Return",
+  CANCEL: "Cancellation",
+  REDUCTION: "Reduction",
+  EXTENSION: "Extension",
+  EXPIRED: "Expired",
+};
+// These sections give money back, so they raise a credit note rather than a debit note.
+const CREDIT_TYPES = ["REVERSAL", "RETURN", "CANCEL", "REDUCTION"];
+const typeKey = (t?: string) => (t || "").toUpperCase();
+const typeBadgeClass = (t?: string) => {
+  const k = typeKey(t);
+  if (CREDIT_TYPES.includes(k)) return "bg-orange-100 text-orange-800 hover:bg-orange-200";
+  if (k === "EXPIRED") return "bg-gray-100 text-gray-600 hover:bg-gray-200";
+  if (k === "RENEWAL" || k === "ADDITIONAL" || k === "EXTENSION") return "bg-blue-100 text-blue-800 hover:bg-blue-200";
+  return "bg-slate-100 text-slate-700 hover:bg-slate-200";
+};
+
 const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({ 
   policyNo, 
   formData, 
@@ -193,6 +216,19 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
   const [selectedEndorsementType, setSelectedEndorsementType] = useState<EndorsementType>("Reversal");
   const [selectedItemForEndorsement, setSelectedItemForEndorsement] = useState<PolicyDetailItem | null>(null);
 
+  // Inputs for the adjustment endorsements (Return / Cancellation / Reduction / Extension)
+  const today = new Date().toISOString().slice(0, 10);
+  const [effectiveDate, setEffectiveDate] = useState<string>(today);
+  const [newEndDate, setNewEndDate] = useState<string>("");
+  const [sourceMembers, setSourceMembers] = useState<any[]>([]);
+  const [sourceMembersLoading, setSourceMembersLoading] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<number>>(new Set());
+
+  const needsMemberPick = ["Return", "Reduction", "Extension"].includes(selectedEndorsementType);
+  const memberPickRequired = selectedEndorsementType === "Return" || selectedEndorsementType === "Reduction";
+  const needsEffectiveDate = ["Return", "Cancellation", "Reduction"].includes(selectedEndorsementType);
+  const needsNewEndDate = selectedEndorsementType === "Extension";
+
   // Define endorsement types with their metadata
   const endorsementTypes: EndorsementTypeInfo[] = [
     {
@@ -217,7 +253,7 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
       value: "Return",
       label: "Return",
       icon: <Undo2 className="w-4 h-4" />,
-      description: "Process a return endorsement. Reverses the policy and returns to previous state.",
+      description: "Selected members leave cover from an effective date. A pro-rata share of their premium is credited (negative figures); the source stays live.",
       color: "text-orange-600",
       borderColor: "border-orange-500",
       bgColor: "bg-orange-50"
@@ -226,7 +262,7 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
       value: "Cancellation",
       label: "Cancellation",
       icon: <Ban className="w-4 h-4" />,
-      description: "Cancel the current policy endorsement. This will terminate the policy coverage.",
+      description: "Cancels every member of this section from an effective date. The unexpired share of the premium is credited (negative figures).",
       color: "text-red-600",
       borderColor: "border-red-500",
       bgColor: "bg-red-50"
@@ -235,7 +271,7 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
       value: "Reduction",
       label: "Reduction",
       icon: <MinusCircle className="w-4 h-4" />,
-      description: "Reduce the coverage amount or benefits under the current policy endorsement.",
+      description: "Reduces cover for selected members from an effective date. A pro-rata share of their premium is credited (negative figures).",
       color: "text-yellow-600",
       borderColor: "border-yellow-500",
       bgColor: "bg-yellow-50"
@@ -244,7 +280,7 @@ const GroupLifeDetailsTab: React.FC<GroupLifeDetailsTabProps> = ({
       value: "Extension",
       label: "Extension",
       icon: <Clock className="w-4 h-4" />,
-      description: "Extend the policy duration or coverage period for the current endorsement.",
+      description: "Extends cover from the current end date to a new end date. A pro-rata premium is charged for the extra period.",
       color: "text-purple-600",
       borderColor: "border-purple-500",
       bgColor: "bg-purple-50"
@@ -297,6 +333,9 @@ const fetchDetail = async () => {
       transDate: d.effectiveDate || d.submittedOn || formData?.transactionDate || new Date().toISOString(),
       endorsementType: d.endorsementType,
       completionStatus: d.completionStatus,
+      // The endorsement dialog validates its dates against the source section's cover period.
+      effectiveDate: d.effectiveDate,
+      expiryDate: d.expiryDate,
     });
 
     // List every endorsement so a renewed (EXPIRED) source and its new RENEWAL row both show.
@@ -462,6 +501,9 @@ const fetchDetail = async () => {
     });
     
     const encodedPolicyNo = encodeURIComponent(item.policyNo);
+    // back to this scheme on the Group Life Detail tab (keeps ?source=…)
+    const returnParams = new URLSearchParams(location.search);
+    returnParams.set("tab", "group-life");
     navigate(`/underwriting/group-life-quotations/debit-note/${encodedPolicyNo}`, {
         state: {
             detailID: item.detailID,
@@ -471,7 +513,7 @@ const fetchDetail = async () => {
             sourcePage: "group-life-details",
             policyNo: item.policyNo,  // ← Also pass policyNo in state
             mode: 'add',
-            returnTo: location.pathname + location.search 
+            returnTo: `${location.pathname}?${returnParams.toString()}`
         }
     });
 };
@@ -540,8 +582,61 @@ const fetchDetail = async () => {
     // Set the selected item and open the dialog
     setSelectedItemForEndorsement(item);
     setSelectedEndorsementType("Reversal"); // Default selection
+    setEffectiveDate(today);
+    setNewEndDate("");
+    setSourceMembers([]);
+    setSelectedMemberIds(new Set());
     setEndorsementDialogOpen(true);
   };
+
+  // Load the source section's members once a type that needs a member selection is chosen
+  useEffect(() => {
+    if (!endorsementDialogOpen || !needsMemberPick || !selectedItemForEndorsement) return;
+    let cancelled = false;
+    setSourceMembersLoading(true);
+
+    // A plain fetch, deliberately not the fetchPolicyMembers thunk: that one flips the shared members
+    // loading flag, which makes the scheme page swap to its full-page spinner and unmount this dialog.
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const qs = new URLSearchParams({
+      policyNo: selectedItemForEndorsement.policyNo,
+      endorsementNo: selectedItemForEndorsement.endorsementNo,
+    });
+    fetch(`${SERVER_URL}/grouplife/policies/policie/members?${qs.toString()}`, {
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.message || `HTTP ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((rows: any[]) => { if (!cancelled) setSourceMembers(Array.isArray(rows) ? rows : []); })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setSourceMembers([]);
+        toast({
+          title: "Could not load members",
+          description: err?.message || "Failed to load the section's members.",
+          variant: "destructive",
+        });
+      })
+      .finally(() => { if (!cancelled) setSourceMembersLoading(false); });
+    return () => { cancelled = true; };
+  }, [endorsementDialogOpen, needsMemberPick, selectedItemForEndorsement?.endorsementNo]);
+
+  const toggleMember = (id: number) => {
+    setSelectedMemberIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const allMembersSelected = sourceMembers.length > 0 && selectedMemberIds.size === sourceMembers.length;
+  const toggleAllMembers = () =>
+    setSelectedMemberIds(allMembersSelected ? new Set() : new Set(sourceMembers.map(m => Number(m.memberID))));
 
   /**
    * Handle the actual endorsement creation after user selects the type
@@ -551,6 +646,29 @@ const fetchDetail = async () => {
     
     // Prevent duplicate clicks
     if (processingEndorsement === selectedItemForEndorsement.endorsementNo) return;
+
+    // Client-side checks for the adjustment endorsements (the API re-validates everything)
+    const invalid = (description: string) =>
+      toast({ title: "Check the endorsement details", description, variant: "destructive" });
+
+    if (memberPickRequired && selectedMemberIds.size === 0) {
+      return invalid(`Select at least one member for a ${selectedEndorsementType} endorsement.`);
+    }
+    if (needsEffectiveDate && !effectiveDate) {
+      return invalid("Choose the effective date.");
+    }
+    if (needsEffectiveDate) {
+      const start = selectedItemForEndorsement.effectiveDate?.slice(0, 10);
+      const end = selectedItemForEndorsement.expiryDate?.slice(0, 10);
+      if ((start && effectiveDate < start) || (end && effectiveDate > end)) {
+        return invalid(`The effective date must fall within the cover period (${start ?? "?"} to ${end ?? "?"}).`);
+      }
+    }
+    if (needsNewEndDate) {
+      const end = selectedItemForEndorsement.expiryDate?.slice(0, 10);
+      if (!newEndDate) return invalid("Choose the new end date.");
+      if (end && newEndDate <= end) return invalid(`The new end date must be after the current end date (${end}).`);
+    }
 
     setProcessingEndorsement(selectedItemForEndorsement.endorsementNo);
 
@@ -562,6 +680,9 @@ const fetchDetail = async () => {
         policyNo: selectedItemForEndorsement.policyNo,
         sourceEndorsementNo: selectedItemForEndorsement.endorsementNo,
         type: selectedEndorsementType,
+        effectiveDate: needsEffectiveDate ? effectiveDate : undefined,
+        newEndDate: needsNewEndDate ? newEndDate : undefined,
+        memberIds: needsMemberPick ? Array.from(selectedMemberIds) : undefined,
       }));
       
       // Check if the action was rejected
@@ -699,6 +820,7 @@ const fetchDetail = async () => {
                   </TableHead>
                   <TableHead className="font-semibold text-gray-700">Policy No</TableHead>
                   <TableHead className="font-semibold text-gray-700">Endorsement Num</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Type</TableHead>
                   <TableHead className="font-semibold text-gray-700">Insured Name</TableHead>
                   <TableHead className="font-semibold text-gray-700 text-right">Sum Insured</TableHead>
                   <TableHead className="font-semibold text-gray-700 text-right">Premium</TableHead>
@@ -711,7 +833,7 @@ const fetchDetail = async () => {
               <TableBody>
                 {policyDetails.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                       <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                       <p>No policy details found.</p>
                       <p className="text-sm mt-1">Click "New Details" to add a record.</p>
@@ -741,6 +863,11 @@ const fetchDetail = async () => {
                         </TableCell>
                         <TableCell className="text-gray-700">{item.endorsementNo || "[AUTO]"}</TableCell>
                         <TableCell>
+                          <Badge variant="secondary" className={typeBadgeClass(item.endorsementType)}>
+                            {TYPE_LABELS[typeKey(item.endorsementType)] || item.endorsementType || "New"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <div className="flex items-center gap-2">
                             <Building2 className="w-4 h-4 text-gray-400" />
                             <span className="text-gray-700">{item.insuredName}</span>
@@ -764,14 +891,16 @@ const fetchDetail = async () => {
                               Expired
                             </Badge>
                           ) : (
+                            // Active once the section's debit/credit note has been approved (the API sets
+                            // the completion status to "Completed"); `created` is false for every listed row.
                             <Badge
-                              variant={item.created ? "default" : "secondary"}
-                              className={item.created
+                              variant={item.completionStatus?.toUpperCase() === "COMPLETED" ? "default" : "secondary"}
+                              className={item.completionStatus?.toUpperCase() === "COMPLETED"
                                 ? "bg-green-100 text-green-800 hover:bg-green-200"
                                 : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
                               }
                             >
-                              {item.created ? "Active" : "Pending"}
+                              {item.completionStatus?.toUpperCase() === "COMPLETED" ? "Active" : "Pending"}
                             </Badge>
                           )}
                         </TableCell>
@@ -806,7 +935,7 @@ const fetchDetail = async () => {
                             )}
 
                             {/* Endorse Button - Opens dialog for type selection */}
-                            {showEndorseButton && (
+                            {showEndorseButton && !CREDIT_TYPES.includes(typeKey(item.endorsementType)) && typeKey(item.endorsementType) !== "EXPIRED" && (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -836,11 +965,13 @@ const fetchDetail = async () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleDebitNote(item)}
-                              className="h-7 px-2 border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800 text-xs"
-                              title="Create Debit Note"
+                              className={`h-7 px-2 text-xs ${CREDIT_TYPES.includes(typeKey(item.endorsementType))
+                                ? "border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                                : "border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"}`}
+                              title={CREDIT_TYPES.includes(typeKey(item.endorsementType)) ? "Create Credit Note" : "Create Debit Note"}
                             >
                               <FileCheck className="w-3 h-3 mr-1" />
-                              Do Debit Note
+                              {CREDIT_TYPES.includes(typeKey(item.endorsementType)) ? "Do Credit Note" : "Do Debit Note"}
                             </Button>
                           </div>
                         </TableCell>
@@ -939,6 +1070,89 @@ const fetchDetail = async () => {
               ))}
             </RadioGroup>
 
+            {/* Inputs for Return / Cancellation / Reduction / Extension */}
+            {(needsEffectiveDate || needsNewEndDate || needsMemberPick) && (
+              <div className="mt-3 sm:mt-4 space-y-3 rounded-lg border border-gray-200 p-3 sm:p-4">
+                <p className="text-[11px] sm:text-xs text-gray-500">
+                  Source cover period:{" "}
+                  <span className="font-medium text-gray-700">
+                    {selectedItemForEndorsement?.effectiveDate?.slice(0, 10) ?? "?"} to {selectedItemForEndorsement?.expiryDate?.slice(0, 10) ?? "?"}
+                  </span>
+                </p>
+
+                {needsEffectiveDate && (
+                  <div>
+                    <Label htmlFor="endorsement-effective-date" className="text-xs sm:text-sm">Effective date</Label>
+                    <input
+                      id="endorsement-effective-date"
+                      type="date"
+                      value={effectiveDate}
+                      min={selectedItemForEndorsement?.effectiveDate?.slice(0, 10)}
+                      max={selectedItemForEndorsement?.expiryDate?.slice(0, 10)}
+                      onChange={(e) => setEffectiveDate(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <p className="mt-1 text-[11px] text-gray-500">Premium is credited for the days from this date to the end of the cover period.</p>
+                  </div>
+                )}
+
+                {needsNewEndDate && (
+                  <div>
+                    <Label htmlFor="endorsement-new-end-date" className="text-xs sm:text-sm">New end date</Label>
+                    <input
+                      id="endorsement-new-end-date"
+                      type="date"
+                      value={newEndDate}
+                      min={selectedItemForEndorsement?.expiryDate?.slice(0, 10)}
+                      onChange={(e) => setNewEndDate(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <p className="mt-1 text-[11px] text-gray-500">Premium is charged for the days after the current end date up to this date.</p>
+                  </div>
+                )}
+
+                {needsMemberPick && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs sm:text-sm">
+                        Members {memberPickRequired ? "(select at least one)" : "(leave empty for all)"}
+                      </Label>
+                      {sourceMembers.length > 0 && (
+                        <button type="button" onClick={toggleAllMembers} className="text-xs text-blue-600 hover:underline">
+                          {allMembersSelected ? "Clear all" : "Select all"}
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-200 divide-y">
+                      {sourceMembersLoading ? (
+                        <div className="flex items-center gap-2 p-3 text-xs text-gray-500">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Loading members...
+                        </div>
+                      ) : sourceMembers.length === 0 ? (
+                        <p className="p-3 text-xs text-gray-500">This section has no members.</p>
+                      ) : (
+                        sourceMembers.map((m) => {
+                          const id = Number(m.memberID);
+                          return (
+                            <label key={id} className="flex items-center gap-2 px-3 py-2 text-xs cursor-pointer hover:bg-gray-50">
+                              <Checkbox checked={selectedMemberIds.has(id)} onCheckedChange={() => toggleMember(id)} />
+                              <span className="flex-1 truncate">
+                                {m.membersNo ? `${m.membersNo} - ` : ""}{[m.surname, m.otherNames].filter(Boolean).join(" ")}
+                              </span>
+                              <span className="text-gray-500">{formatCurrency(m.grossPremium || 0)}</span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                    {selectedMemberIds.size > 0 && (
+                      <p className="mt-1 text-[11px] text-gray-500">{selectedMemberIds.size} selected</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Info Box - Dynamic based on selected type */}
             <div className="mt-3 sm:mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 sm:gap-3">
               <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
@@ -949,14 +1163,14 @@ const fetchDetail = async () => {
                     "A new endorsement will be created with all members and figures from the source. The source endorsement will be marked as EXPIRED."}
                   {selectedEndorsementType === "Additional" && 
                     "A blank endorsement envelope will be created. You'll need to add members and figures manually."}
-                  {selectedEndorsementType === "Return" && 
-                    "A return endorsement will be processed. This will reverse the policy and return to the previous state."}
-                  {selectedEndorsementType === "Cancellation" && 
-                    "A cancellation endorsement will be processed. This will terminate the policy coverage."}
-                  {selectedEndorsementType === "Reduction" && 
-                    "A reduction endorsement will be processed. This will reduce the coverage amount or benefits."}
-                  {selectedEndorsementType === "Extension" && 
-                    "An extension endorsement will be processed. This will extend the policy duration or coverage period."}
+                  {selectedEndorsementType === "Return" &&
+                    "A new endorsement is created with the selected members at a negative pro-rata premium and sum insured. The source endorsement stays live, so the totals net off."}
+                  {selectedEndorsementType === "Cancellation" &&
+                    "A new endorsement is created with every member at a negative pro-rata premium and sum insured (members already returned are skipped). The source endorsement stays live."}
+                  {selectedEndorsementType === "Reduction" &&
+                    "A new endorsement is created with the selected members at a negative pro-rata premium and sum insured. The source endorsement stays live."}
+                  {selectedEndorsementType === "Extension" &&
+                    "A new endorsement is created for the extra period with a positive pro-rata premium. Sum insured is not repeated, so policy totals are not counted twice. The source endorsement stays live."}
                 </p>
               </div>
             </div>

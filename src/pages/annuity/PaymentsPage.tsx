@@ -95,17 +95,21 @@ const PaymentsPage = () => {
       {error && <Banner kind="error">{error}</Banner>}
       {notice && <Banner kind="success">{notice}</Banner>}
       <Table
-        head={["Policy", "Payment #", "Due date", "Gross", "Tax", "Net", "Status", ""]}
+        head={["Policy", "Due date", "Net benefit", "Status", ""]}
+        cols={["w-[180px]", "w-[120px]", "", "w-[130px]", "w-[84px]"]}
         empty={!loading && data.items.length === 0 ? "Nothing is due for payment." : loading ? "Loading…" : undefined}
       >
         {data.items.map((s: any) => (
           <tr key={s.paymentID} className="hover:bg-gray-50">
-            <td className="px-3 py-2 font-medium text-blue-900">{s.policyNo}</td>
-            <td className="px-3 py-2">{s.paymentNo}</td>
-            <td className="px-3 py-2">{fmtDate(s.dueDate)}</td>
-            <td className="px-3 py-2">{money(s.grossBenefit)}</td>
-            <td className="px-3 py-2">{money(s.taxAmount)}</td>
-            <td className="px-3 py-2 font-medium">{money(s.netBenefit)}</td>
+            <td className="px-3 py-2">
+              <div className="whitespace-nowrap font-semibold text-slate-900">{s.policyNo}</div>
+              <div className="text-xs text-slate-500">Payment #{s.paymentNo}</div>
+            </td>
+            <td className="px-3 py-2 whitespace-nowrap">{fmtDate(s.dueDate)}</td>
+            <td className="px-3 py-2 whitespace-nowrap">
+              <div className="font-semibold text-slate-900">{money(s.netBenefit)}</div>
+              <div className="text-xs text-slate-500">{money(s.grossBenefit)} gross · {money(s.taxAmount)} tax</div>
+            </td>
             <td className="px-3 py-2"><StatusBadge status={s.paymentStatus} /></td>
             <td className="px-3 py-2 text-right">
               <Btn size="sm" variant="secondary" onClick={() => { setPay(toPay(s)); dialog.open("pay:" + s.paymentID); }}>Pay</Btn>

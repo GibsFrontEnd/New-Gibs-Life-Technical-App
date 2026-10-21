@@ -51,14 +51,14 @@ const ProposalsOverview = () => {
             className="group block bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-purple-200 transition-all duration-300 flex flex-col h-full"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-purple-50 text-[#8c4b8d] group-hover:bg-[#8c4b8d] group-hover:text-white transition-colors duration-300">
+              <div className="p-3 rounded-xl bg-purple-50 text-[#155dfd] group-hover:bg-[#155dfd] group-hover:text-white transition-colors duration-300">
                 <link.icon size={24} />
               </div>
               <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-1 bg-gray-100 text-gray-500 rounded-md">
                 {link.badge}
               </span>
             </div>
-            <h3 className="text-lg font-bold text-gray-800 group-hover:text-[#8c4b8d] transition-colors mb-2">
+            <h3 className="text-lg font-bold text-gray-800 group-hover:text-[#155dfd] transition-colors mb-2">
               {link.title}
             </h3>
             <p className="text-sm text-gray-500 leading-relaxed flex-1">

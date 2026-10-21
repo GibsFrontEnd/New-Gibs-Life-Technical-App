@@ -9,7 +9,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full px-3 py-2 rounded-md border bg-white outline-none focus:outline-none focus:border-primary-blue disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#155dfd] focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 md:text-sm",
           className
         )}
         ref={ref}
@@ -43,8 +43,8 @@ const Search: React.FC<SearchProps> = ({
   return (
     <div className={cn("relative", className)}>
       <MdOutlineSearch
-        className="absolute left-2.5 top-[50%] -translate-y-1/2"
-        size={24}
+        className="absolute left-3 top-[50%] -translate-y-1/2 text-slate-400"
+        size={20}
       />
       <input
         type="text"
@@ -52,7 +52,7 @@ const Search: React.FC<SearchProps> = ({
         onChange={onChange}
         placeholder={placeholder}
         className={cn(
-          "w-full h-full pl-10 py-2 rounded-md bg-neutral-placeholderBg placeholder-neutral-mediumGray",
+          "w-full h-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm placeholder:text-slate-400 outline-none focus:border-[#155dfd] focus:ring-4 focus:ring-blue-100",
           searchClassName
         )}
         {...props}

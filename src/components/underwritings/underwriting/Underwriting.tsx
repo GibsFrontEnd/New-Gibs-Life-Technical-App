@@ -437,6 +437,16 @@ useEffect(() => {
 
   const hasActiveFilters = filterCriteria.searchValue || filterCriteria.startDate || filterCriteria.endDate || filterCriteria.status !== "all"
 
+  // Filter as the user types (short pause) instead of only on "Apply".
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (hasActiveFilters) applyFilters()
+      else setFilteredPolicies(null)
+    }, 250)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterCriteria, allPolicies])
+
   useEffect(() => {
     setFilteredPolicies(null)
   }, [activeTab, searchTerm, selectedRiskFilter, allPolicies])
@@ -454,7 +464,7 @@ useEffect(() => {
     const statusInfo = statusMap[status] || { label: status || "Unknown", className: "bg-gray-100 text-gray-800 border-gray-200" }
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusInfo.className}`}>
+      <span className={`inline-block max-w-full truncate whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusInfo.className}`}>
         {statusInfo.label}
       </span>
     )
@@ -495,20 +505,20 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto">
+    <div className="min-h-full">
+      <div className="mx-auto w-full max-w-[1400px]">
         <div className="rounded-lg">
           {/* Header Card */}
-          <Card className="bg-gradient-to-r from-gray-200 to-gray-200 border-white-200 mb-6">
-            <div className="p-4 pb-0">
-              <h2 className="text-xl font-bold text-gray-900">
+          <Card className="mb-6 border-0 bg-transparent shadow-none">
+            <div className="p-0">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                 {getPageTitle()} Policies
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="mt-1.5 text-sm text-slate-500 sm:text-base">
                 {getPageDescription()}
               </p>
             </div>
-            <CardContent className="p-3 sm:p-4">
+            <CardContent className="px-0 pb-0 pt-4">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <Button
                   variant="default"
@@ -526,12 +536,12 @@ useEffect(() => {
 
           {/* Filters Section */}
           <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <div className="border rounded-lg mb-6 bg-gray-50">
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
               <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 cursor-pointer">
+                <div className="flex cursor-pointer items-center justify-between px-5 py-4">
                   <div className="flex items-center space-x-2">
                     <Filter className="h-4 w-4" />
-                    <span className="text-sm font-medium">Search Filter</span>
+                    <span className="text-sm font-semibold text-slate-900">Search and filters</span>
                     {hasActiveFilters && (
                       <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                         {[filterCriteria.searchValue, filterCriteria.startDate, filterCriteria.endDate, filterCriteria.status !== "all" ? filterCriteria.status : null].filter(Boolean).length} active
@@ -703,7 +713,7 @@ useEffect(() => {
           )}
 
           {/* Data Display Area */}
-          <div className="border border-border rounded-lg min-h-96 bg-white">
+          <div className="min-h-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {displayData.items.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <Filter className="w-12 h-12 mx-auto mb-4 text-gray-300" />
@@ -750,23 +760,25 @@ useEffect(() => {
                 ) : (
                   // Desktop table view
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="table-fixed">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-12">
+                          <TableHead className="w-11 pr-0">
                             <Checkbox
                               checked={isAllSelected}
                               onCheckedChange={handleSelectAll}
                               className="h-4 w-4"
                             />
                           </TableHead>
-                          <TableHead>Policy No</TableHead>
-                          <TableHead>Client Name</TableHead>
-                          <TableHead>Sub Class</TableHead>
-                          <TableHead>End Date</TableHead>
-                          <TableHead className="text-right">Premium</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead className="w-[170px]">Policy no.</TableHead>
+                          <TableHead>Client</TableHead>
+                          <TableHead className="hidden w-[150px] @5xl:table-cell">Sub class</TableHead>
+                          <TableHead className="hidden w-[120px] @3xl:table-cell">End date</TableHead>
+                          <TableHead className="w-[150px] text-right">Premium</TableHead>
+                          <TableHead className="w-[130px]">Status</TableHead>
+                          <TableHead className="w-[92px] text-right">
+                            <span className="sr-only">Actions</span>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -786,25 +798,25 @@ useEffect(() => {
                             </TableCell>
                             <TableCell className="font-medium">
                               <div className="space-y-1">
-                                <div className="text-sm font-medium text-indigo-900">
+                                <div className="truncate text-sm font-semibold text-slate-900" title={policy.proposalNo}>
                                   {policy.proposalNo}
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell>
                               <div className="space-y-1">
-                                <div className="font-medium text-gray-900">
+                                <div className="truncate font-semibold text-slate-900" title={`${policy.insSurname ?? ""} ${policy.insFirstname ?? ""}`}>
                                   {policy.insSurname} {policy.insFirstname}
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden truncate @5xl:table-cell">
                               {policy.subRisk || "—"}
                             </TableCell>
-                            <TableCell className="text-gray-700">
+                            <TableCell className="hidden truncate @3xl:table-cell">
                               {formatDate(policy.endDate)}
                             </TableCell>
-                            <TableCell className="text-right font-medium text-blue-900">
+                            <TableCell className="truncate text-right font-semibold text-slate-900">
                               {policy.grossPremium
                                 ? formatCurrency(policy.grossPremium, policyCurrency(policy))
                                 : "N/A"}
@@ -817,7 +829,7 @@ useEffect(() => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 w-8 p-0 bg-transparent border-green-300 text-green-700 hover:bg-green-50"
+                                  className="h-8 w-8 rounded-lg p-0 hover:border-blue-200 hover:bg-blue-50 hover:text-[#155dfd]"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     handleEditPolicy(policy.proposalNo)
@@ -828,7 +840,7 @@ useEffect(() => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 w-8 p-0 bg-transparent border-red-300 text-red-700 hover:bg-red-50"
+                                  className="h-8 w-8 rounded-lg border-rose-200 p-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     handleDeletePolicy(policy.proposalNo)
@@ -847,8 +859,8 @@ useEffect(() => {
 
                 {/* Pagination */}
                 {displayData.totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
-                    <div className="text-sm text-muted-foreground order-2 sm:order-1">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 px-5 py-3">
+                    <div className="text-sm text-slate-500 order-2 sm:order-1">
                       Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, displayData.totalCount)} of {displayData.totalCount} entries | Page {currentPage} of {displayData.totalPages}
                       {selectedPolicies.size > 0 && ` | ${selectedPolicies.size} selected`}
                     </div>

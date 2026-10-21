@@ -55,7 +55,7 @@ const TabsList = React.forwardRef<
 
   const variantStyles = {
     default: "bg-white border-b border-gray-200 rounded-none gap-2 px-2",
-    pills: "bg-gray-100 p-1 rounded-lg gap-1.5",
+    pills: "bg-slate-100 p-1 rounded-xl gap-1.5",
     underline: "bg-transparent border-b border-gray-200 rounded-none gap-8 px-2",
   }
 
@@ -109,22 +109,22 @@ const TabsTrigger = React.forwardRef<
   const variantStyles = {
     default: cn(
       "relative font-medium transition-all duration-200",
-      "border-b-2 border-transparent hover:border-red-300",
-      "data-[state=active]:border-red-600 data-[state=active]:text-red-600",
-      "hover:text-red-700 hover:bg-red-50/50",
+      "border-b-2 border-transparent hover:border-blue-300",
+      "data-[state=active]:border-[#155dfd] data-[state=active]:text-[#155dfd]",
+      "hover:text-[#155dfd] hover:bg-blue-50/50",
       "rounded-t-md rounded-b-none"
     ),
     pills: cn(
       "relative font-medium rounded-md transition-all duration-200",
-      "hover:bg-red-100 hover:text-red-700",
-      "data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-md",
+      "hover:bg-blue-50 hover:text-[#155dfd]",
+      "data-[state=active]:bg-[#155dfd] data-[state=active]:text-white data-[state=active]:shadow-sm",
       "disabled:opacity-50 cursor-not-allowed hover:bg-transparent"
     ),
     underline: cn(
       "relative font-medium transition-all duration-200",
       "border-b-2 border-transparent",
-      "data-[state=active]:border-red-600 data-[state=active]:text-red-600",
-      "hover:text-red-700",
+      "data-[state=active]:border-[#155dfd] data-[state=active]:text-[#155dfd]",
+      "hover:text-[#155dfd]",
       "px-0"
     ),
   }
@@ -141,7 +141,7 @@ const TabsTrigger = React.forwardRef<
   const UnderlineIndicator = () => (
     <span 
       className={cn(
-        "absolute bottom-0 left-0 h-0.5 bg-red-600 transition-all duration-300 ease-in-out",
+        "absolute bottom-0 left-0 h-0.5 bg-[#155dfd] transition-all duration-300 ease-in-out",
         isActive ? "w-full" : "w-0"
       )}
     />
@@ -212,7 +212,7 @@ const TabsTrigger = React.forwardRef<
           className={cn(
             "px-2 py-0 text-[10px] font-medium rounded-full",
             badgeColors[badgeColor],
-            isActive && "ring-2 ring-red-200 ring-offset-2"
+            isActive && "ring-2 ring-blue-200 ring-offset-2"
           )}
         >
           {badge}
@@ -221,7 +221,7 @@ const TabsTrigger = React.forwardRef<
 
       {/* Active pill indicator */}
       {variant === "pills" && isActive && (
-        <span className="absolute inset-0 rounded-md bg-red-600 -z-10 animate-in fade-in zoom-in-95 duration-200" />
+        <span className="absolute inset-0 rounded-md bg-[#155dfd] -z-10 animate-in fade-in zoom-in-95 duration-200" />
       )}
     </TabsPrimitive.Trigger>
   )
@@ -242,7 +242,7 @@ const TabsContent = React.forwardRef<
     <TabsPrimitive.Content
       ref={ref}
       className={cn(
-        "mt-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",
+        "mt-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#155dfd] focus-visible:ring-offset-2",
         animate && "animate-in slide-in-from-top-3 fade-in duration-300",
         className
       )}

@@ -932,9 +932,12 @@ const GroupLifeQuotationDetail: React.FC = () => {
       toast({
         title: "Success",
         description: `Scheme created successfully with Policy No: ${result.policyNo}`,
-        variant: "default",
+        variant: "success",
       });
-      navigate("/underwriting/group-life-quotations");
+      // Straight to the new scheme's Group Life Detail tab, where its members and section are added.
+      navigate(
+        `/underwriting/group-life-quotations/${encodeURIComponent(result.policyNo)}?tab=group-life`
+      );
     } catch (err: any) {
       console.error("❌ Save error:", err);
       toast({
@@ -1144,36 +1147,39 @@ const GroupLifeQuotationDetail: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="container mx-auto p-4 lg:p-6">
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-4 lg:p-6 space-y-4">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              className="mb-4 bg-transparent"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Schemes
-            </Button>
-
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold">
-                New Group Life Scheme
+    <div className="min-h-full">
+      <div className="mx-auto w-full max-w-[1400px]">
+        <div>
+          <div className="space-y-6">
+            <div>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-[#155dfd]"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to schemes
+              </button>
+              <p className="text-sm font-medium text-[#155dfd]">Group life</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                New group life scheme
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Create a new group life insurance scheme
+              <p className="mt-1.5 text-sm text-slate-500 sm:text-base">
+                Set up the scheme. Members and premium are added on the scheme page once it is saved.
               </p>
             </div>
 
             {/* Policy Details Section */}
-            <div className="border rounded-lg shadow-sm mb-4">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <button
                 type="button"
                 onClick={() => toggleSection("policyDetails")}
-                className="w-full flex items-center gap-2 px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="flex w-full items-center justify-between gap-2 border-b border-slate-100 px-6 py-4 text-left transition-colors hover:bg-slate-50"
               >
-                <span className="font-semibold">Scheme Policy Details</span>
+                <span>
+                  <span className="block text-lg font-semibold text-slate-900">Scheme details</span>
+                  <span className="block text-sm text-slate-500">Dates, client, product and premium basis</span>
+                </span>
               </button>
               {expandedSections.policyDetails && (
                 <div className="p-6 space-y-6">
@@ -1487,12 +1493,12 @@ const GroupLifeQuotationDetail: React.FC = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-center gap-4 pt-4 bg-transparent p-6 rounded-xl">
+            <div className="flex justify-end gap-3">
               <Button
                 type="button"
                 onClick={handleCancel}
                 variant="outline"
-                className="px-8 bg-transparent"
+                className="px-6"
               >
                 Cancel
               </Button>
@@ -1500,7 +1506,7 @@ const GroupLifeQuotationDetail: React.FC = () => {
               <Button
                 type="button"
                 onClick={handleSave}
-                className="bg-green-600 hover:bg-green-700 text-white px-8"
+                className="px-6"
                 disabled={loading.create || loading.update}
               >
                 {loading.create || loading.update ? "Saving..." : "Save"}

@@ -8,13 +8,13 @@
   --color-background: #ffffff;
   --color-foreground: #020817;
 
-  --color-border: #e4e8ef;
-  --color-input: #bfbfbf;
-  --color-ring: #3b82f6;
+  --color-border: #e2e8f0;
+  --color-input: #cbd5e1;
+  --color-ring: #155dfd;
 
   /* Primary colors */
-  --color-primary: #8b4b8c;
-  --color-primary-blue: #8b4b8c;
+  --color-primary: #155dfd;
+  --color-primary-blue: #155dfd;
   --color-primary-foreground: #ffffff;
 
   /* Neutral colors */
@@ -38,7 +38,7 @@
   --color-warning-foreground: #f8fafc;
 
   /* Info colors */
-  --color-info: #8b4b8c;
+  --color-info: #155dfd;
   --color-info-foreground: #ffffff;
 
   /* Accent colors */

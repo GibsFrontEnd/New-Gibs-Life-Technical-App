@@ -115,7 +115,7 @@ const ConvertInvestmentPolicyPage = ({ proposalNo }: Props) => {
               dispatch(fetchProposalBeneficiaries(proposalNo));
             }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm"
-            style={{ background: "#8c4b8d" }}
+            style={{ background: "#155dfd" }}
           >
             <RefreshCw size={15} /> Retry
           </button>
@@ -150,17 +150,17 @@ const ConvertInvestmentPolicyPage = ({ proposalNo }: Props) => {
       <div className="flex items-center gap-2 border-b border-gray-200">
         <button
           onClick={() => { setActiveTag("B"); setPage(1); }}
-          className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTag === "B" ? "text-[#8c4b8d]" : "text-gray-500 hover:text-gray-700"}`}
+          className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTag === "B" ? "text-[#155dfd]" : "text-gray-500 hover:text-gray-700"}`}
         >
           Investment Policies
-          {activeTag === "B" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8c4b8d]" />}
+          {activeTag === "B" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#155dfd]" />}
         </button>
         <button
           onClick={() => { setActiveTag("A"); setPage(1); }}
-          className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTag === "A" ? "text-[#8c4b8d]" : "text-gray-500 hover:text-gray-700"}`}
+          className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTag === "A" ? "text-[#155dfd]" : "text-gray-500 hover:text-gray-700"}`}
         >
           Traditional Policies
-          {activeTag === "A" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8c4b8d]" />}
+          {activeTag === "A" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#155dfd]" />}
         </button>
       </div>
 
@@ -175,7 +175,7 @@ const ConvertInvestmentPolicyPage = ({ proposalNo }: Props) => {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-6 py-3 transition-colors ${
                 isActive
-                  ? "bg-[#8c4b8d] text-white rounded-t-lg"
+                  ? "bg-[#155dfd] text-white rounded-t-lg"
                   : "text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-t-lg"
               }`}
             >
@@ -286,7 +286,7 @@ const ConvertInvestmentPolicyPage = ({ proposalNo }: Props) => {
                   Status <span className="text-red-500">*</span>
                 </label>
                 <select 
-                  className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8c4b8d]/30 focus:border-[#8c4b8d]"
+                  className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:border-[#155dfd] focus:ring-4 focus:ring-blue-100 focus:border-[#155dfd]"
                   disabled={loadingStatuses || isSubmitting}
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
@@ -328,7 +328,7 @@ const ConvertInvestmentPolicyPage = ({ proposalNo }: Props) => {
                         <span>{formatBytes(doc.documentSize)}</span>
                       </div>
                     </div>
-                    <button type="button" className="p-2 text-gray-400 hover:text-[#8c4b8d] hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200" title="Download Document">
+                    <button type="button" className="p-2 text-gray-400 hover:text-[#155dfd] hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200" title="Download Document">
                       <Download size={18} />
                     </button>
                   </div>
@@ -391,7 +391,7 @@ const ConvertInvestmentPolicyPage = ({ proposalNo }: Props) => {
                     )}
                     
                     <div className="flex items-start gap-4 mb-4">
-                      <div className="h-12 w-12 bg-[#8c4b8d]/10 text-[#8c4b8d] flex items-center justify-center rounded-full text-lg font-bold">
+                      <div className="h-12 w-12 bg-[#155dfd]/10 text-[#155dfd] flex items-center justify-center rounded-full text-lg font-bold">
                         {ben.surname?.charAt(0) || ""}{ben.otherNames?.charAt(0) || ""}
                       </div>
                       <div>

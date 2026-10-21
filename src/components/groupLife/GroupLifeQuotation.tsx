@@ -36,6 +36,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "../UI/new-button";
+import { PageHeader, StatusChip, btnIcon, btnPrimary, btnRow } from "../page/PageKit";
 import {
   Table,
   TableBody,
@@ -65,6 +66,8 @@ import {
   AlertDialogTitle,
 } from "../UI/alert-dialog";
 import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
+import { useGroupLifeList } from "./useGroupLifeList";
+import GroupLifeListFilters from "./GroupLifeListFilters";
 import {
   selectGroupLifeQuotations,
   selectGroupLifePolicies,
@@ -111,17 +114,6 @@ export default function GroupLifeQuotation() {
 
   const [isMobile, setIsMobile] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filterCriteria, setFilterCriteria] = useState({
-    searchField: "companyName",
-    searchValue: "",
-    startDate: "",
-    endDate: "",
-    status: "all",
-    schemeType: "all",
-    insuredType: "all",
-    subRiskId: "all", // ✅ dynamic — was hardcoded 'GLA'
-    tag: "GL",
-  });
 
   // ✅ Product options fetched from API to populate the subRiskId filter
   const [productOptions, setProductOptions] = useState<{ id: string; name: string }[]>([]);
@@ -170,8 +162,16 @@ export default function GroupLifeQuotation() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
+  // search, filters and paging (server-side, every page) - see useGroupLifeList
+  const list = useGroupLifeList({
+    pageSize,
+    onReset: () => {
+      setSelectedQuotations(new Set());
+      setIsAllSelected(false);
+    },
+  });
+  const { filterCriteria, currentPage, setCurrentPage, refreshList, clearAllFilters, hasActiveFilters } = list;
   const [deletingQuotation, setDeletingQuotation] = useState<any>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showComplianceDialog, setShowComplianceDialog] = useState(false);
@@ -193,16 +193,6 @@ export default function GroupLifeQuotation() {
     return quote.companyName || quote.surName || quote.insuredName;
   };
 
-  // Load policies when component mounts or when page/filters change
-  useEffect(() => {
-    console.log("📊 Fetching group life policies...");
-
-    dispatch(fetchGroupLifePolicies({
-      page: currentPage,
-      pageSize: pageSize,
-      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-    }));
-  }, [dispatch, currentPage, pageSize, filterCriteria.subRiskId]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -261,11 +251,7 @@ export default function GroupLifeQuotation() {
       }, 5000);
 
       // Refresh the policies list
-      dispatch(fetchGroupLifePolicies({
-        page: currentPage,
-        pageSize: pageSize,
-        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-      }));
+      refreshList();
 
       const newSelected = new Set(selectedQuotations);
       newSelected.delete(quoteId);
@@ -315,11 +301,7 @@ export default function GroupLifeQuotation() {
       }
 
       // Refresh the policies list
-      dispatch(fetchGroupLifePolicies({
-        page: currentPage,
-        pageSize: pageSize,
-        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-      }));
+      refreshList();
 
       setSelectedQuotations(new Set());
       setIsAllSelected(false);
@@ -331,45 +313,7 @@ export default function GroupLifeQuotation() {
     }
   };
 
-  const applyFilters = () => {
-    setCurrentPage(1);
-    setSelectedQuotations(new Set());
-    setIsAllSelected(false);
 
-    // Fetch with filters
-    dispatch(fetchGroupLifePolicies({
-      page: 1,
-      pageSize: pageSize,
-      search: filterCriteria.searchValue || undefined,
-      status: filterCriteria.status !== 'all' ? filterCriteria.status.toUpperCase() : undefined,
-      fromDate: filterCriteria.startDate || undefined,
-      toDate: filterCriteria.endDate || undefined,
-      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-    }));
-  };
-
-  const clearAllFilters = () => {
-    setFilterCriteria({
-      searchField: "companyName",
-      searchValue: "",
-      startDate: "",
-      endDate: "",
-      status: "all",
-      schemeType: "all",
-      insuredType: "all",
-      subRiskId: "all",
-      tag: "GL",
-    });
-    setCurrentPage(1);
-    setSelectedQuotations(new Set());
-    setIsAllSelected(false);
-
-    // Reset to default fetch (no product filter)
-    dispatch(fetchGroupLifePolicies({
-      page: 1,
-      pageSize: pageSize,
-    }));
-  };
 
   // Get policies from the slice state
   const itemsArray = policies || [];
@@ -386,49 +330,11 @@ export default function GroupLifeQuotation() {
       );
     }
 
-    // Apply client-side filters (in addition to server-side)
-    if (filterCriteria.searchValue) {
-      const searchLower = filterCriteria.searchValue.toLowerCase();
-      filtered = filtered.filter((quote: any) => {
-        if (filterCriteria.searchField === "companyName") {
-          return getCompanyName(quote)?.toLowerCase().includes(searchLower);
-        } else {
-          return getQuotationNumber(quote)?.toLowerCase().includes(searchLower);
-        }
-      });
-    }
-
-    if (filterCriteria.status !== "all") {
-      filtered = filtered.filter((quote: any) =>
-        quote.status?.toUpperCase() === filterCriteria.status.toUpperCase()
-      );
-    }
-
-    if (filterCriteria.startDate) {
-      filtered = filtered.filter((quote: any) => {
-        const date = quote.effectiveDate || quote.startDate || quote.entryDate;
-        return date && date >= filterCriteria.startDate;
-      });
-    }
-
-    if (filterCriteria.endDate) {
-      filtered = filtered.filter((quote: any) => {
-        const date = quote.effectiveDate || quote.startDate || quote.entryDate;
-        return date && date <= filterCriteria.endDate;
-      });
-    }
-
+    // Search, status and dates are applied by the server across every page (see useGroupLifeList).
     return filtered;
   };
 
-  const hasActiveFilters =
-    filterCriteria.searchValue ||
-    filterCriteria.startDate ||
-    filterCriteria.endDate ||
-    filterCriteria.status !== "all" ||
-    filterCriteria.schemeType !== "all" ||
-    filterCriteria.insuredType !== "all" ||
-    filterCriteria.subRiskId !== "all";
+
 
   const itemsForDisplay = getDisplayQuotations();
   const effectiveTotalCount = totalCount || itemsForDisplay.length;
@@ -442,13 +348,6 @@ export default function GroupLifeQuotation() {
       setCurrentPage(page);
       setSelectedQuotations(new Set());
       setIsAllSelected(false);
-
-      // Fetch the new page
-      dispatch(fetchGroupLifePolicies({
-        page: page,
-        pageSize: pageSize,
-        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-      }));
     }
   };
 
@@ -623,24 +522,13 @@ export default function GroupLifeQuotation() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case "PROSPECT":
-        return <Badge variant="outline">Prospect</Badge>;
-      case "ACTIVE":
-        return <Badge variant="default">Active</Badge>;
-      case "PENDING":
-        return <Badge variant="secondary">Pending</Badge>;
-      case "CANCELLED":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
+  const getStatusBadge = (status: string) => (
+    <StatusChip status={status} tone={status?.toUpperCase() === "PROSPECT" ? "blue" : undefined} />
+  );
 
   return (
-    <div className="min-h-screen ">
-      <div className="container mx-auto">
+    <div className="min-h-full">
+      <div className="mx-auto w-full max-w-[1400px]">
         <div className="rounded-lg">
           {/* SUCCESS TOAST */}
           {showSuccessToast && (
@@ -673,7 +561,7 @@ export default function GroupLifeQuotation() {
 
           {/* ERROR MESSAGES */}
           {approveError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center">
+            <div className="mb-6 flex items-center rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4">
               <div className="text-red-500 mr-2">⚠️</div>
               <p className="text-red-700">{approveError}</p>
               <button
@@ -686,47 +574,36 @@ export default function GroupLifeQuotation() {
           )}
 
           {/* Header Card */}
-          <Card className="bg-gradient-to-r from-gray-200 to-gray-200 border-white-200 mb-6">
-            <div className="p-4 pb-0">
-              <h2 className="text-xl font-bold text-gray-900">
-                Group Life Schemes
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Manage and track your group life insurance schemes
-              </p>
-              <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                Nigeria Insurance Industry Reform Act (NIIRA) 2025 and Sections
-                4(5) and 8 of the Pension Reform Act 2014 on Mandatory Insurance
-                Coverage –
-                <button
-                  type="button"
-                  onClick={handleOpenComplianceDialog}
-                  className="ml-1 text-blue-700 font-semibold underline underline-offset-2 hover:text-blue-800"
-                >
-                  Group Life Assurance
+          <div className="mb-6">
+            <PageHeader
+              eyebrow="Group life"
+              title="Group life schemes"
+              description="Manage and track your group life insurance schemes."
+              actions={
+                <button type="button" onClick={handleNewQuotation} className={btnPrimary}>
+                  <Plus className="h-4 w-4" />
+                  New group life scheme
                 </button>
-                .
-              </p>
-            </div>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleNewQuotation}
-                  className="w-full sm:w-auto text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">New Group Life Scheme</span>
-                  <span className="sm:hidden">New</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              }
+            />
+            <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-xs leading-relaxed text-slate-600">
+              Nigeria Insurance Industry Reform Act (NIIRA) 2025 and Sections
+              4(5) and 8 of the Pension Reform Act 2014 on Mandatory Insurance
+              Coverage –
+              <button
+                type="button"
+                onClick={handleOpenComplianceDialog}
+                className="ml-1 font-semibold text-[#155dfd] underline underline-offset-2 hover:text-[#0f4fe0]"
+              >
+                Group Life Assurance
+              </button>
+              .
+            </p>
+          </div>
 
           {/* SELECTION ACTIONS */}
           {selectedQuotations.size > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+            <div className="mb-6 flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
               <div className="flex items-center">
                 <span className="text-blue-700 font-medium">
                   {selectedQuotations.size} quotation
@@ -755,220 +632,13 @@ export default function GroupLifeQuotation() {
             </div>
           )}
 
-          {/* Filters Section */}
-          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <div className="border rounded-lg mb-6 bg-gray-50">
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 cursor-pointer">
-                  <div className="flex items-center space-x-2">
-                    <Filter className="h-4 w-4" />
-                    <span className="text-sm font-medium">Search Filter</span>
-                    {hasActiveFilters && (
-                      <Badge
-                        variant="secondary"
-                        className="bg-blue-100 text-blue-800"
-                      >
-                        {
-                          [
-                            filterCriteria.searchValue,
-                            filterCriteria.startDate,
-                            filterCriteria.endDate,
-                            filterCriteria.status !== "all"
-                              ? filterCriteria.status
-                              : null,
-                            filterCriteria.schemeType !== "all"
-                              ? filterCriteria.schemeType
-                              : null,
-                            filterCriteria.insuredType !== "all"
-                              ? filterCriteria.insuredType
-                              : null,
-                            filterCriteria.subRiskId !== "all"
-                              ? filterCriteria.subRiskId
-                              : null,
-                          ].filter(Boolean).length
-                        }{" "}
-                        active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {hasActiveFilters && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          clearAllFilters();
-                        }}
-                        className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        Clear
-                      </Button>
-                    )}
-                    <Checkbox checked={filtersOpen} />
-                  </div>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-4 pb-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Search by
-                      </label>
-                      <Select
-                        value={filterCriteria.searchField}
-                        onValueChange={(value) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            searchField: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select field" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="CompanyName">
-                            Company Name
-                          </SelectItem>
-                          <SelectItem value="SchemesNumber">
-                            Schemes Number
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Search text
-                      </label>
-                      <Input
-                        value={filterCriteria.searchValue}
-                        onChange={(e) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            searchValue: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter search text"
-                      />
-                    </div>
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Start Date
-                      </label>
-                      <Input
-                        type="date"
-                        value={filterCriteria.startDate}
-                        onChange={(e) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            startDate: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        End Date
-                      </label>
-                      <Input
-                        type="date"
-                        value={filterCriteria.endDate}
-                        onChange={(e) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            endDate: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="lg:col-span-1 flex items-end">
-                      <Button
-                        className="w-full bg-primary hover:bg-primary-blue"
-                        onClick={applyFilters}
-                      >
-                        <Search className="w-4 h-4 mr-2" />
-                        Apply
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                    <div>
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Status
-                      </label>
-                      <Select
-                        value={filterCriteria.status}
-                        onValueChange={(value) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            status: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All statuses" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Statuses</SelectItem>
-                          <SelectItem value="prospect">Prospect</SelectItem>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* ✅ Product / subRiskId filter — now dynamic */}
-                    <div>
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Product
-                      </label>
-                      <Select
-                        value={filterCriteria.subRiskId}
-                        onValueChange={(value) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            subRiskId: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All products" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Products</SelectItem>
-                          {productOptions.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-end">
-                      <Button
-                        variant="outline"
-                        className="w-full bg-transparent"
-                        onClick={clearAllFilters}
-                      >
-                        Clear Filters
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
+          <GroupLifeListFilters list={list} productOptions={productOptions} total={totalCount} loading={isLoading} />
 
           {/* Data Display Area */}
-          <div className="border border-border rounded-lg min-h-96 bg-white">
+          <div className="min-h-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+                <Loader2 className="mb-4 h-10 w-10 animate-spin text-[#155dfd]" />
                 <p className="text-gray-600 font-medium">
                   Loading group life schemes...
                 </p>
@@ -1019,27 +689,26 @@ export default function GroupLifeQuotation() {
                     ))}
                   </div>
                 ) : (
-                  // Desktop table view
+                  // Desktop table view: six columns, so it fits beside the menu without sideways scrolling
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="table-fixed">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-12">
+                          <TableHead className="w-11 pr-0">
                             <Checkbox
                               checked={isAllSelected}
                               onCheckedChange={handleSelectAll}
                               className="h-4 w-4"
                             />
                           </TableHead>
-                          <TableHead>Scheme No.</TableHead>
-                          <TableHead>Company Name</TableHead>
-                          <TableHead className="text-right">
-                            Sum Assured
+                          <TableHead>Scheme</TableHead>
+                          <TableHead className="hidden w-[170px] @5xl:table-cell">Product</TableHead>
+                          <TableHead className="w-[160px] text-right">Sum insured</TableHead>
+                          <TableHead className="hidden w-[130px] @3xl:table-cell">Cover</TableHead>
+                          <TableHead className="w-[110px]">Status</TableHead>
+                          <TableHead className="w-[84px] text-right">
+                            <span className="sr-only">Actions</span>
                           </TableHead>
-                          <TableHead className="text-right">Premium</TableHead>
-                          <TableHead>Effective Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1047,90 +716,86 @@ export default function GroupLifeQuotation() {
                           const quoteId = getQuotationId(quote);
                           const isSelected = selectedQuotations.has(quoteId);
                           const isApproving = approvingQuotations.has(quoteId);
+                          const start = quote.effectiveDate || quote.startDate || quote.entryDate;
 
                           return (
                             <TableRow
                               key={quoteId}
-                              className={`${isSelected ? "bg-blue-50" : ""} ${
-                                isApproving ? "opacity-60" : ""
-                              } cursor-pointer hover:bg-blue-50/50 border-blue-100 transition-colors`}
-
+                              onClick={() => !isApproving && handleEditQuotation(quote)}
+                              className={`${isSelected ? "bg-blue-50/60" : ""} ${isApproving ? "opacity-60" : ""} cursor-pointer`}
                             >
-                              <TableCell>
+                              <TableCell className="pr-0">
                                 <div onClick={(e) => e.stopPropagation()}>
                                   <Checkbox
                                     checked={isSelected}
-                                    onCheckedChange={() =>
-                                      handleSelectQuotation(quoteId)
-                                    }
+                                    onCheckedChange={() => handleSelectQuotation(quoteId)}
                                     className="h-4 w-4"
                                     disabled={isApproving}
                                   />
                                 </div>
                               </TableCell>
-                              <TableCell className="font-medium">
-                                <div className="space-y-1">
-                                  <div className="text-sm font-medium">
-                                    {getQuotationNumber(quote)}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {quoteId}
-                                  </div>
-                                </div>
-                              </TableCell>
                               <TableCell>
-                                <div className="space-y-1">
-                                  <div className="font-medium text-gray-900 flex items-center gap-2">
-                                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                                    {getCompanyName(quote)}
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-600 @4xl:grid">
+                                    <Building2 className="h-4 w-4" />
+                                  </span>
+                                  <div className="min-w-0">
+                                    <div className="truncate font-semibold text-slate-900" title={getCompanyName(quote)}>
+                                      {getCompanyName(quote) || "—"}
+                                    </div>
+                                    <div className="truncate text-xs text-slate-500">{getQuotationNumber(quote)}</div>
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-right font-medium text-blue-900">
-                                {formatCurrency(
-                                  quote.totalSumInsured || quote.sumInsured || quote.sumAssured
+                              <TableCell className="hidden @5xl:table-cell">
+                                <div className="truncate text-slate-900" title={quote.subRiskName}>
+                                  {quote.subRiskName || quote.subRiskId || "—"}
+                                </div>
+                                {quote.isProposal !== undefined && (
+                                  <div className="text-xs text-slate-500">{quote.isProposal ? "Proposal" : "Policy"}</div>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right font-medium text-blue-900">
-                                {formatCurrency(quote.totalPremium || quote.grossPremium)}
+                              <TableCell className="text-right">
+                                <div className="truncate font-semibold text-slate-900">
+                                  {formatCurrency(quote.totalSumInsured || quote.sumInsured || quote.sumAssured)}
+                                </div>
+                                <div className="truncate text-xs text-slate-500">
+                                  {formatCurrency(quote.totalPremium || quote.grossPremium)} premium
+                                </div>
                               </TableCell>
-                              <TableCell className="text-gray-700">
-                                {formatDate(
-                                  quote.effectiveDate || quote.startDate || quote.entryDate
-                                )}
+                              <TableCell className="hidden @3xl:table-cell">
+                                <div className="truncate text-slate-900">{formatDate(start)}</div>
+                                {quote.expiryDate && <div className="truncate text-xs text-slate-500">to {formatDate(quote.expiryDate)}</div>}
                               </TableCell>
+                              <TableCell>{getStatusBadge(quote.status)}</TableCell>
                               <TableCell>
-                                {getStatusBadge(quote.status)}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex justify-end gap-2">
-                                  {/* Edit Button */}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 bg-transparent border-green-300 text-green-700 hover:bg-green-50"
+                                <div className="flex justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    title="Open scheme"
+                                    aria-label="Open scheme"
+                                    className={btnIcon}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleEditQuotation(quote);
                                     }}
                                     disabled={isApproving}
                                   >
-                                    <Pencil className="w-3 h-3" />
-                                  </Button>
-
-                                  {/* Print Button */}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 bg-transparent border-blue-300 text-blue-700 hover:bg-blue-50"
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    title="Print"
+                                    aria-label="Print"
+                                    className={btnIcon}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handlePrintQuotation(quote, e);
                                     }}
                                     disabled={isApproving}
                                   >
-                                    <Printer className="w-3 h-3" />
-                                  </Button>
+                                    <Printer className="h-3.5 w-3.5" />
+                                  </button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -1143,8 +808,8 @@ export default function GroupLifeQuotation() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
-                    <div className="text-sm text-muted-foreground order-2 sm:order-1">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 px-5 py-3">
+                    <div className="text-sm text-slate-500 order-2 sm:order-1">
                       Showing {startItem + 1} to {endItem} of{" "}
                       {effectiveTotalCount} entries | Page {currentPage} of{" "}
                       {totalPages}
@@ -1363,20 +1028,9 @@ const GroupLifeQuotationCard = ({
     return quote.companyName || quote.surName || quote.insuredName || "";
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case "PROSPECT":
-        return <Badge variant="outline">Prospect</Badge>;
-      case "ACTIVE":
-        return <Badge variant="default">Active</Badge>;
-      case "PENDING":
-        return <Badge variant="secondary">Pending</Badge>;
-      case "CANCELLED":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
+  const getStatusBadge = (status: string) => (
+    <StatusChip status={status} tone={status?.toUpperCase() === "PROSPECT" ? "blue" : undefined} />
+  );
 
   return (
     <Card

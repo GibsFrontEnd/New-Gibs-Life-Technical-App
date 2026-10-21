@@ -7,6 +7,7 @@ import {
   loadDebitNote,
   approveDebitNote,
   refreshDebitNote,
+  deleteDebitNote,
   selectDebitNote,
   clearDebitNoteErrors,
 } from '../../features/reducers/groupLifeReducers/groupLifeQuotationSlice';
@@ -865,6 +866,26 @@ const DebitNoteList = ({
     }
   };
 
+  // Delete a note (and the notes raised against it). The API refuses once it is processed into the ledger.
+  const handleDeleteNote = async (note: any) => {
+    const dncnNo = note.debitNoteNo || note.dncnNo;
+    if (!dncnNo) {
+      toast.error('Debit note number is missing');
+      return;
+    }
+    const kind = note.noteType === 'CN' ? 'credit note' : 'debit note';
+    if (!window.confirm(`Delete ${kind} ${dncnNo} and every note raised against it? The section will be released so it can be debited again.`)) {
+      return;
+    }
+    try {
+      await dispatch(deleteDebitNote(dncnNo)).unwrap();
+      toast.success(`${dncnNo} deleted`);
+      await fetchDebitNotesList();
+    } catch (error: any) {
+      toast.error(typeof error === 'string' ? error : error?.message || 'Failed to delete the note');
+    }
+  };
+
   const handleViewNote = (note: any) => {
     const dncnNo = note.debitNoteNo || note.dncnNo;
     const policyNumber = note.policyNo || policyNo;
@@ -1245,6 +1266,11 @@ const DebitNoteList = ({
                         </TableCell>
                         <TableCell className="font-medium text-blue-600">
                           {dncnNo}
+                          {note.noteType === 'CN' && (
+                            <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 align-middle">
+                              CREDIT
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-slate-600">{policyNoDisplay}</TableCell>
                         <TableCell className="text-slate-600 max-w-[150px] truncate" title={insuredNameDisplay}>
@@ -1291,6 +1317,18 @@ const DebitNoteList = ({
                                 title="Edit Note"
                               >
                                 <Edit className="w-4 h-4 text-slate-500 hover:text-blue-600" />
+                              </Button>
+                            )}
+
+                            {approvalStatus !== 2 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleDeleteNote(note)}
+                                title="Delete Note"
+                              >
+                                <Trash2 className="w-4 h-4 text-slate-500 hover:text-red-600" />
                               </Button>
                             )}
 

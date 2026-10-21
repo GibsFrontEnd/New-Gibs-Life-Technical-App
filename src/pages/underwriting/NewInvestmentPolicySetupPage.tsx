@@ -2,16 +2,29 @@
 // @ts-nocheck
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Users, RefreshCw, Save } from "lucide-react";
+import { ArrowLeft, Users, RefreshCw, Save, ArrowRight } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import apiCall from "../../utils/api-call";
 import { useToast } from "../../components/UI/use-toast";
+import { policyToForm } from "../../utils/individualPolicy";
+import BeneficiariesPanel from "../../components/individual/BeneficiariesPanel";
+import PolicySummaryCard from "../../components/individual/PolicySummaryCard";
+import { usePolicySteps, type StepField } from "../../components/individual/usePolicySteps";
+import { Stepper } from "../../components/page/PageKit";
+
+// Required fields per step (Client, Identity & health, Plan, Payment & save). validateForm still runs on save.
+const STEP_FIELDS: StepField[][] = [
+  [["surName", "Surname"], ["dateOfBirth", "Date of Birth"], ["gender", "Gender"], ["email", "Email Address"], ["mobilePhone", "Mobile Phone"], ["address", "Contact Address"], ["state", "State"]],
+  [],
+  [["productCode", "Product Code"], ["frequency", "Frequency"], ["regularSaving", "Regular Saving", "positive"], ["issueDate", "Start Date"], ["duration", "Duration", "positive"]],
+  [["paymentType", "Payment Type"], ["dateofpayment", "Date of Payment"]]
+];
 
 
 // ─── helpers ───────────────────────────────────────────────
 const InputField = ({ label, value, onChange, type = "text", required = false, disabled = false }: any) => (
   <div>
-    <label className="block text-sm font-semibold text-gray-800 mb-1">
+    <label className="mb-1.5 block text-sm font-medium text-slate-700">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <input
@@ -20,21 +33,21 @@ const InputField = ({ label, value, onChange, type = "text", required = false, d
       onChange={onChange}
       disabled={disabled}
       required={required}
-      className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8c4b8d]/30 focus:border-[#8c4b8d] ${disabled ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`}
+      className={`w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-[#155dfd] focus:ring-4 focus:ring-blue-100 ${disabled ? "cursor-not-allowed bg-slate-50 text-slate-500" : "bg-white"}`}
     />
   </div>
 );
 
 const SelectField = ({ label, value, onChange, options, required = false }: any) => (
   <div>
-    <label className="block text-sm font-semibold text-gray-800 mb-1">
+    <label className="mb-1.5 block text-sm font-medium text-slate-700">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <select
       value={value || ""}
       onChange={onChange}
       required={required}
-      className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8c4b8d]/30 focus:border-[#8c4b8d]"
+      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-[#155dfd] focus:ring-4 focus:ring-blue-100"
     >
       <option value="">Select...</option>
       {options.map((opt: any) => (
@@ -47,7 +60,7 @@ const SelectField = ({ label, value, onChange, options, required = false }: any)
 );
 
 const SectionHead = ({ title }: { title: string }) => (
-  <h3 className="text-lg font-semibold text-[#111827] border-b border-gray-200 pb-2 mb-4 mt-8">
+  <h3 className="mb-5 mt-10 border-b border-slate-100 pb-3 text-base font-semibold text-slate-900 first:mt-0">
     {title}
   </h3>
 );
@@ -70,8 +83,8 @@ const emptyFormState = {
   dateOfBirth: "",
   duration: 5,
   frequency: "Monthly",
-  regularSaving: 10000,
-  productCode: "CEE",
+  regularSaving: 0,
+  productCode: "",
   extraRate: 0,
   loadingRate: 0,
   maritalStatus: "Single",
@@ -85,7 +98,7 @@ const emptyFormState = {
   chronicIllness: "",
   mop: "",
   paymentType: "Cash",
-  paymentAmount: 5000,
+  paymentAmount: 0,
   dateofpayment: "",
   receiptNo: "",
   bankName: "",
@@ -136,16 +149,7 @@ const NewInvestmentPolicySetupPage = () => {
   // ✅ Populate form with initial data if in edit mode
   useEffect(() => {
     if (isEditMode && initialData) {
-      setFormData({
-        ...emptyFormState,
-        ...initialData,
-        // Ensure dates are in the correct format
-        dateOfBirth: initialData.dateOfBirth?.split('T')[0] || "",
-        issueDate: initialData.issueDate?.split('T')[0] || "",
-        expiryDate: initialData.expiryDate?.split('T')[0] || "",
-        dateofpayment: initialData.dateofpayment?.split('T')[0] || "",
-        dateEmployed: initialData.dateEmployed?.split('T')[0] || "",
-      });
+      setFormData(policyToForm(initialData, emptyFormState));
       
       // ✅ Show success toast when loading edit data
       toast({
@@ -185,33 +189,8 @@ const NewInvestmentPolicySetupPage = () => {
       const start = new Date(formData.issueDate);
       if (!isNaN(start.getTime())) {
         const mat = new Date(start);
-        const durationVal = Number(formData.duration);
-        
-        switch (formData.frequency) {
-          case "Monthly":
-            mat.setMonth(mat.getMonth() + durationVal);
-            break;
-          case "Quarterly":
-            mat.setMonth(mat.getMonth() + (durationVal * 3));
-            break;
-          case "Half-Yearly":
-            mat.setMonth(mat.getMonth() + (durationVal * 6));
-            break;
-          case "Weekly":
-            mat.setDate(mat.getDate() + (durationVal * 7));
-            break;
-          case "Fortnightly":
-            mat.setDate(mat.getDate() + (durationVal * 14));
-            break;
-          case "Daily":
-            mat.setDate(mat.getDate() + durationVal);
-            break;
-          case "Annually":
-          case "Single":
-          default:
-            mat.setFullYear(mat.getFullYear() + durationVal);
-            break;
-        }
+        // Duration is in YEARS (rate tables and API) whatever the payment frequency
+        mat.setFullYear(mat.getFullYear() + Math.floor(Number(formData.duration) || 0));
 
         const isoString = mat.toISOString();
         if (formData.expiryDate !== isoString) {
@@ -225,8 +204,29 @@ const NewInvestmentPolicySetupPage = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const validateForm = () => {
+    const fail = (description: string) => {
+      toast({ title: "Validation Error", description, variant: "destructive" });
+      return false;
+    };
+    const required = [
+      ["surName", "Surname"], ["dateOfBirth", "Date of Birth"], ["gender", "Gender"], ["email", "Email Address"],
+      ["mobilePhone", "Mobile Phone"], ["address", "Contact Address"], ["state", "State"], ["productCode", "Product Code"],
+      ["frequency", "Frequency"], ["issueDate", "Start Date"], ["paymentType", "Payment Type"], ["dateofpayment", "Date of Payment"],
+    ];
+    for (const [field, label] of required) {
+      const v = formData[field];
+      if (v === undefined || v === null || (typeof v === "string" && v.trim() === "")) return fail(`${label} is required`);
+    }
+    if (!(Number(formData.regularSaving) > 0)) return fail("Regular Saving must be greater than 0");
+    if (!(Number(formData.duration) > 0)) return fail("Duration must be greater than 0");
+    if (new Date(formData.dateOfBirth) > new Date()) return fail("Date of birth cannot be in the future");
+    return true;
+  };
+
   const handleCreatePolicy = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setIsSubmitting(true);
     
     // ✅ Show loading toast
@@ -246,7 +246,7 @@ const NewInvestmentPolicySetupPage = () => {
         dateofpayment: formData.dateofpayment ? new Date(formData.dateofpayment).toISOString() : new Date().toISOString(),
         issueDate: formData.issueDate ? new Date(formData.issueDate).toISOString() : new Date().toISOString(),
         expiryDate: formData.expiryDate ? new Date(formData.expiryDate).toISOString() : new Date().toISOString(),
-        dateEmployed: formData.dateEmployed ? new Date(formData.dateEmployed).toISOString() : new Date().toISOString(),
+        dateEmployed: formData.dateEmployed ? new Date(formData.dateEmployed).toISOString() : null,
       };
       
       let response;
@@ -263,7 +263,7 @@ const NewInvestmentPolicySetupPage = () => {
           return;
         }
         
-         response = await apiCall.post(`/v1/lifepolicyAdmin/edit/${policyNo}`, payload);
+         response = await apiCall.post(`/v1/lifepolicyAdmin/edit/policyNo?policyNo=${encodeURIComponent(policyNo)}`, payload);
       
       toast({
         title: "Success",
@@ -301,47 +301,54 @@ const NewInvestmentPolicySetupPage = () => {
     }
   };
 
+
+  const flow = usePolicySteps({ formData, stepFields: STEP_FIELDS, toast, editMode: !!isEditMode, onSave: handleCreatePolicy });
+
   return (
-    <div className="p-6 max-w-[1400px] mx-auto min-h-screen">
+    <div className="mx-auto w-full max-w-[1400px] space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </button>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-[#155dfd]"
+          >
+            <ArrowLeft size={16} /> Back
+          </button>
+          <p className="text-sm font-medium text-[#155dfd]">Policy admin</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             {isEditMode ? "Edit Investment Policy" : "New Investment Policy Setup"}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="mt-1.5 text-sm text-slate-500 sm:text-base">
             {isEditMode ? "Update policy details for the client" : "Create a brand new policy for a client"}
           </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-200">
+      <div className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
         <button
           onClick={() => setActiveTab("Information")}
-          className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTab === "Information" ? "text-[#8c4b8d]" : "text-gray-500 hover:text-gray-700"}`}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "Information" ? "bg-[#155dfd] text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
         >
           Information
-          {activeTab === "Information" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8c4b8d]" />}
         </button>
         <button
           onClick={() => setActiveTab("Beneficiaries")}
-          className={`px-5 py-3 text-sm font-semibold transition-colors relative ${activeTab === "Beneficiaries" ? "text-[#8c4b8d]" : "text-gray-500 hover:text-gray-700"}`}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "Beneficiaries" ? "bg-[#155dfd] text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
         >
           <Users size={16} /> Beneficiaries
-          {activeTab === "Beneficiaries" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8c4b8d]" />}
         </button>
       </div>
 
       {activeTab === "Information" && (
-        <form onSubmit={handleCreatePolicy} className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 lg:p-8">
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div ref={flow.topRef} className="min-w-0 scroll-mt-6 space-y-6">
+        <Stepper steps={flow.steps} current={flow.step} reachable={flow.reached} onStep={flow.goTo} />
+        <form onSubmit={flow.onSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
           
+          {flow.step === 0 && (<>
           <SectionHead title="Personal Information" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
             <SelectField label="Title" value={formData.title} onChange={(e: any) => handleChange("title", e.target.value)} options={["Mr", "Mrs", "Ms", "Miss", "Dr", "Prof", "Rev", "Chief"]} required />
@@ -370,6 +377,9 @@ const NewInvestmentPolicySetupPage = () => {
             <InputField label="Country" value={formData.country} onChange={(e: any) => handleChange("country", e.target.value)} required />
           </div>
 
+          </>)}
+
+          {flow.step === 1 && (<>
           <SectionHead title="Identification" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
             <SelectField label="Means of ID" value={formData.meansID} onChange={(e: any) => handleChange("meansID", e.target.value)} options={["National ID", "Passport", "Driver's License", "Voter's Card"]} required />
@@ -393,6 +403,9 @@ const NewInvestmentPolicySetupPage = () => {
             <InputField label="Chronic Illness (if any)" value={formData.chronicIllness} onChange={(e: any) => handleChange("chronicIllness", e.target.value)} />
           </div>
 
+          </>)}
+
+          {flow.step === 2 && (<>
           <SectionHead title="Policy & Cover Details" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
             <SelectField 
@@ -420,6 +433,9 @@ const NewInvestmentPolicySetupPage = () => {
             <InputField label="Maturity Date" type="date" value={formData.expiryDate?.split('T')[0] || ''} onChange={(e: any) => handleChange("expiryDate", e.target.value)} disabled={true} required />
           </div>
 
+          </>)}
+
+          {flow.step === 3 && (<>
           <SectionHead title="Payment Details" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
             <SelectField label="Payment Type" value={formData.paymentType} onChange={(e: any) => handleChange("paymentType", e.target.value)} options={["Cash", "Transfer", "Cheque", "POS"]} required />
@@ -430,49 +446,70 @@ const NewInvestmentPolicySetupPage = () => {
             <InputField label="Account No" value={formData.accountNo} onChange={(e: any) => handleChange("accountNo", e.target.value)} />
           </div>
 
-          {/* Form Actions */}
-          <div className="flex items-center justify-end gap-4 pt-8 mt-4 border-t border-gray-100">
+          </>)}
+
+          {/* Step navigation */}
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-6">
             <button
               type="button"
               disabled={isSubmitting}
-              className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors font-medium text-sm disabled:opacity-50"
-              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
+              onClick={flow.isFirst ? () => navigate(-1) : flow.back}
             >
-              Cancel
+              {flow.isFirst ? "Cancel" : (<><ArrowLeft size={16} /> Back</>)}
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex items-center gap-2 px-6 py-2.5 bg-[#8c4b8d] text-white rounded-lg hover:bg-opacity-90 transition-opacity font-semibold shadow-sm text-sm disabled:opacity-70"
-            >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw size={16} className="animate-spin" />
-                  {isEditMode ? "Updating..." : "Creating..."}
-                </>
-              ) : (
-                <>
-                  <Save size={16} />
-                  {isEditMode ? "Update Policy" : "Submit Policy"}
-                </>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="hidden text-sm text-slate-500 md:inline">Step {flow.step + 1} of {flow.steps.length}</span>
+              {isEditMode && !flow.isLast && (
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={flow.saveAll}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <Save size={16} /> Save changes
+                </button>
               )}
-            </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex items-center gap-2 rounded-xl bg-[#155dfd] px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-[#0f4fe0] disabled:opacity-70"
+              >
+                {!flow.isLast ? (
+                  <>
+                    Continue to {flow.steps[flow.step + 1].toLowerCase()}
+                    <ArrowRight size={16} />
+                  </>
+                ) : isSubmitting ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    {isEditMode ? "Updating..." : "Creating..."}
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    {isEditMode ? "Update Policy" : "Submit Policy"}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
+        </div>
+        <PolicySummaryCard formData={formData} branches={branches} products={products} />
+        </div>
       )}
 
       {activeTab === "Beneficiaries" && (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 text-center min-h-[400px] flex flex-col justify-center items-center">
-          <div className="bg-purple-100 p-4 rounded-full mb-4">
-            <Users size={32} className="text-[#8c4b8d]" />
+        isEditMode && (formData.policyNo || formData.proposalNo) ? (
+          <BeneficiariesPanel policyNo={formData.policyNo || formData.proposalNo} />
+        ) : (
+          <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <Users size={32} className="text-[#155dfd] mb-3" />
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Save the policy first</h2>
+            <p className="text-gray-500 max-w-sm">Beneficiaries are added from the policy's Edit screen once it has a policy number.</p>
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">No Beneficiaries Added Yet</h2>
-          <p className="text-gray-500 max-w-sm">
-            {isEditMode 
-              ? "Add beneficiaries to this policy in the system." 
-              : "Save the initial policy setup first to unlock adding beneficiaries in the system."}
-          </p>
-        </div>
+        )
       )}
 
     </div>

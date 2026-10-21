@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 
 const basePath = "/underwriting-group";
 
-const SIDEBAR_BG = "#8c4b8d";
+const SIDEBAR_BG = "#155dfd";
 const ACTIVE_BG = "rgba(255,255,255,0.15)";
 
 const menuItems = [

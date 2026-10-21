@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { schemeUrl } from "../../utils/groupLifeNav";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "../UI/new-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
@@ -257,6 +258,32 @@ const MemberDetailPage: React.FC = () => {
     });
   };
 
+  // Says how many rows went in, how many were skipped and why (the API groups the reasons).
+  // Success only when something was added; otherwise the user must see why nothing happened.
+  const reportUpload = (result: any) => {
+    const inserted = result?.insertedCount || 0;
+    const skipped = result?.skippedCount || 0;
+    const reasons = (result?.skipReasons || [])
+      .slice(0, 3)
+      .map((r: any) => `${r.count} × ${r.reason}${r.examples?.length ? ` (e.g. ${r.examples.slice(0, 2).join(", ")})` : ""}`)
+      .join("\n");
+    if (inserted === 0) {
+      toast({
+        title: "No members were added",
+        description: skipped > 0 ? `All ${skipped} rows were skipped.\n${reasons}` : "The file contained no usable member rows.",
+        variant: "destructive",
+        duration: 12000,
+      });
+    } else {
+      toast({
+        title: "Upload complete",
+        description: `Added ${inserted} member${inserted === 1 ? "" : "s"}${skipped > 0 ? `, skipped ${skipped}.\n${reasons}` : "."}`,
+        variant: skipped > 0 ? "default" : "success",
+        duration: skipped > 0 ? 10000 : 4000,
+      });
+    }
+  };
+
   // ============================================
 // 1. DIRECT UPLOAD - upload-excel endpoint
 // ============================================
@@ -307,12 +334,7 @@ const handleUploadExcel = async () => {
       fixedPremiumRate: pricingMode === "FixedRate" ? Number(fixedPremiumRate) : 0,
     })).unwrap();
 
-    toast({
-      title: "✅ Upload Successful",
-      description: `Uploaded ${result.insertedCount || 0} members successfully`,
-      variant: "default",
-      duration: 4000,
-    });
+    reportUpload(result);
 
     setShowDirectUploadModal(false);
     // Refresh the policy detail to get updated members
@@ -454,12 +476,7 @@ const handleConfirmUpload = async () => {
     const skippedCount = result.skippedCount || 0;
     const totalMembers = result.aggregate?.memberCount || insertedCount;
 
-    toast({
-      title: "✅ Upload Successful",
-      description: `Added ${insertedCount} members successfully${skippedCount > 0 ? `, ${skippedCount} skipped` : ''}`,
-      variant: "default",
-      duration: 4000,
-    });
+    reportUpload(result);
 
     // Refresh the policy detail to get updated members
     await fetchPolicyDetail();
@@ -485,7 +502,8 @@ const handleConfirmUpload = async () => {
 };
 
   const handleBack = () => {
-    navigate(-1);
+    // back to the scheme's Group Life Detail tab (the list of sections the members belong to)
+    navigate(policyNo ? schemeUrl(policyNo, 'group-life') : -1 as any);
   };
 
   // If no policy number, show error

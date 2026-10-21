@@ -82,7 +82,7 @@ const GLPage = () => {
             </tr>
           ))}
         </Table>
-        <h4 className="mb-2 mt-4 text-sm font-semibold text-blue-900">Set accounts</h4>
+        <h4 className="mb-2 mt-4 text-sm font-semibold text-slate-900">Set accounts</h4>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <Field label="Transaction" required className="md:col-span-2">
             <select className={inputCls} value={form.transactionType} onChange={(e) => setForm({ ...form, transactionType: e.target.value })}>

@@ -97,19 +97,25 @@ const BatchesPage = () => {
     >
       {error && <Banner kind="error">{error}</Banner>}
       <Table
-        head={["Batch", "As of", "Policies", "Items", "Exceptions", "Net amount", "Paid", "Created by", "Status", ""]}
+        head={["Batch", "Items", "Net amount", "Created by", "Status", ""]}
+        cols={["", "w-[170px]", "w-[170px]", "hidden w-[130px] @4xl:table-cell", "w-[140px]", "w-[84px]"]}
         empty={!loading && rows.length === 0 ? "No payment batches. Create one from Due payments." : loading ? "Loading…" : undefined}
       >
         {rows.map((r) => (
           <tr key={r.batchNo} className="hover:bg-gray-50">
-            <td className="px-3 py-2 font-medium text-blue-900">{r.batchNo}</td>
-            <td className="px-3 py-2">{fmtDate(r.asOfDate)}</td>
-            <td className="px-3 py-2">{r.policyCount}</td>
-            <td className="px-3 py-2">{r.itemCount}</td>
-            <td className="px-3 py-2">{r.exceptionCount}</td>
-            <td className="px-3 py-2">{money(r.netAmount)}</td>
-            <td className="px-3 py-2">{r.status === "EXECUTED" || r.status === "RECONCILED" ? money(r.paidAmount) : "—"}</td>
-            <td className="px-3 py-2 text-xs">{r.createdBy}</td>
+            <td className="px-3 py-2">
+              <div className="font-semibold text-slate-900" title={r.batchNo}>{r.batchNo}</div>
+              <div className="text-xs text-slate-500">As of {fmtDate(r.asOfDate)}</div>
+            </td>
+            <td className="px-3 py-2">
+              <div className="text-slate-900">{r.policyCount} policies · {r.itemCount} items</div>
+              <div className={`text-xs ${r.exceptionCount ? "text-rose-600" : "text-slate-500"}`}>{r.exceptionCount || 0} exceptions</div>
+            </td>
+            <td className="px-3 py-2">
+              <div className="font-semibold text-slate-900">{money(r.netAmount)}</div>
+              <div className="text-xs text-slate-500">Paid {r.status === "EXECUTED" || r.status === "RECONCILED" ? money(r.paidAmount) : "—"}</div>
+            </td>
+            <td className="hidden truncate px-3 py-2 text-xs @4xl:table-cell" title={r.createdBy}>{r.createdBy}</td>
             <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
             <td className="px-3 py-2 text-right"><Btn size="sm" variant="secondary" onClick={() => modal.open(r.batchNo)}>Open</Btn></td>
           </tr>
@@ -145,7 +151,7 @@ const BatchesPage = () => {
 
               {b.status === "PENDING_APPROVAL" && (
                 <div className="space-y-2 rounded-md border p-3">
-                  <h4 className="m-0 text-sm font-semibold text-blue-900">Checker review</h4>
+                  <h4 className="m-0 text-sm font-semibold text-slate-900">Checker review</h4>
                   <p className="m-0 text-xs text-gray-500">The user who created the batch cannot approve it.</p>
                   <Field label="Reason (required to reject)"><input className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
                   <div className="flex gap-2">
@@ -157,7 +163,7 @@ const BatchesPage = () => {
 
               {b.status === "APPROVED" && (
                 <div className="space-y-3 rounded-md border p-3">
-                  <h4 className="m-0 text-sm font-semibold text-blue-900">Record bank execution</h4>
+                  <h4 className="m-0 text-sm font-semibold text-slate-900">Record bank execution</h4>
                   <p className="m-0 text-xs text-gray-500">
                     Everything not ticked as rejected is treated as paid and recorded in the payment records (undDNCN), marked PAID. Items that no longer pass validation are released automatically.
                   </p>
@@ -196,7 +202,7 @@ const BatchesPage = () => {
 
               {b.status === "EXECUTED" && (
                 <div className="space-y-2 rounded-md border p-3">
-                  <h4 className="m-0 text-sm font-semibold text-blue-900">Reconcile with bank statement</h4>
+                  <h4 className="m-0 text-sm font-semibold text-slate-900">Reconcile with bank statement</h4>
                   <div className="flex items-end gap-3">
                     <Field label="Amount on bank statement (₦)" hint={`Expected ${money(b.paidAmount)}`}>
                       <input type="number" step="0.01" className={inputCls} value={bankAmount} onChange={(e) => setBankAmount(e.target.value)} />
@@ -206,7 +212,7 @@ const BatchesPage = () => {
                 </div>
               )}
 
-              <h4 className="text-sm font-semibold text-blue-900">Items</h4>
+              <h4 className="text-sm font-semibold text-slate-900">Items</h4>
               <Table head={["Policy", "#", "Gross", "Deductions", "Net", "Result", "Reason"]} empty={items.length === 0 ? "No items." : undefined}>
                 {items.map((i: any) => (
                   <tr key={i.itemID}>

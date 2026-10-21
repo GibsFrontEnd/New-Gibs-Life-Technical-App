@@ -12,11 +12,11 @@ const ToastIcons = {
 }
 
 const ToastColors = {
-  default: "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-700/80",
-  success: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800",
-  error: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
-  warning: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
-  destructive: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
+  default: "bg-white border-gray-200/80",
+  success: "bg-emerald-50 border-emerald-200",
+  error: "bg-red-50 border-red-200",
+  warning: "bg-amber-50 border-amber-200",
+  destructive: "bg-red-50 border-red-200",
 }
 
 const IconColors = {
@@ -28,19 +28,19 @@ const IconColors = {
 }
 
 const TextColors = {
-  default: "text-gray-900 dark:text-white",
-  success: "text-emerald-900 dark:text-emerald-100",
-  error: "text-red-900 dark:text-red-100",
-  warning: "text-amber-900 dark:text-amber-100",
-  destructive: "text-red-900 dark:text-red-100",
+  default: "text-gray-900",
+  success: "text-emerald-900",
+  error: "text-red-900",
+  warning: "text-amber-900",
+  destructive: "text-red-900",
 }
 
 const DescriptionColors = {
-  default: "text-gray-600 dark:text-gray-400",
-  success: "text-emerald-700 dark:text-emerald-300",
-  error: "text-red-700 dark:text-red-300",
-  warning: "text-amber-700 dark:text-amber-300",
-  destructive: "text-red-700 dark:text-red-300",
+  default: "text-gray-600",
+  success: "text-emerald-700",
+  error: "text-red-700",
+  warning: "text-amber-700",
+  destructive: "text-red-700",
 }
 
 const AccentColors = {
@@ -106,12 +106,12 @@ export function Toaster() {
               
               <div className="flex-1 min-w-0">
                 {title && (
-                  <ToastTitle className={`text-sm font-semibold text-black leading-tight`}>
+                  <ToastTitle className={`text-sm font-semibold ${textColor} leading-tight`}>
                     {title}
                   </ToastTitle>
                 )}
                 {description && (
-                  <ToastDescription className={`text-sm text-black mt-0.5 leading-relaxed`}>
+                  <ToastDescription className={`text-sm ${descriptionColor} mt-0.5 leading-relaxed`}>
                     {description}
                   </ToastDescription>
                 )}
@@ -122,13 +122,13 @@ export function Toaster() {
                 )}
               </div>
               
-              <ToastClose className={`flex-shrink-0 rounded-full p-1.5 ${textColor} hover:bg-black/5 dark:hover:bg-white/10 transition-colors opacity-60 hover:opacity-100`}>
+              <ToastClose className={`flex-shrink-0 rounded-full p-1.5 ${textColor} hover:bg-black/5 transition-colors opacity-60 hover:opacity-100`}>
                 <X className="h-4 w-4" />
               </ToastClose>
             </div>
 
             {/* Progress bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5 dark:bg-white/5">
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5">
               <div className={`
                 h-full transition-all duration-[4000ms] ease-linear
                 ${progressColor}

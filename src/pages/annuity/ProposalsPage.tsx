@@ -16,6 +16,13 @@ const ProposalsPage = () => {
   const status = statusParam === "ALL" ? "" : statusParam;           // "ALL" = the explicit "All statuses" choice
   const setStatus = (v: string) => setStatusParam(v === "" ? "ALL" : v);
   const [search, setSearch] = useState("");
+  // The annuity API has no text search: while a term is typed, load every record (up to 500)
+  // and search those, instead of only the page on screen.
+  const [term, setTerm] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setTerm(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -36,7 +43,7 @@ const ProposalsPage = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await annuityApi.proposals({ page, pageSize: PAGE_SIZE, status: status || undefined });
+      const res = await annuityApi.proposals(term ? { page: 1, pageSize: 500, status: status || undefined } : { page, pageSize: PAGE_SIZE, status: status || undefined });
       setRows(res.items ?? []);
       setTotal(res.totalCount ?? 0);
     } catch (e) {
@@ -44,7 +51,7 @@ const ProposalsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, status]);
+  }, [page, status, term]);
 
   useEffect(() => {
     load();
@@ -104,7 +111,7 @@ const ProposalsPage = () => {
   };
 
   const visible = rows.filter((r) => {
-    const s = search.trim().toLowerCase();
+    const s = term.toLowerCase();
     return !s || [r.proposalNo, r.fullName, r.assuredCode].some((x) => String(x ?? "").toLowerCase().includes(s));
   });
 
@@ -113,7 +120,7 @@ const ProposalsPage = () => {
       title="Annuity proposals"
       actions={
         <>
-          <input className={inputCls + " !w-48"} placeholder="Search this page…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input type="search" className={inputCls + " !w-64"} placeholder="Search name or number…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <select className={inputCls + " !w-auto"} value={status} onChange={(e) => setStatus(e.target.value)}>
             {STATUSES.map((s) => (
               <option key={s} value={s}>{s || "All statuses"}</option>
@@ -124,23 +131,30 @@ const ProposalsPage = () => {
     >
       {error && <Banner kind="error">{error}</Banner>}
       <Table
-        head={["Proposal No.", "Customer", "Product", "Purchase price", "Frequency", "Date", "Status", ""]}
+        head={["Proposal", "Customer", "Purchase price", "Status", ""]}
+        cols={["w-[170px]", "", "w-[160px]", "w-[130px]", "w-[124px]"]}
         empty={!loading && visible.length === 0 ? "No annuity proposals found." : loading ? "Loading…" : undefined}
       >
         {visible.map((r) => (
           <tr key={r.proposalNo} className="hover:bg-gray-50">
-            <td className="px-3 py-2 font-medium text-blue-900">{r.proposalNo}</td>
-            <td className="px-3 py-2">{r.fullName}</td>
-            <td className="px-3 py-2">{r.covertype ?? r.coverCode}</td>
-            <td className="px-3 py-2">{money(r.sumAssured)}</td>
-            <td className="px-3 py-2">{r.fop}</td>
-            <td className="px-3 py-2">{fmtDate(r.tDate)}</td>
+            <td className="px-3 py-2">
+              <div className="whitespace-nowrap font-semibold text-slate-900">{r.proposalNo}</div>
+              <div className="text-xs text-slate-500">{fmtDate(r.tDate)}</div>
+            </td>
+            <td className="px-3 py-2">
+              <div className="font-semibold text-slate-900">{r.fullName}</div>
+              <div className="max-w-[260px] truncate text-xs text-slate-500" title={r.covertype ?? r.coverCode}>{r.covertype ?? r.coverCode}</div>
+            </td>
+            <td className="px-3 py-2 whitespace-nowrap">
+              <div className="font-semibold text-slate-900">{money(r.sumAssured)}</div>
+              <div className="text-xs capitalize text-slate-500">{String(r.fop ?? "").toLowerCase()}</div>
+            </td>
             <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
             <td className="px-3 py-2 text-right"><Btn size="sm" variant="secondary" onClick={() => open(r.proposalNo)}>Underwrite</Btn></td>
           </tr>
         ))}
       </Table>
-      <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
+      {!term && <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />}
 
       {openNo && (
         <Modal title={`Annuity proposal ${openNo}`} wide onClose={() => { modal.close(); load(); }}>
@@ -170,7 +184,7 @@ const ProposalsPage = () => {
                 ]}
               />
 
-              <h4 className="text-sm font-semibold text-blue-900">Calculations</h4>
+              <h4 className="text-sm font-semibold text-slate-900">Calculations</h4>
               <Table head={["Type", "Status", "Age", "Factor", "Periodic benefit", "Net of tax", "Annual benefit", "Date"]} empty={calcs.length === 0 ? "None." : undefined}>
                 {calcs.map((c: any) => (
                   <tr key={c.calculationID}>
@@ -194,7 +208,7 @@ const ProposalsPage = () => {
 
               {["PENDING", "REFERRED"].includes(p.status) && (
                 <div className="space-y-3 rounded-md border border-gray-200 p-3">
-                  <h4 className="m-0 text-sm font-semibold text-blue-900">1. Formal calculation</h4>
+                  <h4 className="m-0 text-sm font-semibold text-slate-900">1. Formal calculation</h4>
                   <div className="flex flex-wrap items-end gap-3">
                     <Field label="New commencement date (optional)" hint="Only needed if the quoted date has passed.">
                       <input type="date" min={isoDate()} className={inputCls} value={commence} onChange={(e) => setCommence(e.target.value)} />
@@ -203,7 +217,7 @@ const ProposalsPage = () => {
                       {formal.length ? "Recalculate" : "Run formal calculation"}
                     </Btn>
                   </div>
-                  <h4 className="m-0 pt-2 text-sm font-semibold text-blue-900">2. Underwriting decision</h4>
+                  <h4 className="m-0 pt-2 text-sm font-semibold text-slate-900">2. Underwriting decision</h4>
                   <Field label="Reason (required to refer or decline)">
                     <textarea className={inputCls} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
                   </Field>
@@ -218,7 +232,7 @@ const ProposalsPage = () => {
 
               {p.status === "APPROVED" && (
                 <div className="space-y-3 rounded-md border border-gray-200 p-3">
-                  <h4 className="m-0 text-sm font-semibold text-blue-900">3. Premium receipt</h4>
+                  <h4 className="m-0 text-sm font-semibold text-slate-900">3. Premium receipt</h4>
                   {detail.premium ? (
                     <Banner kind="success">Receipt <b>{detail.premium.receiptNo}</b> issued for {money(detail.premium.amount)} on {fmtDate(detail.premium.receiptDate)} (undDNCN {detail.premium.dncnNo}).</Banner>
                   ) : (<>
@@ -235,7 +249,7 @@ const ProposalsPage = () => {
                   </Btn>
                   </>)}
 
-                  <h4 className="m-0 pt-2 text-sm font-semibold text-blue-900">4. Issue policy</h4>
+                  <h4 className="m-0 pt-2 text-sm font-semibold text-slate-900">4. Issue policy</h4>
                   <div className="flex flex-wrap items-end gap-3">
                     {!(latest?.guaranteePeriodYears > 0) && (
                       <Field label="Schedule horizon (years)" hint="Lifetime annuity with no guarantee - default 5.">

@@ -45,7 +45,7 @@ const ProposalsSubPage = () => {
 
   return (
     <div className="p-6">
-      <p className="text-xs font-semibold uppercase tracking-widest text-[#8c4b8d] mb-1">
+      <p className="text-xs font-semibold uppercase tracking-widest text-[#155dfd] mb-1">
         {sectionLabel}
       </p>
       <h1 className="text-2xl font-bold text-gray-800 mb-2">{pageLabel}</h1>

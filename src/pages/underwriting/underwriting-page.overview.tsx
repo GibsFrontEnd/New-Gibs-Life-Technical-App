@@ -1,74 +1,53 @@
-import { Link } from "react-router-dom";
-import {
-  User,
-  Users,
-  CreditCard,
-  ArrowRight,
-} from "lucide-react";
+import { User, Users, CreditCard, Landmark, FilePen, RefreshCw, TrendingUp, GitBranch } from "lucide-react";
+import { PageHeader, PageShell, ShortcutCard, type Tone } from "../../components/page/PageKit";
 
-// Mirrors the underwriting sidebar structure so the overview stays in sync.
-const sections = [
+// Mirrors the underwriting menu so the overview stays in sync.
+const groups: { title: string; items: { label: string; blurb: string; icon: any; path: string; tone: Tone }[] }[] = [
   {
-    label: "Individual",
-    blurb: "Administer individual life policies end to end.",
-    icon: User,
-    path: "/underwriting/individual/policy-admin",
+    title: "Policy administration",
+    items: [
+      { label: "Individual", blurb: "Investment and traditional policies", icon: User, path: "/underwriting/individual/policy-admin", tone: "blue" },
+      { label: "Group Life", blurb: "Schemes, members and renewals", icon: Users, path: "/underwriting/group-life-quotations", tone: "violet" },
+      { label: "Credit Life", blurb: "Schemes and renewals", icon: CreditCard, path: "/underwriting/credit-life/scheme-admin", tone: "orange" },
+      { label: "Annuity", blurb: "Proposals, policies and payments", icon: Landmark, path: "/underwriting/annuity/proposals", tone: "teal" },
+    ],
   },
   {
-    label: "Group Life",
-    blurb: "Manage group life schemes and renewals.",
-    icon: Users,
-    path: "/underwriting/group-life-quotations",
+    title: "Changes and renewals",
+    items: [
+      { label: "Individual endorsements", blurb: "Change an individual policy", icon: FilePen, path: "/underwriting/individual/endorsements", tone: "amber" },
+      { label: "Group life endorsements", blurb: "Change a group life scheme", icon: FilePen, path: "/underwriting/group-life/endorsement", tone: "rose" },
+      { label: "Scheme renewals", blurb: "Renew group life schemes", icon: RefreshCw, path: "/underwriting/group-life/scheme-renewals", tone: "emerald" },
+    ],
   },
   {
-    label: "Credit Life",
-    blurb: "Manage credit life schemes and renewals.",
-    icon: CreditCard,
-    path: "/underwriting/credit-life/scheme-admin",
+    title: "Convert",
+    items: [
+      { label: "Investment policies", blurb: "Proposals to policies", icon: TrendingUp, path: "/underwriting/convert-to-policy/investment-policies", tone: "blue" },
+      { label: "Group life policies", blurb: "Quotations to schemes", icon: GitBranch, path: "/underwriting/convert-to-scheme/group-life-policies", tone: "violet" },
+    ],
   },
 ];
 
-const UnderwritingOverview = () => {
-  const QuickAction = ({ to, label, icon, description }: any) => (
-    <Link
-      to={to}
-      className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full hover:-translate-y-1"
-    >
-      <div className="bg-gray-50 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#8c4b8d]/10 transition-colors">
-        <span className="text-gray-600 group-hover:text-[#8c4b8d] transition-colors">{icon}</span>
-      </div>
-      <h3 className="font-bold text-gray-800 text-lg mb-2">{label}</h3>
-      <p className="text-gray-500 text-sm mb-6 flex-1">{description}</p>
-      <div className="flex items-center text-[#8c4b8d] text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-        Get Started <ArrowRight className="w-4 h-4 ml-1" />
-      </div>
-    </Link>
-  );
+const UnderwritingOverview = () => (
+  <PageShell className="space-y-8">
+    <PageHeader
+      eyebrow="Underwriting"
+      title="Underwriting overview"
+      description="Convert proposals into policies and schemes, then administer the full policy lifecycle."
+    />
 
-  return (
-    <div className="space-y-8 animate-in fade-in duration-900 p-2 lg:p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <header>
-        <h1 className="text-3xl font-black text-gray-800 tracking-tight">Underwriting Overview</h1>
-        <p className="text-gray-500 mt-1">
-          Convert proposals into policies and schemes, then administer the full policy lifecycle.
-        </p>
-      </header>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sections.map((section) => (
-          <QuickAction
-            key={section.label}
-            to={section.path}
-            label={section.label}
-            icon={<section.icon className="w-6 h-6" />}
-            description={section.blurb}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
+    {groups.map((g) => (
+      <section key={g.title}>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">{g.title}</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {g.items.map((s) => (
+            <ShortcutCard key={s.path} to={s.path} icon={s.icon} title={s.label} subtitle={s.blurb} tone={s.tone} />
+          ))}
+        </div>
+      </section>
+    ))}
+  </PageShell>
+);
 
 export default UnderwritingOverview;

@@ -2,6 +2,7 @@
 // Plain Tailwind + lucide-react so they behave the same in every GIBS front end.
 import { ReactNode, ButtonHTMLAttributes, useEffect } from "react";
 import { X, Loader2, AlertCircle, CheckCircle2, Info } from "lucide-react";
+import { StatusChip, type Tone } from "../page/PageKit";
 
 // ---------------------------------------------------------------- formatting
 export const money = (v: number | string | null | undefined): string => {
@@ -47,49 +48,42 @@ export const errMsg = (e: any): string => {
 };
 
 // ---------------------------------------------------------------- components
-const STATUS_COLOURS: Record<string, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  ISSUED: "bg-blue-100 text-blue-800",
-  ACCEPTED: "bg-indigo-100 text-indigo-800",
-  CONVERTED: "bg-emerald-100 text-emerald-800",
-  EXPIRED: "bg-amber-100 text-amber-800",
-  CANCELLED: "bg-red-100 text-red-700",
-  PENDING: "bg-amber-100 text-amber-800",
-  REFERRED: "bg-orange-100 text-orange-800",
-  APPROVED: "bg-emerald-100 text-emerald-800",
-  DECLINED: "bg-red-100 text-red-700",
-  "IN FORCE": "bg-emerald-100 text-emerald-800",
-  "PAYMENT SUSPENDED": "bg-orange-100 text-orange-800",
-  "DEATH REPORTED": "bg-red-100 text-red-700",
-  SETTLED: "bg-gray-200 text-gray-700",
-  PAID: "bg-emerald-100 text-emerald-800",
-  DUE: "bg-amber-100 text-amber-800",
-  PROCESSING: "bg-blue-100 text-blue-800",
-  FAILED: "bg-red-100 text-red-700",
-  PENDING_APPROVAL: "bg-amber-100 text-amber-800",
-  EXECUTED: "bg-blue-100 text-blue-800",
-  RECONCILED: "bg-emerald-100 text-emerald-800",
-  REJECTED: "bg-red-100 text-red-700",
-  REPORTED: "bg-amber-100 text-amber-800",
-  VERIFIED: "bg-blue-100 text-blue-800",
-  CALCULATED: "bg-indigo-100 text-indigo-800",
-  POSTED: "bg-emerald-100 text-emerald-800",
-  REVERSED: "bg-red-100 text-red-700",
-  VALID: "bg-emerald-100 text-emerald-800",
-  SUPERSEDED: "bg-gray-100 text-gray-600",
-  INCLUDED: "bg-blue-100 text-blue-800",
-  EXCEPTION: "bg-red-100 text-red-700",
+const STATUS_TONE: Record<string, Tone> = {
+  DRAFT: "amber",
+  ISSUED: "blue",
+  ACCEPTED: "violet",
+  CONVERTED: "emerald",
+  EXPIRED: "amber",
+  CANCELLED: "rose",
+  PENDING: "amber",
+  REFERRED: "orange",
+  APPROVED: "emerald",
+  DECLINED: "rose",
+  "IN FORCE": "emerald",
+  "PAYMENT SUSPENDED": "orange",
+  "DEATH REPORTED": "rose",
+  SETTLED: "slate",
+  PAID: "emerald",
+  DUE: "amber",
+  PROCESSING: "blue",
+  FAILED: "rose",
+  PENDING_APPROVAL: "amber",
+  EXECUTED: "blue",
+  RECONCILED: "emerald",
+  REJECTED: "rose",
+  REPORTED: "amber",
+  VERIFIED: "blue",
+  CALCULATED: "violet",
+  POSTED: "emerald",
+  REVERSED: "rose",
+  VALID: "emerald",
+  SUPERSEDED: "slate",
+  INCLUDED: "blue",
+  EXCEPTION: "rose",
 };
 
-export const StatusBadge = ({ status }: { status?: string | null }) => (
-  <span
-    className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${
-      STATUS_COLOURS[(status ?? "").toUpperCase()] ?? "bg-gray-100 text-gray-700"
-    }`}
-  >
-    {status ?? "—"}
-  </span>
-);
+/** Annuity statuses use the same soft, bordered chip as the rest of the app. */
+export const StatusBadge = ({ status }: { status?: string | null }) => <StatusChip status={status} tone={STATUS_TONE[(status ?? "").toUpperCase()]} />;
 
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "danger" | "ghost";
@@ -99,18 +93,18 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export const Btn = ({ variant = "primary", size = "md", busy, disabled, className = "", children, ...rest }: BtnProps) => {
   const v = {
-    primary: "bg-blue-900 text-white hover:bg-blue-800",
-    secondary: "bg-white text-blue-900 border border-blue-900 hover:bg-blue-50",
-    danger: "bg-red-600 text-white hover:bg-red-700",
-    ghost: "bg-transparent text-blue-900 hover:bg-blue-50",
+    primary: "bg-[#155dfd] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0f4fe0]",
+    secondary: "bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 hover:text-slate-900",
+    danger: "bg-white text-rose-600 border border-rose-200 hover:bg-rose-50",
+    ghost: "bg-transparent text-[#155dfd] hover:bg-blue-50",
   }[variant];
-  const s = size === "sm" ? "px-2.5 py-1 text-xs" : "px-4 py-2 text-sm";
+  const s = size === "sm" ? "rounded-lg px-3 py-1.5 text-xs" : "rounded-xl px-4 py-2.5 text-sm";
   return (
     <button
       type="button"
       {...rest}
       disabled={disabled || busy}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${v} ${s} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${v} ${s} ${className}`}
     >
       {busy && <Loader2 size={14} className="animate-spin" />}
       {children}
@@ -119,7 +113,7 @@ export const Btn = ({ variant = "primary", size = "md", busy, disabled, classNam
 };
 
 export const inputCls =
-  "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:bg-gray-100";
+  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#155dfd] focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500";
 
 export const Field = ({
   label,
@@ -135,12 +129,12 @@ export const Field = ({
   className?: string;
 }) => (
   <label className={`block ${className}`}>
-    <span className="mb-1 block text-xs font-semibold text-gray-600">
+    <span className="mb-1.5 block text-sm font-medium text-slate-700">
       {label}
       {required && <span className="text-red-600"> *</span>}
     </span>
     {children}
-    {hint && <span className="mt-1 block text-[11px] text-gray-500">{hint}</span>}
+    {hint && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
   </label>
 );
 
@@ -152,7 +146,7 @@ export const Banner = ({ kind = "info", children }: { kind?: "info" | "error" | 
   } as const;
   const [cls, Icon] = map[kind];
   return (
-    <div className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${cls}`}>
+    <div className={`flex items-start gap-2 rounded-xl border px-4 py-3 text-sm ${cls}`}>
       <Icon size={16} className="mt-0.5 flex-shrink-0" />
       <div className="min-w-0 break-words">{children}</div>
     </div>
@@ -179,60 +173,67 @@ export const Modal = ({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-      <div className={`my-8 w-full rounded-lg bg-white shadow-xl ${wide ? "max-w-5xl" : "max-w-2xl"}`}>
-        <div className="flex items-center justify-between border-b px-5 py-3">
-          <h2 className="m-0 text-base font-semibold text-gray-900">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-gray-500 hover:bg-gray-100">
+    <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-[2px]">
+      <div className={`my-8 w-full overflow-hidden rounded-2xl bg-white shadow-2xl ${wide ? "max-w-5xl" : "max-w-2xl"}`}>
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <h2 className="m-0 text-lg font-semibold text-slate-900">{title}</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-900">
             <X size={18} />
           </button>
         </div>
-        <div className="space-y-4 px-5 py-4">{children}</div>
-        {footer && <div className="flex flex-wrap justify-end gap-2 border-t bg-gray-50 px-5 py-3">{footer}</div>}
+        <div className="space-y-4 px-6 py-5">{children}</div>
+        {footer && <div className="flex flex-wrap justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4">{footer}</div>}
       </div>
     </div>
   );
 };
 
 export const Card = ({ title, actions, children }: { title?: string; actions?: ReactNode; children: ReactNode }) => (
-  <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     {(title || actions) && (
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-        <h3 className="m-0 text-sm font-semibold text-gray-900">{title}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <h3 className="m-0 text-base font-semibold text-slate-900">{title}</h3>
         <div className="flex flex-wrap gap-2">{actions}</div>
       </div>
     )}
-    <div className="p-4">{children}</div>
+    <div className="p-5">{children}</div>
   </div>
 );
 
 /** Label / value grid used on detail screens. */
 export const KV = ({ items }: { items: [string, ReactNode][] }) => (
-  <dl className="grid grid-cols-2 gap-x-6 gap-y-2 md:grid-cols-3">
+  <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 sm:grid-cols-2 md:grid-cols-3">
     {items.map(([k, v]) => (
-      <div key={k}>
-        <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k}</dt>
-        <dd className="m-0 text-sm text-gray-900">{v ?? "—"}</dd>
+      <div key={k} className="bg-white px-4 py-3">
+        <dt className="text-xs text-slate-500">{k}</dt>
+        <dd className="m-0 mt-0.5 break-words text-sm font-semibold text-slate-900">{v ?? "—"}</dd>
       </div>
     ))}
   </dl>
 );
 
-export const Table = ({ head, children, empty }: { head: string[]; children: ReactNode; empty?: string }) => (
-  <div className="overflow-x-auto rounded-md border border-gray-200">
-    <table className="w-full text-left text-sm">
-      <thead className="bg-gray-50 text-xs uppercase text-gray-600">
+/**
+ * `cols` (one class string per column, e.g. "w-[130px]" or "hidden w-[100px] @4xl:table-cell")
+ * makes the table fixed-layout and as wide as its card: give the compact columns a width, leave
+ * the main text column without one, and cut long text with "truncate". The wrapper is a size
+ * container, so @3xl:/@4xl:/@5xl: hide columns by the card's width. The page puts the same hiding
+ * classes on its <td>s. Without `cols` the table sizes itself and headers wrap.
+ */
+export const Table = ({ head, children, empty, cols }: { head: string[]; children: ReactNode; empty?: string; cols?: string[] }) => (
+  <div className="@container overflow-x-auto rounded-xl border border-slate-200">
+    <table className={`w-full text-left text-sm ${cols ? "table-fixed" : ""}`}>
+      <thead className="bg-slate-50/70 text-xs uppercase tracking-wide text-slate-500">
         <tr>
-          {head.map((h) => (
-            <th key={h} className="whitespace-nowrap px-3 py-2 font-semibold">
-              {h}
+          {head.map((h, i) => (
+            <th key={h || i} className={`border-b border-slate-200 px-3 py-3 font-semibold leading-tight ${cols ? "truncate" : ""} ${cols?.[i] ?? ""}`}>
+              {h ? h : <span className="sr-only">Actions</span>}
             </th>
           ))}
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-100">{children}</tbody>
+      <tbody className={`divide-y divide-slate-100 text-slate-700 [&_td]:!px-3 [&_td]:!py-3 [&_tr]:transition-colors [&_tr:hover]:bg-slate-50/80 ${cols ? "[&_td>div]:truncate" : ""}`}>{children}</tbody>
     </table>
-    {empty && <div className="px-3 py-6 text-center text-sm text-gray-500">{empty}</div>}
+    {empty && <div className="px-4 py-12 text-center text-sm text-slate-500">{empty}</div>}
   </div>
 );
 
@@ -250,7 +251,7 @@ export const Pager = ({
   const pages = Math.max(1, Math.ceil(total / pageSize));
   if (total <= pageSize) return null;
   return (
-    <div className="flex items-center justify-between pt-3 text-sm text-gray-600">
+    <div className="flex flex-wrap items-center justify-between gap-3 pt-4 text-sm text-slate-500">
       <span>
         Page {page} of {pages} · {total} records
       </span>

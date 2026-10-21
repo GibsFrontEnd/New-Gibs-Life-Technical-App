@@ -282,8 +282,8 @@ export default function CreditLifeSchemeRenewals() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto">
+    <div className="min-h-full">
+      <div className="mx-auto w-full max-w-[1400px]">
         <div className="rounded-lg">
           {/* SUCCESS TOAST */}
           {showSuccessToast && (
@@ -322,20 +322,20 @@ export default function CreditLifeSchemeRenewals() {
           )}
 
           {/* Header Card */}
-          <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200 mb-6">
-            <div className="p-4 pb-0">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <RefreshCw className="w-5 h-5 text-indigo-600" />
+          <Card className="mb-6 border-0 bg-transparent shadow-none">
+            <div className="p-0">
+              <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                <RefreshCw className="h-10 w-10 shrink-0 rounded-xl bg-blue-50 p-2.5 text-[#155dfd]" />
                 Credit Life Scheme Renewals
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="mt-1.5 text-sm text-slate-500 sm:text-base">
                 Manage and process renewals for credit life insurance schemes
               </p>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="mt-1 text-xs text-slate-400">
                 Schemes eligible for renewal are shown below. Renewals should be processed before the expiry date.
               </p>
             </div>
-            <CardContent className="p-3 sm:p-4">
+            <CardContent className="px-0 pb-0 pt-4">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 {selectedQuotations.size > 0 && (
                   <Button
@@ -364,12 +364,12 @@ export default function CreditLifeSchemeRenewals() {
 
           {/* Filters Section */}
           <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <div className="border rounded-lg mb-6 bg-gray-50">
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
               <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 cursor-pointer">
+                <div className="flex cursor-pointer items-center justify-between px-5 py-4">
                   <div className="flex items-center space-x-2">
                     <Filter className="h-4 w-4" />
-                    <span className="text-sm font-medium">Search Filter</span>
+                    <span className="text-sm font-semibold text-slate-900">Search and filters</span>
                     {hasActiveFilters && (
                       <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                         {[
@@ -505,7 +505,7 @@ export default function CreditLifeSchemeRenewals() {
           </Collapsible>
 
           {/* Data Display Area */}
-          <div className="border border-border rounded-lg min-h-96 bg-white">
+          <div className="min-h-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mb-4"></div>
@@ -637,8 +637,8 @@ export default function CreditLifeSchemeRenewals() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
-                    <div className="text-sm text-muted-foreground order-2 sm:order-1">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 px-5 py-3">
+                    <div className="text-sm text-slate-500 order-2 sm:order-1">
                       Showing {startItem + 1} to {endItem} of {effectiveTotalCount} entries | Page {currentPage} of {totalPages}
                       {selectedQuotations.size > 0 && ` | ${selectedQuotations.size} selected`}
                     </div>

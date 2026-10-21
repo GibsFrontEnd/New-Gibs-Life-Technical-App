@@ -183,26 +183,38 @@ const ProductsPage = () => {
       </Banner>
       <div className="mt-3">
         <Table
-          head={["Product", "Type", "Ver.", "Frequencies", "Guarantee", "Interest", "Entry age", "Purchase price", "Escalation", "Convention", "Effective", "Status", ""]}
+          head={["Product", "Terms", "Rates", "Entry age · price", "Effective", "Status", ""]}
+          cols={["", "hidden w-[170px] @4xl:table-cell", "w-[150px]", "w-[180px]", "hidden w-[130px] @5xl:table-cell", "w-[100px]", "w-[120px]"]}
           empty={!loading && rules.length === 0 ? "No annuity rules yet. Create the product under Product Configuration, then add its rule here." : loading ? "Loading…" : undefined}
         >
           {rules.map((r) => (
             <tr key={r.ruleID} className="hover:bg-gray-50">
-              <td className="px-3 py-2 font-medium text-blue-900">{r.productCode}</td>
-              <td className="px-3 py-2">{r.annuityType}</td>
-              <td className="px-3 py-2">v{r.ruleVersion}</td>
-              <td className="px-3 py-2 text-xs">{r.allowedFrequencies}</td>
-              <td className="px-3 py-2 text-xs">{r.allowedGuaranteeYears ?? "—"}</td>
-              <td className="px-3 py-2">{pct(r.interestRate)}</td>
-              <td className="px-3 py-2">{r.minimumEntryAge ?? "—"}–{r.maximumEntryAge ?? "—"}</td>
-              <td className="px-3 py-2 text-xs">{r.minimumPremium ? money(r.minimumPremium) : "—"} – {r.maximumPremium ? money(r.maximumPremium) : "—"}</td>
-              <td className="px-3 py-2 text-xs">{pct(r.minEscalationRate)}–{pct(r.maxEscalationRate)}</td>
-              <td className="px-3 py-2">{r.paymentConvention}</td>
-              <td className="px-3 py-2 text-xs whitespace-nowrap">{fmtDate(r.effectiveFrom)}{r.effectiveTo ? ` → ${fmtDate(r.effectiveTo)}` : ""}</td>
+              <td className="px-3 py-2">
+                <div className="font-semibold text-slate-900" title={r.productCode}>{r.productCode}</div>
+                <div className="text-xs text-slate-500" title={r.annuityType}>{r.annuityType} · v{r.ruleVersion}</div>
+              </td>
+              <td className="hidden px-3 py-2 @4xl:table-cell">
+                <div className="text-xs text-slate-900" title={r.allowedFrequencies}>{r.allowedFrequencies}</div>
+                <div className="text-xs text-slate-500" title={`Guarantee ${r.allowedGuaranteeYears ?? "—"} · ${r.paymentConvention ?? ""}`}>Guarantee {r.allowedGuaranteeYears ?? "—"} · {r.paymentConvention}</div>
+              </td>
+              <td className="px-3 py-2">
+                <div className="text-slate-900">{pct(r.interestRate)} interest</div>
+                <div className="text-xs text-slate-500">{pct(r.minEscalationRate)}–{pct(r.maxEscalationRate)} escalation</div>
+              </td>
+              <td className="px-3 py-2">
+                <div className="text-slate-900">Age {r.minimumEntryAge ?? "—"}–{r.maximumEntryAge ?? "—"}</div>
+                <div className="text-xs text-slate-500" title={`${r.minimumPremium ? money(r.minimumPremium) : "—"} – ${r.maximumPremium ? money(r.maximumPremium) : "—"}`}>{r.minimumPremium ? money(r.minimumPremium) : "—"} – {r.maximumPremium ? money(r.maximumPremium) : "—"}</div>
+              </td>
+              <td className="hidden px-3 py-2 @5xl:table-cell">
+                <div className="text-xs text-slate-900">{fmtDate(r.effectiveFrom)}</div>
+                {r.effectiveTo && <div className="text-xs text-slate-500">to {fmtDate(r.effectiveTo)}</div>}
+              </td>
               <td className="px-3 py-2"><StatusBadge status={r.isActive ? "VALID" : "CANCELLED"} /></td>
-              <td className="px-3 py-2 text-right whitespace-nowrap">
-                <Btn size="sm" variant="secondary" onClick={() => openFactors(r.productCode)}>Factors</Btn>{" "}
-                {r.isActive && <Btn size="sm" variant="ghost" onClick={() => deactivate(r)}>Deactivate</Btn>}
+              <td className="px-3 py-2 text-right">
+                <div className="flex flex-col items-end gap-1">
+                  <Btn size="sm" variant="secondary" onClick={() => openFactors(r.productCode)}>Factors</Btn>
+                  {r.isActive && <Btn size="sm" variant="ghost" onClick={() => deactivate(r)}>Deactivate</Btn>}
+                </div>
               </td>
             </tr>
           ))}

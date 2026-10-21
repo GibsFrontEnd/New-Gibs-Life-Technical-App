@@ -269,27 +269,27 @@ export default function CreditLifeSchemeAdmin() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto">
+    <div className="min-h-full">
+      <div className="mx-auto w-full max-w-[1400px]">
         <div className="rounded-lg">
           {/* Header Card */}
-          <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200 mb-6">
-            <div className="p-4 pb-0">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-indigo-600" />
+          <Card className="mb-6 border-0 bg-transparent shadow-none">
+            <div className="p-0">
+              <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                <CreditCard className="h-10 w-10 shrink-0 rounded-xl bg-blue-50 p-2.5 text-[#155dfd]" />
                 Credit Life Schemes
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="mt-1.5 text-sm text-slate-500 sm:text-base">
                 Manage and track your credit life insurance schemes
               </p>
             </div>
-            <CardContent className="p-3 sm:p-4">
+            <CardContent className="px-0 pb-0 pt-4">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <Button
                   variant="default"
                   size="sm"
                   onClick={handleNewQuotation}
-                  className="w-full sm:w-auto text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
+                  className="w-full sm:w-auto text-xs sm:text-sm bg-[#155dfd] hover:bg-[#0f4fe0] text-white"
                 >
                   <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">New Credit Life Scheme</span>
@@ -301,12 +301,12 @@ export default function CreditLifeSchemeAdmin() {
 
           {/* Filters Section */}
           <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <div className="border rounded-lg mb-6 bg-gray-50">
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
               <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 cursor-pointer">
+                <div className="flex cursor-pointer items-center justify-between px-5 py-4">
                   <div className="flex items-center space-x-2">
                     <Filter className="h-4 w-4" />
-                    <span className="text-sm font-medium">Search Filter</span>
+                    <span className="text-sm font-semibold text-slate-900">Search and filters</span>
                     {hasActiveFilters && (
                       <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                         {[
@@ -444,7 +444,7 @@ export default function CreditLifeSchemeAdmin() {
           </Collapsible>
 
           {/* Data Display Area */}
-          <div className="border border-border rounded-lg min-h-96 bg-white">
+          <div className="min-h-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mb-4"></div>

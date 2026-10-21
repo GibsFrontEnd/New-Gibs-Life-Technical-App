@@ -15,6 +15,13 @@ const PoliciesPage = () => {
   const [page, setPage] = useUrlPage();
   const [status, setStatus] = useUrlParam("status");
   const [search, setSearch] = useState("");
+  // The annuity API has no text search: while a term is typed, load every record (up to 500)
+  // and search those, instead of only the page on screen.
+  const [term, setTerm] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setTerm(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [due, setDue] = useState<any>(null);
@@ -40,7 +47,7 @@ const PoliciesPage = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await annuityApi.policies({ page, pageSize: PAGE_SIZE, status: status || undefined });
+      const res = await annuityApi.policies(term ? { page: 1, pageSize: 500, status: status || undefined } : { page, pageSize: PAGE_SIZE, status: status || undefined });
       setRows(res.items ?? []);
       setTotal(res.totalCount ?? 0);
     } catch (e) {
@@ -48,7 +55,7 @@ const PoliciesPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, status]);
+  }, [page, status, term]);
 
   useEffect(() => {
     load();
@@ -115,7 +122,7 @@ const PoliciesPage = () => {
   };
 
   const visible = rows.filter((r) => {
-    const s = search.trim().toLowerCase();
+    const s = term.toLowerCase();
     return !s || [r.policyNo, r.fullName, r.assuredCode].some((x) => String(x ?? "").toLowerCase().includes(s));
   });
 
@@ -124,7 +131,7 @@ const PoliciesPage = () => {
       title="Annuity policies"
       actions={
         <>
-          <input className={inputCls + " !w-48"} placeholder="Search this page…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input type="search" className={inputCls + " !w-64"} placeholder="Search name or number…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <select className={inputCls + " !w-auto"} value={status} onChange={(e) => setStatus(e.target.value)}>
             {STATUSES.map((s) => (
               <option key={s} value={s}>{s || "All statuses"}</option>
@@ -136,30 +143,37 @@ const PoliciesPage = () => {
     >
       {error && <Banner kind="error">{error}</Banner>}
       <Table
-        head={["Policy No.", "Customer", "Product", "Purchase price", "Frequency", "Commencement", "Status", ""]}
+        head={["Policy", "Customer", "Purchase price", "Status", ""]}
+        cols={["w-[170px]", "", "w-[160px]", "w-[130px]", "w-[90px]"]}
         empty={!loading && visible.length === 0 ? "No annuity policies found." : loading ? "Loading…" : undefined}
       >
         {visible.map((r) => (
           <tr key={r.policyNo} className="hover:bg-gray-50">
-            <td className="px-3 py-2 font-medium text-blue-900">{r.policyNo}</td>
-            <td className="px-3 py-2">{r.fullName}</td>
-            <td className="px-3 py-2">{r.covertype ?? r.coverCode}</td>
-            <td className="px-3 py-2">{money(r.sumAssured)}</td>
-            <td className="px-3 py-2">{r.fop}</td>
-            <td className="px-3 py-2">{fmtDate(r.startDate)}</td>
+            <td className="px-3 py-2">
+              <div className="whitespace-nowrap font-semibold text-slate-900">{r.policyNo}</div>
+              <div className="text-xs text-slate-500">From {fmtDate(r.startDate)}</div>
+            </td>
+            <td className="px-3 py-2">
+              <div className="font-semibold text-slate-900">{r.fullName}</div>
+              <div className="max-w-[260px] truncate text-xs text-slate-500" title={r.covertype ?? r.coverCode}>{r.covertype ?? r.coverCode}</div>
+            </td>
+            <td className="px-3 py-2 whitespace-nowrap">
+              <div className="font-semibold text-slate-900">{money(r.sumAssured)}</div>
+              <div className="text-xs capitalize text-slate-500">{String(r.fop ?? "").toLowerCase()}</div>
+            </td>
             <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
             <td className="px-3 py-2 text-right"><Btn size="sm" variant="secondary" onClick={() => open(r.policyNo)}>Open</Btn></td>
           </tr>
         ))}
       </Table>
-      <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
+      {!term && <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />}
 
       {due && (
         <Modal title="Life certificates due or missing (next 30 days)" onClose={() => setDue(null)}>
           <Table head={["Policy", "Customer", "Product", "Certificate expires"]} empty={due.items.length === 0 ? "All in-force policies have a current certificate." : undefined}>
             {due.items.map((i: any) => (
               <tr key={i.policyNo}>
-                <td className="px-3 py-2 font-medium text-blue-900">{i.policyNo}</td>
+                <td className="px-3 py-2 font-semibold text-slate-900">{i.policyNo}</td>
                 <td className="px-3 py-2">{i.fullName}</td>
                 <td className="px-3 py-2">{i.coverCode}</td>
                 <td className="px-3 py-2">{i.expiry ? fmtDate(i.expiry) : <span className="text-red-700">None on record</span>}</td>
@@ -183,7 +197,7 @@ const PoliciesPage = () => {
                 <div className="ml-auto flex flex-wrap gap-1">
                   {[["overview", "Overview"], ["schedule", "Payment schedule"], ["life", "Life verification"], ["actions", "Actions"]].map(([k, l]) => (
                     <button key={k} type="button" onClick={() => setTab(k)}
-                      className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === k ? "bg-blue-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-semibold ${tab === k ? "bg-[#155dfd] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
                       {l}
                     </button>
                   ))}
@@ -207,7 +221,7 @@ const PoliciesPage = () => {
                   />
                   {calc && (
                     <>
-                      <h4 className="text-sm font-semibold text-blue-900">Approved benefit</h4>
+                      <h4 className="text-sm font-semibold text-slate-900">Approved benefit</h4>
                       <KV
                         items={[
                           ["Periodic benefit", money(calc.periodicBenefit)],
@@ -224,7 +238,7 @@ const PoliciesPage = () => {
                   )}
                   {sum && (
                     <>
-                      <h4 className="text-sm font-semibold text-blue-900">Schedule position</h4>
+                      <h4 className="text-sm font-semibold text-slate-900">Schedule position</h4>
                       <KV
                         items={[
                           ["Instalments", sum.totalInstalments],
@@ -277,7 +291,7 @@ const PoliciesPage = () => {
 
               {tab === "life" && (
                 <>
-                  <h4 className="text-sm font-semibold text-blue-900">Record life verification</h4>
+                  <h4 className="text-sm font-semibold text-slate-900">Record life verification</h4>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                     <Field label="Method" required>
                       <select className={inputCls} value={life.verificationMethod} onChange={(e) => setLife({ ...life, verificationMethod: e.target.value })}>
@@ -289,7 +303,7 @@ const PoliciesPage = () => {
                     <Field label="Notes"><input className={inputCls} value={life.notes} onChange={(e) => setLife({ ...life, notes: e.target.value })} /></Field>
                   </div>
                   <Btn busy={busy} onClick={() => run(() => annuityApi.recordLife(openNo!, { ...life, expiryDate: life.expiryDate || undefined, notes: life.notes || undefined }), () => "Life verification recorded.")}>Record verification</Btn>
-                  <h4 className="pt-2 text-sm font-semibold text-blue-900">History</h4>
+                  <h4 className="pt-2 text-sm font-semibold text-slate-900">History</h4>
                   <Table head={["Method", "Verified", "Expires", "By", "Status"]} empty={certs.length === 0 ? "No certificates recorded." : undefined}>
                     {certs.map((c) => (
                       <tr key={c.certificateID}>
@@ -307,7 +321,7 @@ const PoliciesPage = () => {
               {tab === "actions" && (
                 <div className="space-y-5">
                   <section className="space-y-2 rounded-md border p-3">
-                    <h4 className="m-0 text-sm font-semibold text-blue-900">Payments</h4>
+                    <h4 className="m-0 text-sm font-semibold text-slate-900">Payments</h4>
                     <Field label="Reason (required)"><input className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
                     <div className="flex gap-2">
                       {policy.status === "IN FORCE" && <Btn variant="secondary" busy={busy} onClick={() => !noReason() && run(() => annuityApi.suspend(openNo!, reason), () => "Payments suspended.")}>Suspend payments</Btn>}
@@ -317,7 +331,7 @@ const PoliciesPage = () => {
 
                   {policy.status === "IN FORCE" && (
                     <section className="space-y-2 rounded-md border p-3">
-                      <h4 className="m-0 text-sm font-semibold text-blue-900">Regenerate payment schedule</h4>
+                      <h4 className="m-0 text-sm font-semibold text-slate-900">Regenerate payment schedule</h4>
                       <p className="m-0 text-xs text-gray-500">Cancels unpaid instalments and creates a new schedule version. Not allowed once any instalment has been paid.</p>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                         {!(calc?.guaranteePeriodYears > 0) && <Field label="Horizon (years)"><input type="number" min="1" max="60" className={inputCls} value={regen.horizonYears} onChange={(e) => setRegen({ ...regen, horizonYears: e.target.value })} /></Field>}

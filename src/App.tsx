@@ -31,6 +31,8 @@ import AdminCompany from "./pages/admin/admin-page.Company";
 import Underwriting from "./pages/Underwriting";
 import UnderwritingOverview from "./pages/underwriting/underwriting-page.overview";
 import UnderwritingSubPage from "./pages/underwriting/underwriting-page.subpage";
+import IndividualEndorsementsPage from "./pages/underwriting/IndividualEndorsementsPage";
+import IndividualProcessingPage from "./pages/underwriting/IndividualProcessingPage";
 import Claims from "./pages/Claims";
 import ClaimsOverview from "./pages/claims/claims-page.overview";
 import ClaimsSubPage from "./pages/claims/claims-page.subpage";
@@ -281,10 +283,10 @@ const App: React.FC = () => {
               
 
             {/* Other underwriting routes */}
-            <Route path="individual/endorsements" element={<UnderwritingSubPage />} />
-            <Route path="individual/endorsements/*" element={<UnderwritingSubPage />} />
-            <Route path="individual/processing" element={<UnderwritingSubPage />} />
-            <Route path="individual/processing/*" element={<UnderwritingSubPage />} />
+            <Route path="individual/endorsements" element={<IndividualEndorsementsPage />} />
+            <Route path="individual/endorsements/*" element={<IndividualEndorsementsPage />} />
+            <Route path="individual/processing" element={<IndividualProcessingPage />} />
+            <Route path="individual/processing/:option" element={<IndividualProcessingPage />} />
             <Route path="individual/maintenance" element={<UnderwritingSubPage />} />
             <Route path="group-life/maintenance" element={<UnderwritingSubPage />} />
             <Route path="credit-life/scheme-admin" element={<UnderwritingSubPage />} />

@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { rememberSchemeSource, getSchemeSource, schemeListUrl, policyFromPath } from "../../utils/groupLifeNav";
 import { Button } from "../UI/new-button";
 import { Input } from "../UI/new-input";
 import { Label } from "../UI/label";
@@ -277,6 +278,11 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("policy");
 
+  // remember which list this scheme was opened from (Scheme Admin / Endorsements / Scheme Renewals)
+  useEffect(() => {
+    rememberSchemeSource(policyFromPath(location.pathname), new URLSearchParams(location.search).get("source"));
+  }, [location.pathname, location.search]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get("tab");
@@ -284,16 +290,18 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   
     if (tab && VALID_TABS.includes(tab)) {
       setActiveTab(tab);
-  
-      // Strip the query param so a refresh doesn't force the tab again
-      const newSearch = new URLSearchParams(location.search);
-      newSearch.delete("tab");
-      newSearch.delete("policy");
-      const newPath =
-        location.pathname + (newSearch.toString() ? `?${newSearch.toString()}` : "");
-      window.history.replaceState({}, document.title, newPath);
     }
   }, [location.search]);
+
+  // The selected tab stays in the URL, so refresh and the browser's Back button return to the same tab
+  // (replaceState: tab clicks add no history entries and the router is not re-triggered).
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", value);
+    params.delete("policy");
+    window.history.replaceState(window.history.state, document.title, window.location.pathname + "?" + params.toString());
+  };
 
   // Track if dropdowns are loaded
   const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
@@ -774,7 +782,16 @@ const sourcePage = getSourceFromUrl();
           transactionDate: data.entryDate ? formatDateForInput(data.entryDate) : new Date().toISOString().split("T")[0],
           effectiveDate: data.startDate ? formatDateForInput(data.startDate) : new Date().toISOString().split("T")[0],
           expiryDate: data.expiryDate ? formatDateForInput(data.expiryDate) : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split("T")[0],
-          coverDay: data.coverDays != null ? data.coverDays.toString() : "0.00",
+          // The API does not return cover days, so work them out from the saved dates here. Relying on
+          // the date-change effect left "0.00" whenever the saved dates equalled the form's defaults
+          // (starts today, ends in a year), because then no change fires.
+          coverDay:
+            data.coverDays != null
+              ? data.coverDays.toString()
+              : inclusiveCoverDays(
+                  data.startDate ? formatDateForInput(data.startDate) : "",
+                  data.expiryDate ? formatDateForInput(data.expiryDate) : ""
+                ).toString(),
           clientName: data.insuredName || data.companyName || data.clientName || "",
           groupFactorAmount: data.groupFactorAmount != null ? data.groupFactorAmount.toString() : "1000.00",
           insuredType: data.insuredType || "",
@@ -1162,7 +1179,8 @@ const sourcePage = getSourceFromUrl();
       
       toast({
         title: "Success",
-        description: "Quotation updated successfully.",
+        description: "Scheme updated successfully.",
+        variant: "success",
       });
       navigate("/underwriting/group-life-quotations");
     } catch (err: any) {
@@ -1176,8 +1194,11 @@ const sourcePage = getSourceFromUrl();
     }
   };
 
+  // "Back to Schemes": the list the scheme was opened from. navigate(-1) went to whatever page came before,
+  // which after a debit/credit-note form was that form.
   const handleCancel = () => {
-     navigate(-1); 
+    const source = new URLSearchParams(window.location.search).get("source") || getSchemeSource(policyFromPath(window.location.pathname));
+    navigate(schemeListUrl(source));
   };
 
   // Show loading state while data loads
@@ -1635,7 +1656,7 @@ const sourcePage = getSourceFromUrl();
             </div>
 
             {/* Main Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <div className="relative">
                 <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto gap-25 overflow-x-auto scrollbar-hide flex-nowrap">
                   <TabsTrigger 

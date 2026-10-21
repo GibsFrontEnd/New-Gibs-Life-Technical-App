@@ -4,6 +4,7 @@ import { SERVER_URL } from "../../utils/constants";
 import Select, { SingleValue } from "react-select";
 import { useSelector, useDispatch } from "react-redux";
 import { useParams, useLocation, useOutletContext, useNavigate } from "react-router-dom";
+import { schemeUrl } from "../../utils/groupLifeNav";
 import {
     ChevronDown,
     ChevronRight,
@@ -623,9 +624,7 @@ useEffect(() => {
 
             dispatch(clearCurrentCoinsuranceCreditNote());
 
-            navigate(
-                `/underwriting/group-life-quotations/${encodeURIComponent(policyNo)}?tab=credit-note`
-              );
+            navigate(schemeUrl(policyNo, 'credit-note'), { replace: true });
             
         } catch (error: any) {
             console.error("Save error:", error);
@@ -691,7 +690,8 @@ useEffect(() => {
     const handleCancel = () => {
         dispatch(clearCurrentCoinsuranceCreditNote());
         dispatch(clearCoinsuranceCreditNoteErrors());
-        navigate(-1);
+        if (policyNo) navigate(schemeUrl(policyNo, 'credit-note'), { replace: true });
+        else navigate(-1);
     };
 
     // --- HANDLERS ---
@@ -824,7 +824,7 @@ useEffect(() => {
                         Coinsurance Credit Note: {note.creditNoteNo}
                     </h1>
                     <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" onClick={() => navigate(-1)} className="mr-2">
+                        <Button variant="outline" onClick={handleCancel} className="mr-2">
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Back
                         </Button>

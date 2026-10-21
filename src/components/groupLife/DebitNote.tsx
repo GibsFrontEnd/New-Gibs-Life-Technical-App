@@ -4,6 +4,7 @@ import { SERVER_URL } from "../../utils/constants";
 import Select, { SingleValue } from "react-select";
 import { useSelector, useDispatch } from "react-redux";
 import { useParams, useLocation, useOutletContext, useNavigate } from "react-router-dom";
+import { schemeUrl } from "../../utils/groupLifeNav";
 import {
     ChevronDown,
     ChevronRight,
@@ -45,6 +46,7 @@ import {
     calculateDebitNotePremium,
     distributeDebitNoteRisk,
     raiseDebitNote,
+    updateDebitNote,
     approveDebitNote,
     selectDebitNote,
 } from "../../features/reducers/groupLifeReducers/groupLifeQuotationSlice";
@@ -159,7 +161,23 @@ const DebitNote = () => {
     const { branches } = useSelector((state: RootState) => state.branches);
     const { agents } = useSelector((state: RootState) => state.parties);
     const { mktStaffs } = useAppSelector(selectMarketingStaff);
-    const policyNo = urlPolicyNo || location.state?.policyNo || '';
+    // For ".../debit-note/{policyNo}" the :dncnNo segment IS the policy number. The list's "New" button
+    // passes no policyNo in state, which left policyNo empty: the form was not prefilled and, after
+    // saving, the user was sent to the schemes list instead of the scheme's Debit Note tab.
+    const policyNoFromPath =
+        urlDncnNo && !location.pathname.includes('/view') && !location.pathname.includes('/edit')
+            ? urlDncnNo
+            : '';
+    const policyNo = urlPolicyNo || location.state?.policyNo || policyNoFromPath || '';
+
+    // The layout scrolls inside its own container, so a page opened from the middle of a long list would keep
+    // that scroll position. Start every note form at the top.
+    useEffect(() => {
+        window.scrollTo(0, 0);
+        document.querySelectorAll('main, [class*="overflow-y-auto"], [class*="overflow-auto"]').forEach((el) => {
+            (el as HTMLElement).scrollTop = 0;
+        });
+    }, []);
 
     // ✅ FIXED: Check for mode from URL path or state
     const isNewMode = location.state?.mode === 'add' || location.pathname.includes('/new');
@@ -422,7 +440,9 @@ useEffect(() => {
                         bizSource: result.bizSource || prev.bizSource,
                         bizOption: result.bizOption || prev.bizOption,
                         sourceType: result.bizOption || prev.sourceType,
-                        
+                        // DN, or CN for a Reversal / Return / Cancellation / Reduction section
+                        noteType: result.noteType || prev.noteType,
+
                         // ✅ Parties
                         insuredName: result.insuredName || location.state?.insuredName || prev.insuredName,
                         insuredID: result.insuredId || '',
@@ -534,6 +554,8 @@ useEffect(() => {
                         netPremium: premiumData.netPremium || prev.netPremium || 0,
                         exRate: result.exRate || prev.exRate || 1,
                         exCurrency: result.exCurrency || prev.exCurrency || "NGN",
+                        sumInsuredFrgn: result.sumInsuredFrgn ?? prev.sumInsuredFrgn ?? 0,
+                        grossPremiumFrgn: result.grossPremiumFrgn ?? prev.grossPremiumFrgn ?? 0,
                         coinsuranceDistribution: result.coinsuranceLines?.map((line: any) => ({
                             partyID: line.participantId || "",
                             partyName: line.participantName || "",
@@ -846,18 +868,37 @@ const handleSave = async () => {
             postLeadOrcCreditNotes: false,
         };
 
-        const result = await dispatch(raiseDebitNote(payload)).unwrap();
+        if (viewMode === 'edit') {
+            // Amend the existing note. This used to go through raiseDebitNote, so "Update Note"
+            // quietly raised a second note instead of changing the one being edited.
+            const noteNo = formData.dncnNo || location.state?.debitNoteNo || urlDncnNo || '';
+            const updated = await dispatch(updateDebitNote({
+                dncnNo: noteNo,
+                request: {
+                    ...payload,
+                    partyId: formData.partyID || '',
+                    partyName: formData.partyName || '',
+                    mktStaffId: formData.mktStaffID || '',
+                },
+            })).unwrap();
 
-        toast({
-            description: `✅ Debit Note raised successfully! DN: ${result.debitNoteNo}`,
-            variant: "default",
-            duration: 5000,
-        });
+            toast({
+                description: `✅ Debit Note updated successfully! DN: ${updated.debitNoteNo || noteNo}`,
+                variant: "success",
+                duration: 5000,
+            });
+        } else {
+            const result = await dispatch(raiseDebitNote(payload)).unwrap();
 
-        // Navigate back one page
-        navigate(
-            `/underwriting/group-life-quotations/${encodeURIComponent(policyNo)}?tab=debit-note`
-          );
+            toast({
+                description: `✅ Debit Note raised successfully! DN: ${result.debitNoteNo}`,
+                variant: "success",
+                duration: 5000,
+            });
+        }
+
+        // Land on the scheme's Debit Note tab
+        navigate(schemeUrl(policyNo, 'debit-note'), { replace: true });
 
     } catch (error: any) {
         console.error("Save error", error);
@@ -873,7 +914,18 @@ const handleSave = async () => {
 
 // --- CANCEL ---
 const handleCancel = () => {
-    // Navigate back one page
+    // Go back to the scheme this note belongs to, on the tab the user came from. navigate(-1) only goes to
+    // "whatever page was before", which was the endorsements list when the scheme was reached from there.
+    const target = location.state?.returnTo;
+    if (typeof target === 'string' && target.startsWith('/underwriting/group-life-quotations/')) {
+        navigate(target, { replace: true });   // replace: the form must not stay in the history behind the scheme
+        return;
+    }
+    if (policyNo) {
+        const fromSections = viewMode === 'add' && location.state?.sourcePage === 'group-life-details';
+        navigate(schemeUrl(policyNo, fromSections ? 'group-life' : 'debit-note'), { replace: true });
+        return;
+    }
     navigate(-1);
 };
 
@@ -1288,7 +1340,7 @@ const handleCancel = () => {
                         Back
                     </Button>
                     <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-                        {viewMode === 'add' ? 'New Debit Note' : 'Edit Debit Note'}
+                        {viewMode === 'add' ? 'New' : 'Edit'} {formData.noteType === 'CN' ? 'Credit Note' : 'Debit Note'}
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
                         Policy: {policyNo}
@@ -1405,6 +1457,16 @@ const handleCancel = () => {
             <div className="lg:col-span-4 mt-2 mb-2">
                 <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider"> Premium</h4>
             </div>
+
+            {/* Foreign-currency note: the figures are in the policy currency, the note is booked in naira. */}
+            {!['', 'NGN', 'NAIRA'].includes(String(formData.exCurrency || '').toUpperCase()) && Number(formData.exRate) > 1 && (
+                <div className="lg:col-span-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                    Foreign-currency note: amounts are in <strong>{formData.exCurrency}</strong> and are booked in NGN at a
+                    rate of <strong>{Number(formData.exRate).toLocaleString()}</strong> (gross premium ≈ NGN{' '}
+                    <strong>{(Number(formData.grossPremium || 0) * Number(formData.exRate)).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>).
+                    The currency and rate come from the scheme and cannot be changed here.
+                </div>
+            )}
             
             {/* ✅ READ-ONLY - Disabled */}
             {renderInputField('Sum Insured ', 'sumInsuredFrgn', String(formData.sumInsuredFrgn), handleInputChange, 'number', true, 'bg-slate-50 text-slate-600')}
@@ -1425,6 +1487,7 @@ const handleCancel = () => {
                         classNamePrefix="react-select"
                         placeholder="Select Currency"
                         isSearchable={false}
+                        isDisabled
                         className="flex-1 text-sm"
                     />
                     {exchangeRateLoading && (
@@ -1443,11 +1506,13 @@ const handleCancel = () => {
                         disabled
                         className="bg-slate-50 text-slate-600 h-11 flex-1"
                     />
+                    {/* The rate is the scheme's own (legacy: read-only); the server ignores a posted rate. */}
                     <Button
                         size="sm"
                         variant="outline"
                         onClick={() => fetchExchangeRate(formData.exCurrency || "NGN", "NGN")}
-                        disabled={exchangeRateLoading}
+                        disabled
+                        title="The exchange rate comes from the scheme"
                         className="h-11 px-3"
                     >
                         <RefreshCw className={`w-4 h-4 ${exchangeRateLoading ? 'animate-spin' : ''}`} />

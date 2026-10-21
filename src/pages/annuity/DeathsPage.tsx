@@ -91,16 +91,19 @@ const DeathsPage = () => {
     >
       {error && <Banner kind="error">{error}</Banner>}
       <Table
-        head={["Policy", "Date of death", "Reported by", "Recorded", "Benefit", "Status", ""]}
+        head={["Policy", "Date of death", "Recorded", "Benefit", "Status", ""]}
+        cols={["", "w-[130px]", "hidden w-[130px] @4xl:table-cell", "w-[160px]", "w-[140px]", "w-[84px]"]}
         empty={!loading && rows.length === 0 ? "No death notifications. Deaths are reported from the policy screen." : loading ? "Loading…" : undefined}
       >
         {rows.map((n) => (
           <tr key={n.notificationID} className="hover:bg-gray-50">
-            <td className="px-3 py-2 font-medium text-blue-900">{n.policyNo}</td>
+            <td className="px-3 py-2">
+              <div className="font-semibold text-slate-900" title={n.policyNo}>{n.policyNo}</div>
+              <div className="text-xs text-slate-500" title={n.reportedBy}>Reported by {n.reportedBy || "—"}</div>
+            </td>
             <td className="px-3 py-2">{fmtDate(n.dateOfDeath)}</td>
-            <td className="px-3 py-2">{n.reportedBy}</td>
-            <td className="px-3 py-2">{fmtDate(n.reportedOn)}</td>
-            <td className="px-3 py-2">{n.benefitAmount != null ? money(n.benefitAmount) : "—"}</td>
+            <td className="hidden px-3 py-2 @4xl:table-cell">{fmtDate(n.reportedOn)}</td>
+            <td className="truncate px-3 py-2">{n.benefitAmount != null ? money(n.benefitAmount) : "—"}</td>
             <td className="px-3 py-2"><StatusBadge status={n.status} /></td>
             <td className="px-3 py-2 text-right"><Btn size="sm" variant="secondary" onClick={() => open(n)}>Open</Btn></td>
           </tr>
@@ -131,7 +134,7 @@ const DeathsPage = () => {
 
           {sel.status === "REPORTED" && (
             <div className="space-y-2 rounded-md border p-3">
-              <h4 className="m-0 text-sm font-semibold text-blue-900">Verify the death</h4>
+              <h4 className="m-0 text-sm font-semibold text-slate-900">Verify the death</h4>
               <p className="m-0 text-xs text-gray-500">The person who recorded the notification cannot verify it. Rejecting restores the policy to its previous status.</p>
               <Field label="Reason (required to reject)"><input className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
               <div className="flex gap-2">
@@ -143,7 +146,7 @@ const DeathsPage = () => {
 
           {["VERIFIED", "CALCULATED"].includes(sel.status) && (
             <div className="space-y-2 rounded-md border p-3">
-              <h4 className="m-0 text-sm font-semibold text-blue-900">Benefit calculation</h4>
+              <h4 className="m-0 text-sm font-semibold text-slate-900">Benefit calculation</h4>
               <p className="m-0 text-xs text-gray-500">Unpaid guaranteed instalments (undiscounted) plus the amount accrued up to the date of death.</p>
               <Btn busy={busy} onClick={() => run(async () => { const r = await annuityApi.calculateDeath(sel.notificationID); setBeneficiaries(r.beneficiaries ?? []); return r; }, (r) => `Benefit calculated: ${money(r.notification.benefitAmount)}.`)}>
                 {sel.status === "CALCULATED" ? "Recalculate" : "Calculate benefit"}

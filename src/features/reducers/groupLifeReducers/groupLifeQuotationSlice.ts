@@ -109,6 +109,9 @@ export interface ComputeResponse {
 
 export interface BulkUploadResponse {
   insertedCount: number;
+  skippedCount?: number;
+  skipReasons?: { reason: string; count: number; examples: string[] }[];
+  aggregate?: { memberCount?: number; [key: string]: any };
   totalMembers: number;
   totalSumInsured: number;
   totalPremium: number;
@@ -131,12 +134,25 @@ export interface AggregateTotals {
 
 // ==================== ENDORSEMENT TYPES ====================
 
-export type EndorsementType = "Renewal" | "Reversal" | "Additional";
+export type EndorsementType =
+  | "Renewal"
+  | "Reversal"
+  | "Additional"
+  | "Return"
+  | "Cancellation"
+  | "Reduction"
+  | "Extension";
 
 export interface CreateEndorsementRequest {
   policyNo: string;
   sourceEndorsementNo: string;
   type: EndorsementType;
+  /** Return / Cancellation / Reduction: yyyy-MM-dd, defaults to today on the API. */
+  effectiveDate?: string;
+  /** Extension: yyyy-MM-dd new end date. */
+  newEndDate?: string;
+  /** Return / Reduction (required) and Extension (optional): MemberIDs of the source section. */
+  memberIds?: number[];
 }
 
 export interface CreateEndorsementResponse {
@@ -644,6 +660,8 @@ export interface GroupLifeQuotationState {
   policies: GroupLifePolicyListItem[];
   policiesTotalCount: number;
   policiesTotalPages: number;
+  /** The newest list request; an older response that arrives later is ignored. */
+  policiesRequestId: string | null;
   createdEndorsement: CreateEndorsementResponse | null;
   // Debit Note fields
   currentDebitNote: DebitNote | null;
@@ -765,6 +783,7 @@ const initialState: GroupLifeQuotationState = {
   policies: [],
   policiesTotalCount: 0,
   policiesTotalPages: 0,
+  policiesRequestId: null,
   createdEndorsement: null,
   // Debit Note fields
   currentDebitNote: null,
@@ -1582,13 +1601,16 @@ export const createEndorsement = createAsyncThunk(
         throw new Error("Source endorsement number is required");
       }
       if (!request.type) {
-        throw new Error("Endorsement type is required (Renewal, Reversal, or Additional)");
+        throw new Error("Endorsement type is required");
       }
 
       const url = new URL(`${SERVER_URL}/grouplife/policies/policyNo/details/sourceEndorsementNo/endorsement`);
       url.searchParams.append('policyNo', request.policyNo);
       url.searchParams.append('sourceEndorsementNo', request.sourceEndorsementNo);
       url.searchParams.append('type', request.type);
+      if (request.effectiveDate) url.searchParams.append('effectiveDate', request.effectiveDate);
+      if (request.newEndDate) url.searchParams.append('newEndDate', request.newEndDate);
+      (request.memberIds ?? []).forEach((id) => url.searchParams.append('memberIds', String(id)));
 
       const response = await fetch(url.toString(), {
         method: "POST",
@@ -1702,6 +1724,8 @@ export const prefillDebitNote = createAsyncThunk(
         bizSource: result.bizSource,
         bizOption: result.bizOption,
         sourceType: result.bizOption,
+        // DN, or CN for a Reversal / Return / Cancellation / Reduction section
+        noteType: result.noteType,
         
         // Party info
         insuredId: result.insuredId,
@@ -1996,6 +2020,75 @@ export const raiseDebitNote = createAsyncThunk(
       return result;
     } catch (error: any) {
       return rejectWithValue(error.message || "Failed to raise debit note");
+    }
+  }
+);
+
+// PUT /api/grouplife/debit-notes/{dncnNo} - Amend an unposted debit note.
+// (The form used to send "Update Note" through raiseDebitNote, which created a second note.)
+export const updateDebitNote = createAsyncThunk(
+  "groupLifeQuotations/updateDebitNote",
+  async (
+    { dncnNo, request }: { dncnNo: string; request: Record<string, any> },
+    { rejectWithValue }
+  ) => {
+    try {
+      if (!dncnNo) throw new Error("Debit note number is required");
+
+      const response = await fetch(
+        `${SERVER_URL}/grouplife/debit-notes/${encodeURIComponent(dncnNo)}`,
+        {
+          method: "PUT",
+          headers: getHeaders(),
+          body: JSON.stringify(request),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      return (await response.json()) as { debitNoteNo: string; message: string };
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to update debit note");
+    }
+  }
+);
+
+// DELETE /api/grouplife/debit-notes/{dncnNo} - Delete a note and the notes raised against it.
+// Allowed until the note is processed into the ledger (approval 2); the API releases the section.
+export const deleteDebitNote = createAsyncThunk(
+  "groupLifeQuotations/deleteDebitNote",
+  async (dncnNo: string, { rejectWithValue }) => {
+    try {
+      if (!dncnNo) throw new Error("Debit note number is required");
+
+      const response = await fetch(
+        `${SERVER_URL}/grouplife/debit-notes/${encodeURIComponent(dncnNo)}`,
+        { method: "DELETE", headers: getHeaders() }
+      );
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.title || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      return dncnNo;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to delete debit note");
     }
   }
 );
@@ -2489,18 +2582,23 @@ const groupLifeQuotationSlice = createSlice({
       })
 
       // Fetch Policies List
-      .addCase(fetchGroupLifePolicies.pending, (state) => {
+      .addCase(fetchGroupLifePolicies.pending, (state, action) => {
         state.loading.policies = true;
         state.error.policies = null;
+        state.policiesRequestId = action.meta.requestId;
       })
       .addCase(fetchGroupLifePolicies.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.policiesRequestId) return;
         state.loading.policies = false;
         state.policies = action.payload.items || [];
         state.policiesTotalCount = action.payload.totalCount || 0;
-        state.policiesTotalPages = action.payload.totalPages || 0;
+        state.policiesTotalPages =
+          action.payload.totalPages ||
+          Math.ceil((action.payload.totalCount || 0) / (action.payload.pageSize || action.meta.arg?.pageSize || 50));
         state.totalCount = action.payload.totalCount || 0;
       })
       .addCase(fetchGroupLifePolicies.rejected, (state, action) => {
+        if (action.meta.requestId !== state.policiesRequestId) return;
         state.loading.policies = false;
         state.error.policies = action.payload as string;
       })

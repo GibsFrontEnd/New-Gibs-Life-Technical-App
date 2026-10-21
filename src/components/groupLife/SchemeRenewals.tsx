@@ -62,6 +62,8 @@ import {
   AlertDialogTitle,
 } from "../../components/UI/alert-dialog";
 import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
+import { useGroupLifeList } from "./useGroupLifeList";
+import GroupLifeListFilters from "./GroupLifeListFilters";
 import {
   selectGroupLifePolicies,
   setCurrentQuotation,
@@ -102,16 +104,6 @@ export default function SchemeRenewals() {
 
   const [isMobile, setIsMobile] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filterCriteria, setFilterCriteria] = useState({
-    searchField: "companyName",
-    searchValue: "",
-    startDate: "",
-    endDate: "",
-    status: "all",
-    renewalStatus: "all",
-    subRiskId: "all",
-    tag: "GL",
-  });
 
   const [selectedQuotations, setSelectedQuotations] = useState<Set<string>>(
     new Set()
@@ -125,23 +117,22 @@ export default function SchemeRenewals() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
+  // search, filters and paging (server-side, every page) - see useGroupLifeList
+  const list = useGroupLifeList({
+    pageSize,
+    onReset: () => {
+      setSelectedQuotations(new Set());
+      setIsAllSelected(false);
+    },
+  });
+  const { filterCriteria, currentPage, setCurrentPage, clearAllFilters, hasActiveFilters } = list;
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [selectedForRenewal, setSelectedForRenewal] = useState<any>(null);
   const [renewalDate, setRenewalDate] = useState("");
   const [isProcessingRenewal, setIsProcessingRenewal] = useState(false);
 
   // ✅ Fetch policies when component mounts or when page/filters change
-  useEffect(() => {
-    console.log("📊 Fetching group life policies for renewals...");
-
-    dispatch(fetchGroupLifePolicies({
-      page: currentPage,
-      pageSize: pageSize,
-      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-    }));
-  }, [dispatch, currentPage, pageSize, filterCriteria.subRiskId]);
 
   const getQuotationId = (quote: any) => {
     return quote.id || quote.quoteID || quote.policyNo || quote.transGUID;
@@ -216,44 +207,7 @@ export default function SchemeRenewals() {
   navigate(url);
 };
 
-  const applyFilters = () => {
-    setCurrentPage(1);
-    setSelectedQuotations(new Set());
-    setIsAllSelected(false);
 
-    // ✅ Fetch with filters
-    dispatch(fetchGroupLifePolicies({
-      page: 1,
-      pageSize: pageSize,
-      search: filterCriteria.searchValue || undefined,
-      status: filterCriteria.status !== 'all' ? filterCriteria.status.toUpperCase() : undefined,
-      fromDate: filterCriteria.startDate || undefined,
-      toDate: filterCriteria.endDate || undefined,
-      subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-    }));
-  };
-
-  const clearAllFilters = () => {
-    setFilterCriteria({
-      searchField: "companyName",
-      searchValue: "",
-      startDate: "",
-      endDate: "",
-      status: "all",
-      renewalStatus: "all",
-      subRiskId: "all",
-      tag: "GL",
-    });
-    setCurrentPage(1);
-    setSelectedQuotations(new Set());
-    setIsAllSelected(false);
-
-    // ✅ Reset to default fetch
-    dispatch(fetchGroupLifePolicies({
-      page: 1,
-      pageSize: pageSize,
-    }));
-  };
 
   // ✅ Get policies from the slice state
   const itemsArray = policies || [];
@@ -262,53 +216,15 @@ export default function SchemeRenewals() {
     // Filter for schemes that are eligible for renewal (active or expiring soon)
     let filtered = itemsArray.filter((quote: any) => {
       const status = quote.status?.toUpperCase() || quote.transSTATUS?.toUpperCase();
-      // Show schemes that are ACTIVE, PENDING, or PROSPECT for renewal
-      return status === "ACTIVE" || status === "PENDING" || status === "PROSPECT";
+      // Show schemes that are APPROVED, ACTIVE, PENDING, or PROSPECT for renewal (the API sets PENDING / APPROVED)
+      return status === "APPROVED" || status === "ACTIVE" || status === "PENDING" || status === "PROSPECT";
     });
 
     // Apply additional filters
-    if (filterCriteria.searchValue) {
-      const searchLower = filterCriteria.searchValue.toLowerCase();
-      filtered = filtered.filter((quote: any) => {
-        if (filterCriteria.searchField === "companyName") {
-          const name = getCompanyName(quote)?.toLowerCase() || "";
-          return name.includes(searchLower);
-        } else {
-          return getQuotationNumber(quote)?.toLowerCase().includes(searchLower);
-        }
-      });
-    }
-
-    if (filterCriteria.status !== "all") {
-      filtered = filtered.filter((quote: any) => {
-        const status = quote.status?.toUpperCase() || quote.transSTATUS?.toUpperCase();
-        return status === filterCriteria.status.toUpperCase();
-      });
-    }
-
-    if (filterCriteria.startDate) {
-      filtered = filtered.filter((quote: any) => {
-        const date = quote.effectiveDate || quote.startDate || quote.transactionDate;
-        return date && date >= filterCriteria.startDate;
-      });
-    }
-
-    if (filterCriteria.endDate) {
-      filtered = filtered.filter((quote: any) => {
-        const date = quote.effectiveDate || quote.startDate || quote.transactionDate;
-        return date && date <= filterCriteria.endDate;
-      });
-    }
-
+    // search, status and dates are applied by the server across every page
     return filtered;
   };
 
-  const hasActiveFilters =
-    filterCriteria.searchValue ||
-    filterCriteria.startDate ||
-    filterCriteria.endDate ||
-    filterCriteria.status !== "all" ||
-    filterCriteria.renewalStatus !== "all";
 
   const itemsForDisplay = getDisplayQuotations();
   const effectiveTotalCount = totalCount || itemsForDisplay.length;
@@ -324,11 +240,6 @@ export default function SchemeRenewals() {
       setIsAllSelected(false);
 
       // ✅ Fetch the new page
-      dispatch(fetchGroupLifePolicies({
-        page: page,
-        pageSize: pageSize,
-        subRiskId: filterCriteria.subRiskId !== "all" ? filterCriteria.subRiskId : undefined,
-      }));
     }
   };
 
@@ -360,9 +271,9 @@ export default function SchemeRenewals() {
     if (daysUntilExpiry < 0) {
       return <Badge variant="destructive">Overdue</Badge>;
     } else if (daysUntilExpiry <= 30) {
-      return <Badge variant="warning" className="bg-yellow-500 text-white">Expiring Soon ({daysUntilExpiry} days)</Badge>;
+      return <Badge className="border-amber-200 bg-amber-50 text-amber-700" title={`Expires in ${daysUntilExpiry} days`}>Due in {daysUntilExpiry}d</Badge>;
     } else {
-      return <Badge variant="outline" className="border-green-500 text-green-700">Active ({daysUntilExpiry} days)</Badge>;
+      return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700" title={`Expires in ${daysUntilExpiry} days`}>{daysUntilExpiry}d left</Badge>;
     }
   };
 
@@ -376,8 +287,8 @@ const handleViewScheme = (quote: any) => {
 };
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto">
+    <div className="min-h-full">
+      <div className="mx-auto w-full max-w-[1400px]">
         <div className="rounded-lg">
           {/* SUCCESS TOAST */}
           {showSuccessToast && (
@@ -421,20 +332,20 @@ const handleViewScheme = (quote: any) => {
           )}
 
           {/* Header Card */}
-          <Card className="bg-gradient-to-r from-gray-200 to-gray-200 border-white-200 mb-6">
-            <div className="p-4 pb-0">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <RefreshCw className="w-5 h-5 text-blue-600" />
+          <Card className="mb-6 border-0 bg-transparent shadow-none">
+            <div className="p-0">
+              <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                <RefreshCw className="h-10 w-10 shrink-0 rounded-xl bg-blue-50 p-2.5 text-[#155dfd]" />
                 Group Life Scheme Renewals
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="mt-1.5 text-sm text-slate-500 sm:text-base">
                 Manage and process renewals for group life insurance schemes
               </p>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="mt-1 text-xs text-slate-400">
                 Schemes eligible for renewal are shown below. Renewals should be processed before the expiry date.
               </p>
             </div>
-            <CardContent className="p-3 sm:p-4">
+            <CardContent className="px-0 pb-0 pt-4">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 {selectedQuotations.size > 0 && (
                   <Button
@@ -461,168 +372,10 @@ const handleViewScheme = (quote: any) => {
             </CardContent>
           </Card>
 
-          {/* Filters Section */}
-          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <div className="border rounded-lg mb-6 bg-gray-50">
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 cursor-pointer">
-                  <div className="flex items-center space-x-2">
-                    <Filter className="h-4 w-4" />
-                    <span className="text-sm font-medium">Search Filter</span>
-                    {hasActiveFilters && (
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                        {[
-                          filterCriteria.searchValue,
-                          filterCriteria.startDate,
-                          filterCriteria.endDate,
-                          filterCriteria.status !== "all" ? filterCriteria.status : null,
-                          filterCriteria.renewalStatus !== "all" ? filterCriteria.renewalStatus : null,
-                        ].filter(Boolean).length} active
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {hasActiveFilters && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          clearAllFilters();
-                        }}
-                        className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        Clear
-                      </Button>
-                    )}
-                    <Checkbox checked={filtersOpen} />
-                  </div>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-4 pb-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Search by
-                      </label>
-                      <Select
-                        value={filterCriteria.searchField}
-                        onValueChange={(value) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            searchField: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select field" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="companyName">Company Name</SelectItem>
-                          <SelectItem value="quotationNumber">Scheme Number</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Search text
-                      </label>
-                      <Input
-                        value={filterCriteria.searchValue}
-                        onChange={(e) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            searchValue: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter search text"
-                      />
-                    </div>
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Start Date
-                      </label>
-                      <Input
-                        type="date"
-                        value={filterCriteria.startDate}
-                        onChange={(e) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            startDate: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="lg:col-span-1">
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        End Date
-                      </label>
-                      <Input
-                        type="date"
-                        value={filterCriteria.endDate}
-                        onChange={(e) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            endDate: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="lg:col-span-1 flex items-end">
-                      <Button
-                        className="w-full bg-primary hover:bg-primary-blue"
-                        onClick={applyFilters}
-                      >
-                        <Search className="w-4 h-4 mr-2" />
-                        Apply
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                    <div>
-                      <label className="text-sm text-gray-600 mb-1 block">
-                        Status
-                      </label>
-                      <Select
-                        value={filterCriteria.status}
-                        onValueChange={(value) =>
-                          setFilterCriteria((prev) => ({
-                            ...prev,
-                            status: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All statuses" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Statuses</SelectItem>
-                          <SelectItem value="prospect">Prospect</SelectItem>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-end">
-                      <Button
-                        variant="outline"
-                        className="w-full bg-transparent"
-                        onClick={clearAllFilters}
-                      >
-                        Clear Filters
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
+          <GroupLifeListFilters list={list} total={totalCount} loading={isLoading} />
 
           {/* Data Display Area */}
-          <div className="border border-border rounded-lg min-h-96 bg-white">
+          <div className="min-h-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
@@ -677,25 +430,23 @@ const handleViewScheme = (quote: any) => {
                 ) : (
                   // Desktop table view
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="table-fixed">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-12">
+                          <TableHead className="w-11 pr-0">
                             <Checkbox
                               checked={isAllSelected}
                               onCheckedChange={handleSelectAll}
                               className="h-4 w-4"
                             />
                           </TableHead>
-                          <TableHead>Scheme No.</TableHead>
-                          <TableHead>Company Name</TableHead>
-                          <TableHead className="text-right">Sum Assured</TableHead>
-                          <TableHead className="text-right">Premium</TableHead>
-                          <TableHead>Effective Date</TableHead>
-                          <TableHead>Expiry Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Renewal Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead>Scheme</TableHead>
+                          <TableHead className="w-[160px] text-right">Sum assured</TableHead>
+                          <TableHead className="hidden w-[130px] @3xl:table-cell">Cover</TableHead>
+                          <TableHead className="w-[130px]">Status</TableHead>
+                          <TableHead className="w-[110px] text-right">
+                            <span className="sr-only">Actions</span>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -728,38 +479,42 @@ const handleViewScheme = (quote: any) => {
                                   />
                                 </div>
                               </TableCell>
-                              <TableCell className="font-medium">
-                                <div className="text-sm font-medium">
-                                  {getQuotationNumber(quote)}
-                                </div>
-                              </TableCell>
                               <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                                  <span className="font-medium text-gray-900">
-                                    {getCompanyName(quote)}
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-600 @4xl:grid">
+                                    <Building2 className="h-4 w-4" />
                                   </span>
+                                  <div className="min-w-0">
+                                    <div className="truncate font-semibold text-slate-900" title={getCompanyName(quote)}>
+                                      {getCompanyName(quote) || "—"}
+                                    </div>
+                                    <div className="truncate text-xs text-slate-500">{getQuotationNumber(quote)}</div>
+                                  </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-right font-medium text-blue-900">
-                                {formatCurrency(quote.totalSumInsured || quote.sumAssured || quote.sumInsured)}
+                              <TableCell className="text-right">
+                                <div className="truncate font-semibold text-slate-900">
+                                  {formatCurrency(quote.totalSumInsured || quote.sumAssured || quote.sumInsured)}
+                                </div>
+                                <div className="truncate text-xs text-slate-500">{formatCurrency(quote.totalPremium || quote.grossPremium)} premium</div>
                               </TableCell>
-                              <TableCell className="text-right font-medium text-blue-900">
-                                {formatCurrency(quote.totalPremium || quote.grossPremium)}
+                              <TableCell className="hidden @3xl:table-cell">
+                                <div className="truncate text-slate-900">{formatDate(effectiveDate)}</div>
+                                <div className="truncate text-xs text-slate-500">to {expiryDate ? formatDate(expiryDate.toISOString()) : "N/A"}</div>
                               </TableCell>
-                              <TableCell>{formatDate(effectiveDate)}</TableCell>
                               <TableCell>
-                                {expiryDate ? formatDate(expiryDate.toISOString()) : "N/A"}
+                                <div className="flex min-w-0 flex-col items-start gap-1">
+                                  {getStatusBadge(quote.status || quote.transSTATUS)}
+                                  {getRenewalStatusBadge(effectiveDate)}
+                                </div>
                               </TableCell>
-                              <TableCell>{getStatusBadge(quote.status || quote.transSTATUS)}</TableCell>
-                              <TableCell>{getRenewalStatusBadge(effectiveDate)}</TableCell>
                               <TableCell>
                                 <div className="flex justify-end gap-2">
                                   
                                   <Button
                                     variant="default"
                                     size="sm"
-                                    className="h-8 bg-green-600 hover:bg-green-700 text-white"
+                                    className="h-8 rounded-lg px-3"
                                     onClick={() => handleViewScheme(quote)}
                                     disabled={isProcessing}
                                   >
@@ -784,8 +539,8 @@ const handleViewScheme = (quote: any) => {
 
                 {/* Pagination */}
                 {totalPagesCount > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
-                    <div className="text-sm text-muted-foreground order-2 sm:order-1">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 px-5 py-3">
+                    <div className="text-sm text-slate-500 order-2 sm:order-1">
                       Showing {startItem + 1} to {endItem} of{" "}
                       {effectiveTotalCount} entries | Page {currentPage} of{" "}
                       {totalPagesCount}
@@ -1011,9 +766,9 @@ const SchemeRenewalCard = ({
     if (daysUntilExpiry < 0) {
       return <Badge variant="destructive">Overdue</Badge>;
     } else if (daysUntilExpiry <= 30) {
-      return <Badge variant="warning" className="bg-yellow-500 text-white">Expiring Soon ({daysUntilExpiry} days)</Badge>;
+      return <Badge className="border-amber-200 bg-amber-50 text-amber-700" title={`Expires in ${daysUntilExpiry} days`}>Due in {daysUntilExpiry}d</Badge>;
     } else {
-      return <Badge variant="outline" className="border-green-500 text-green-700">Active ({daysUntilExpiry} days)</Badge>;
+      return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700" title={`Expires in ${daysUntilExpiry} days`}>{daysUntilExpiry}d left</Badge>;
     }
   };
 

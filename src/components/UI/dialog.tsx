@@ -30,7 +30,7 @@ export const Dialog = ({ open, onOpenChange, children, maxWidth = "640px", heigh
       }}
     >
       <div
-        className="bg-white rounded-lg shadow-lg w-full relative"
+        className="bg-white rounded-2xl shadow-2xl w-full relative"
         style={{ maxWidth, height }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -82,7 +82,7 @@ export const ButtonDismissDialog = ({
   return ReactDOM.createPortal(
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[9999] !m-0">
       <div
-        className="bg-white rounded-lg shadow-lg w-full relative"
+        className="bg-white rounded-2xl shadow-2xl w-full relative"
         style={{ maxWidth, height }}
       >
         {children}
@@ -130,7 +130,7 @@ export const OutsideDismissDialog = ({
     >
       <div
         ref={ref}
-        className="bg-white cursor-default rounded-lg shadow-lg w-full relative max-md:w-[90%]"
+        className="bg-white cursor-default rounded-2xl shadow-2xl w-full relative max-md:w-[90%]"
         style={{ maxWidth, height }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -173,7 +173,7 @@ export const DialogTitle = ({
   children,
 }: {
   children: ReactNode;
-}) => <h2 className="text-xl font-medium">{children}</h2>;
+}) => <h2 className="text-lg font-semibold text-slate-900">{children}</h2>;
 
 // ==================== DIALOG SUBTITLE ====================
 export const DialogSubTitle = ({
