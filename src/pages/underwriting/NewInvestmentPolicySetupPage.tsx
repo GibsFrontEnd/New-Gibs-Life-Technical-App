@@ -2,12 +2,13 @@
 // @ts-nocheck
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Users, RefreshCw, Save, ArrowRight } from "lucide-react";
+import { ArrowLeft, RefreshCw, Save, ArrowRight } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import apiCall from "../../utils/api-call";
+import { usePolicyFromUrl } from "../../hooks/usePolicyFromUrl";
 import { useToast } from "../../components/UI/use-toast";
 import { policyToForm } from "../../utils/individualPolicy";
-import BeneficiariesPanel from "../../components/individual/BeneficiariesPanel";
+import { PolicyTabBar, PolicyTabContent } from "../../components/individual/PolicyTabs";
 import PolicySummaryCard from "../../components/individual/PolicySummaryCard";
 import { usePolicySteps, type StepField } from "../../components/individual/usePolicySteps";
 import { Stepper } from "../../components/page/PageKit";
@@ -138,7 +139,13 @@ const NewInvestmentPolicySetupPage = () => {
   
   // ✅ Check if we're in edit mode and get initial data
   const isEditMode = location.state?.editMode || location.pathname.includes("edit-investment");
-  const initialData = location.state?.policyData || null;
+  // from the Policy Admin list (router state), or loaded by ?policyNo= after a refresh or when opened from a link
+  const stateData = location.state?.policyData || null;
+  const fromUrl = usePolicyFromUrl(!!isEditMode, stateData);
+  const initialData = stateData || fromUrl.policy;
+  useEffect(() => {
+    if (fromUrl.error) toast({ title: "Error", description: fromUrl.error, variant: "destructive" });
+  }, [fromUrl.error]);
   
   const [activeTab, setActiveTab] = useState("Information");
   const [formData, setFormData] = useState(emptyFormState);
@@ -327,20 +334,7 @@ const NewInvestmentPolicySetupPage = () => {
       </div>
 
       {/* Tabs */}
-      <div className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-        <button
-          onClick={() => setActiveTab("Information")}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "Information" ? "bg-[#155dfd] text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
-        >
-          Information
-        </button>
-        <button
-          onClick={() => setActiveTab("Beneficiaries")}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "Beneficiaries" ? "bg-[#155dfd] text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
-        >
-          <Users size={16} /> Beneficiaries
-        </button>
-      </div>
+      <PolicyTabBar active={activeTab} onChange={setActiveTab} />
 
       {activeTab === "Information" && (
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -500,17 +494,7 @@ const NewInvestmentPolicySetupPage = () => {
         </div>
       )}
 
-      {activeTab === "Beneficiaries" && (
-        isEditMode && (formData.policyNo || formData.proposalNo) ? (
-          <BeneficiariesPanel policyNo={formData.policyNo || formData.proposalNo} />
-        ) : (
-          <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <Users size={32} className="text-[#155dfd] mb-3" />
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Save the policy first</h2>
-            <p className="text-gray-500 max-w-sm">Beneficiaries are added from the policy's Edit screen once it has a policy number.</p>
-          </div>
-        )
-      )}
+      <PolicyTabContent active={activeTab} policyNo={formData.policyNo || formData.proposalNo} isEditMode={isEditMode} />
 
     </div>
   );

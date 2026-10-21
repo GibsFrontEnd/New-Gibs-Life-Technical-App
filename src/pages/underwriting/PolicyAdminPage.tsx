@@ -4,7 +4,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchInvestmentProposals } from "../../features/reducers/proposalReducers/proposalsSlice";
 import type { Proposal } from "../../features/reducers/proposalReducers/proposalsSlice";
-import { FileText, X, RefreshCw, Pencil, Plus, FilePen, TrendingUp, Landmark, SlidersHorizontal, AlertCircle } from "lucide-react";
+import { FileText, X, RefreshCw, Pencil, Plus, FilePen, TrendingUp, Landmark, SlidersHorizontal, AlertCircle, Printer, Loader2 } from "lucide-react";
+import { downloadPolicyDocument } from "../../utils/policyDocument";
 import {
   EmptyState,
   PageHeader,
@@ -59,11 +60,17 @@ const PolicyAdminPage = () => {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
+  // rows ticked for the toolbar actions (Print Policy Document, ...); kept across pages like the legacy grid
+  const [selected, setSelected] = useState<string[]>([]);
+  const [printing, setPrinting] = useState(false);
+  const [actionMsg, setActionMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   useEffect(() => {
     const newTag = getActiveTagFromPath();
     if (newTag !== activeTag) {
       setActiveTag(newTag);
       setPage(1);
+      setSelected([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
@@ -100,8 +107,34 @@ const PolicyAdminPage = () => {
 
   const retryFetch = () => dispatch(fetchInvestmentProposals(query));
 
+  const toggleRow = (policyNo: string) =>
+    setSelected((prev) => (prev.includes(policyNo) ? prev.filter((n) => n !== policyNo) : [...prev, policyNo]));
+  const pageNos = (items as Proposal[]).map((p) => p.policyNo).filter(Boolean);
+  const allOnPage = pageNos.length > 0 && pageNos.every((n) => selected.includes(n));
+  const togglePage = () =>
+    setSelected((prev) => (allOnPage ? prev.filter((n) => !pageNos.includes(n)) : [...new Set([...prev, ...pageNos])]));
+
+  // like the legacy button, the document is made for the first ticked policy
+  const printPolicyDocument = async () => {
+    if (selected.length === 0) {
+      setActionMsg({ ok: false, text: "Please select a policy to print." });
+      return;
+    }
+    setPrinting(true);
+    setActionMsg(null);
+    try {
+      await downloadPolicyDocument(selected[0]);
+      setActionMsg({ ok: true, text: `Policy document for ${selected[0]} downloaded.${selected.length > 1 ? " Only the first selected policy is printed." : ""}` });
+    } catch (e: any) {
+      setActionMsg({ ok: false, text: e.message || "Couldn't generate the policy document." });
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const handleEdit = (proposal: Proposal) => {
-    navigate(activeTag === "B" ? "/underwriting/individual/policy-admin/new-investment" : "/underwriting/individual/policy-admin/new-traditional", {
+    const base = activeTag === "B" ? "edit-investment" : "edit-traditional";
+    navigate(`/underwriting/individual/policy-admin/${base}/edit?policyNo=${encodeURIComponent(proposal.policyNo)}`, {
       state: { policyData: proposal, editMode: true },
     });
   };
@@ -198,6 +231,32 @@ const PolicyAdminPage = () => {
         {loading ? "Loading…" : `${(totalCount || 0).toLocaleString("en-NG")} ${kind} polic${totalCount === 1 ? "y" : "ies"}${term ? ` matching “${term}”` : ""}`}
       </p>
 
+      {/* Actions on the ticked rows (legacy buttons under the grid) */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={printPolicyDocument} disabled={printing || selected.length === 0} className={btnOutline} title={selected.length === 0 ? "Tick a policy first" : "Print the policy document"}>
+          {printing ? <Loader2 size={15} className="animate-spin" /> : <Printer size={15} />}
+          Print Policy Document
+        </button>
+        {/* Not built yet: the layout is in place and each gets its behaviour later */}
+        <button type="button" disabled className={btnOutline} title="Coming soon">
+          <FileText size={15} />
+          Print Policy Certificate
+        </button>
+        <button type="button" disabled className={btnOutline} title="Coming soon">
+          <FilePen size={15} />
+          Get Naicom Unique ID
+        </button>
+        <span className="text-sm text-slate-500">{selected.length > 0 ? `${selected.length} selected` : "Tick a policy to use these actions"}</span>
+        {selected.length > 0 && (
+          <button type="button" onClick={() => setSelected([])} className={btnRow}>
+            <X size={14} /> Clear selection
+          </button>
+        )}
+      </div>
+      {actionMsg && (
+        <div className={`rounded-xl border px-4 py-3 text-sm ${actionMsg.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-700"}`}>{actionMsg.text}</div>
+      )}
+
       {/* Table: six columns, so it fits beside the menu without sideways scrolling */}
       <Panel flush>
         {error ? (
@@ -216,6 +275,9 @@ const PolicyAdminPage = () => {
             <table className={tableCls.table}>
               <thead className={tableCls.thead}>
                 <tr>
+                  <th className={tableCls.th + " w-[44px]"}>
+                    <input type="checkbox" checked={allOnPage} onChange={togglePage} aria-label="Select all policies on this page" className="h-4 w-4 rounded border-slate-300" />
+                  </th>
                   <th className={tableCls.th + " w-[170px]"}>Policy</th>
                   <th className={tableCls.th}>Client</th>
                   <th className={tableCls.th + " w-[150px] text-right"}>Sum assured</th>
@@ -229,7 +291,7 @@ const PolicyAdminPage = () => {
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <EmptyState
                         icon={FileText}
                         title={loading ? "Loading policies…" : "No policies found"}
@@ -240,6 +302,9 @@ const PolicyAdminPage = () => {
                 ) : (
                   items.map((p: Proposal) => (
                     <tr key={p.transGUID || p.policyNo} className={tableCls.tr + " cursor-pointer"} onClick={() => handleEdit(p)}>
+                      <td className={tableCls.td} onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" checked={selected.includes(p.policyNo)} onChange={() => toggleRow(p.policyNo)} aria-label={`Select ${p.policyNo}`} className="h-4 w-4 rounded border-slate-300" />
+                      </td>
                       <td className={tableCls.td}>
                         <div className={tableCls.primary} title={p.policyNo}>{p.policyNo || "—"}</div>
                         <div className={tableCls.secondary} title={p.covertype}>

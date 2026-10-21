@@ -4,5 +4,5 @@
 window.APP_CONFIG = {
   API_BASE_URL: "https://lifetechnicalapi.newgibsonline.com/api",
   ROOT_URL: "https://lifetechnicalapi.newgibsonline.com/",
-  QUOTATIONS_URL: "https://fortislifetest.newgibsonline.com", // ← ADD THIS
+  QUOTATIONS_URL: "https://lifequotes.newgibsonline.com",
 };
