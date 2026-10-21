@@ -1,7 +1,7 @@
 // Reinsurance → Treaties → Group Life Underwriting Treaty.
 // Lists every group life debit note raised in Underwriting (the same notes as the scheme's Debit Note tab).
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, FileText, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileText, Loader2, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
 import { SERVER_URL } from '../../../utils/constants';
 import {
   EmptyState,
@@ -57,6 +57,11 @@ const GroupLifeTreatyDebitNotes: React.FC = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
+  // ticked debit notes, kept across pages; Process sends them to the treaty
+  const [selected, setSelected] = useState<string[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
   // search as the user types, without a request per keystroke
   useEffect(() => {
     const t = setTimeout(() => {
@@ -97,6 +102,41 @@ const GroupLifeTreatyDebitNotes: React.FC = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const pageNos = notes.map(n => n.debitNoteNo);
+  const allOnPage = pageNos.length > 0 && pageNos.every(n => selected.includes(n));
+  const toggleRow = (no: string) => setSelected(prev => (prev.includes(no) ? prev.filter(n => n !== no) : [...prev, no]));
+  const togglePage = () =>
+    setSelected(prev => (allOnPage ? prev.filter(n => !pageNos.includes(n)) : [...new Set([...prev, ...pageNos])]));
+
+  const processSelected = async () => {
+    if (selected.length === 0) {
+      setNotice({ ok: false, text: 'Please select a debit note to process.' });
+      return;
+    }
+    if (!window.confirm(`Process ${selected.length} selected debit note${selected.length === 1 ? '' : 's'}?`)) return;
+    setProcessing(true);
+    setNotice(null);
+    try {
+      const res = await fetch(`${SERVER_URL}/reinsurance-treaties/raw-treaty/process-bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify(selected),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setNotice({ ok: false, text: body?.message || `Processing failed (${res.status})` });
+        return;
+      }
+      setNotice({ ok: true, text: `${selected.length} debit note${selected.length === 1 ? '' : 's'} processed successfully.` });
+      setSelected([]);
+      load();
+    } catch {
+      setNotice({ ok: false, text: 'Network error. Please try again.' });
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const activeFilters = (from ? 1 : 0) + (to ? 1 : 0);
   const filtering = !!query || activeFilters > 0;
@@ -154,6 +194,27 @@ const GroupLifeTreatyDebitNotes: React.FC = () => {
         {loading ? 'Loading…' : `${total.toLocaleString('en-NG')} debit note${total === 1 ? '' : 's'}${query ? ` matching “${query}”` : ''}`}
       </p>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={processSelected}
+          disabled={processing || selected.length === 0}
+          className={btnPrimary}
+          title={selected.length === 0 ? 'Tick a debit note first' : 'Process the selected debit notes'}
+        >
+          {processing ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+          {processing ? 'Processing…' : `Process Selected (${selected.length})`}
+        </button>
+        {selected.length > 0 && (
+          <button type="button" onClick={() => setSelected([])} className={btnRow}>
+            <X size={14} /> Clear selection
+          </button>
+        )}
+      </div>
+      {notice && (
+        <div className={`rounded-xl border px-4 py-3 text-sm ${notice.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-700'}`}>{notice.text}</div>
+      )}
+
       <Panel flush>
         {error ? (
           <EmptyState
@@ -171,6 +232,9 @@ const GroupLifeTreatyDebitNotes: React.FC = () => {
             <table className={tableCls.table}>
               <thead className={tableCls.thead}>
                 <tr>
+                  <th className={tableCls.th + ' w-[44px]'}>
+                    <input type="checkbox" checked={allOnPage} onChange={togglePage} aria-label="Select all debit notes on this page" className="h-4 w-4 rounded border-slate-300" />
+                  </th>
                   <th className={tableCls.th + ' w-[190px]'}>Debit note</th>
                   <th className={tableCls.th}>Scheme</th>
                   <th className={tableCls.th + ' w-[170px] text-right'}>Gross premium</th>
@@ -181,7 +245,7 @@ const GroupLifeTreatyDebitNotes: React.FC = () => {
               <tbody>
                 {notes.length === 0 ? (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <EmptyState
                         icon={FileText}
                         title={loading ? 'Loading debit notes…' : 'No debit notes found'}
@@ -192,6 +256,9 @@ const GroupLifeTreatyDebitNotes: React.FC = () => {
                 ) : (
                   notes.map(n => (
                     <tr key={n.debitNoteNo} className={tableCls.tr}>
+                      <td className={tableCls.td}>
+                        <input type="checkbox" checked={selected.includes(n.debitNoteNo)} onChange={() => toggleRow(n.debitNoteNo)} aria-label={`Select ${n.debitNoteNo}`} className="h-4 w-4 rounded border-slate-300" />
+                      </td>
                       <td className={tableCls.td}>
                         <div className={tableCls.primary} title={n.debitNoteNo}>{n.debitNoteNo}</div>
                         <div className={tableCls.secondary}>

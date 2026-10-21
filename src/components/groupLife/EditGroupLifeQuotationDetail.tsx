@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../UI/new-select";
-import { ArrowLeft, RefreshCw, Loader2, ChevronDown, X, Users, CreditCard, Paperclip, FileText } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, ChevronDown, X, Users, CreditCard, Paperclip, FileText, ClipboardList, Wallet } from "lucide-react";
 import { useToast } from "../UI/use-toast";
 import { useAppDispatch, useAppSelector } from "../../hooks/use-apps";
 import {
@@ -41,6 +41,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "../UI/tabs";
 import GroupLifeDetailsTab from "./GroupLifeDetailsTab";
 import CreditNotesTab from "./CreditNotesTab";
 import AttachmentsTab from "./AttachmentsTab";
+import { ClaimHistoryTab, PayoutsTab } from "./SchemeClaimsTabs";
 import DebitNoteList from './DebitNoteList';
 
 // ==================== TYPES ====================
@@ -286,7 +287,7 @@ const EditGroupLifeQuotationDetail: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get("tab");
-    const VALID_TABS = ["policy", "group-life", "debit-note", "credit-note", "attachments"];
+    const VALID_TABS = ["policy", "group-life", "debit-note", "credit-note", "claim-history", "attachments", "payouts"];
   
     if (tab && VALID_TABS.includes(tab)) {
       setActiveTab(tab);
@@ -1658,7 +1659,7 @@ const sourcePage = getSourceFromUrl();
             {/* Main Tabs */}
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <div className="relative">
-                <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto gap-25 overflow-x-auto scrollbar-hide flex-nowrap">
+                <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto gap-1 overflow-x-auto scrollbar-hide flex-nowrap">
                   <TabsTrigger 
                     value="policy" 
                     className={`
@@ -1737,6 +1738,24 @@ const sourcePage = getSourceFromUrl();
                     </span>
                   </TabsTrigger>
                   
+                  <TabsTrigger
+                    value="claim-history"
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3
+                      text-xs sm:text-sm font-medium
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600
+                      data-[state=active]:bg-transparent rounded-none
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span>Claim History</span>
+                    </span>
+                  </TabsTrigger>
+
                   <TabsTrigger 
                     value="attachments" 
                     className={`
@@ -1755,6 +1774,25 @@ const sourcePage = getSourceFromUrl();
                       <span className="xs:hidden">Files</span>
                     </span>
                   </TabsTrigger>
+                  
+                  <TabsTrigger
+                    value="payouts"
+                    className={`
+                      px-3 sm:px-4 py-2.5 sm:py-3
+                      text-xs sm:text-sm font-medium
+                      text-gray-600 hover:text-gray-900 hover:bg-blue-50/50
+                      data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600
+                      data-[state=active]:bg-transparent rounded-none
+                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 min-w-[80px] sm:min-w-0
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span>Payouts</span>
+                    </span>
+                  </TabsTrigger>
+
                 </TabsList>
               </div>
 
@@ -1792,8 +1830,16 @@ const sourcePage = getSourceFromUrl();
                   <CreditNotesTab policyNo={policyNo} />
                 </TabsContent>
 
+                <TabsContent value="claim-history" className="mt-0">
+                  <ClaimHistoryTab policyNo={policyNo} />
+                </TabsContent>
+
                 <TabsContent value="attachments" className="mt-0">
                   <AttachmentsTab policyNo={policyNo} />
+                </TabsContent>
+
+                <TabsContent value="payouts" className="mt-0">
+                  <PayoutsTab policyNo={policyNo} />
                 </TabsContent>
               </div>
             </Tabs>

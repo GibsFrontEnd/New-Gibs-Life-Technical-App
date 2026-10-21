@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GroupLifeTreatyDebitNotes from './GroupLifeTreatyDebitNotes';
+import IndividualLifeTreatyPolicies from './IndividualLifeTreatyPolicies';
 import RIDistribution from './RIDistribution';
 import FinalRIDistribution from './FinalRIDistribution';
 import DebitNoteViewEdit, { DebitNote, getApprovalLabel, getApprovalStyle } from '../../../components/Reinsurance/DebitNoteViewEdit';
@@ -89,6 +90,7 @@ const ProcessUnderwritingTreaty: React.FC = () => {
 
   // Group Life Underwriting Treaty is its own screen: RI Distribution and Final RI Distribution have their own menu items
   if (isGroupLife) return <GroupLifeTreatyDebitNotes />;
+  if (searchParams.get('class') === 'individual') return <IndividualLifeTreatyPolicies />;
 
   return (
     <div className="max-w-6xl mx-auto">
