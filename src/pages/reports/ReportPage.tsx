@@ -94,10 +94,61 @@ const ParamField = ({ param, value, onChange, min, max }: any) => {
   );
 };
 
-/** Shows a PDF in the tab the click already opened (so it isn't blocked); other formats download. */
+const escapeHtml = (text: string) =>
+  text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+/**
+ * Opens the PDF's tab during the click (later it would be blocked) and shows a loader in it
+ * until the report arrives.
+ */
+const openLoadingTab = (title: string) => {
+  const tab = window.open("", "_blank");
+  if (!tab) return null;
+  const name = escapeHtml(title);
+  tab.document.write(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preparing ${name}…</title>
+<style>
+  :root { --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #64748b; --ring: #dbeafe; --accent: #155dfd; --border: #e2e8f0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b1220; --card: #111a2e; --text: #e2e8f0; --muted: #94a3b8; --ring: #1e3a8a; --accent: #60a5fa; --border: #1f2a44; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px;
+         background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .card { width: 100%; max-width: 420px; padding: 32px 28px; text-align: center; background: var(--card);
+          border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 10px 30px rgba(15, 23, 42, .08); }
+  .spinner { width: 48px; height: 48px; margin: 0 auto 20px; border-radius: 50%;
+             border: 4px solid var(--ring); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+  h1 { margin: 0 0 6px; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+  p { margin: 0; color: var(--muted); font-size: 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+</style>
+</head>
+<body>
+  <div class="card" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <h1>${name}</h1>
+    <p>Preparing your report. This can take a minute for long periods.</p>
+  </div>
+</body>
+</html>`);
+  tab.document.close();
+  return tab;
+};
+
+/**
+ * Shows a PDF in the tab opened by openLoadingTab; other formats download, as does a PDF
+ * whose tab was blocked or closed while it loaded. True when it went to the tab.
+ */
 const deliver = ({ blob, filename }: any, tab: Window | null) => {
   const url = URL.createObjectURL(blob);
-  if (tab) {
+  const inTab = !!tab && !tab.closed;
+  if (inTab) {
     tab.location.href = url;
   } else {
     const a = document.createElement("a");
@@ -108,6 +159,7 @@ const deliver = ({ blob, filename }: any, tab: Window | null) => {
     a.remove();
   }
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  return inTab;
 };
 
 /** The chosen report's parameters, as the report server lists them, and the Run button. */
@@ -147,11 +199,11 @@ const RunPanel = ({ title, endpoint, apiName }: { title: string; endpoint?: stri
   const run = async () => {
     setRunning(true);
     setResult(null);
-    const tab = format === "pdf" ? window.open("", "_blank") : null;
+    const tab = format === "pdf" ? openLoadingTab(title) : null;
     try {
       const file = await exportReport(endpoint, state.report, format, values);
-      deliver(file, tab);
-      setResult({ ok: true, text: format === "pdf" ? `Opened ${file.filename} in a new tab.` : `Downloaded ${file.filename}.` });
+      const inTab = deliver(file, tab);
+      setResult({ ok: true, text: inTab ? `Opened ${file.filename} in a new tab.` : `Downloaded ${file.filename}.` });
     } catch (e) {
       tab?.close();
       setResult({ ok: false, text: e.message });
